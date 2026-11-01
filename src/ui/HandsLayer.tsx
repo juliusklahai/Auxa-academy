@@ -14,7 +14,7 @@ import { Icon } from './Icon';
 const Hands3D = lazy(() => import('./Hands3D'));
 
 /** Palm space under the keys: about 95 mm of hand at the keyboard's scale. */
-export const handsBelow = (whiteW: number) => Math.round(Math.max(100, Math.min(250, (95 * whiteW) / 23.5)));
+export const handsBelow = (whiteW: number) => Math.round(Math.max(70, Math.min(190, (78 * whiteW) / 23.5)));
 /** Keep keys long enough for real-proportion hands. */
 export const HANDS_MIN_ASPECT = 4.4;
 

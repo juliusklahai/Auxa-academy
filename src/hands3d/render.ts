@@ -236,7 +236,7 @@ export class HandScene {
   }
   /** per-finger highlight (index 0 = thumb) spread onto that finger's bones */
   setHighlight(h: Hand, hi: number[], fix: number[]) {
-    const toBones = (v: number[]) => { const b = new Array(17).fill(0); v.forEach((x, i) => { const s = chainStart(i + 1); b[s] = x * (i === 0 ? 0.7 : 0.85); b[s + 1] = x; b[s + 2] = x; }); return b; };
+    const toBones = (v: number[]) => { const b = new Array(17).fill(0); v.forEach((x, i) => { const s = chainStart(i + 1); b[s] = x * (i === 0 ? 0.3 : 0.85); b[s + 1] = x; b[s + 2] = x; }); return b; };
     this.mats[h].u.uHi.value = toBones(hi);
     this.mats[h].u.uFix.value = toBones(fix);
   }

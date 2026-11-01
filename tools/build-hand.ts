@@ -11,12 +11,9 @@ const n = mesh.positions.length / 3;
 const skinIdx = new Uint8Array(n * 4), skinW = new Uint8Array(n * 4);
 for (let v = 0; v < n; v++) {
   const [si, sw] = skinWeights([mesh.positions[v * 3], mesh.positions[v * 3 + 1], mesh.positions[v * 3 + 2]], mesh.parts[v]);
-  let acc = 0;
-  for (let k = 0; k < 4; k++) {
-    skinIdx[v * 4 + k] = si[k];
-    const q = k === 3 ? 255 - acc : Math.round(sw[k] * 255);
-    skinW[v * 4 + k] = Math.max(0, q); acc += Math.max(0, q);
-  }
+  const q = sw.map((x) => Math.round(x * 255));
+  q[0] += 255 - q.reduce((a, b) => a + b, 0); // weights are sorted, so the largest absorbs rounding
+  for (let k = 0; k < 4; k++) { skinIdx[v * 4 + k] = si[k]; skinW[v * 4 + k] = q[k]; }
 }
 // nails as a small skinned mesh of their own
 const nails = buildNails();

@@ -46,7 +46,7 @@ export default function Hands3D(p: Hands3DProps) {
   const dirty = useRef(true);
 
   const bridge = useMemo(
-    () => new AnimationBridge(p.events, p.fingering, p.timeOf, { x: (m) => p.g.keyX(m) / k, whiteLen: H / k, blackLen: (H * 0.62) / k }),
+    () => new AnimationBridge(p.events, p.fingering, p.timeOf, { x: (m) => p.g.keyX(m) / k, whiteLen: H / k, blackLen: (H * 0.62) / k, lo: p.g.whites[0], hi: p.g.whites[p.g.whites.length - 1] }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [p.events, p.fingering, p.timeKey, p.g.width, H, p.g.whites[0]],
   );

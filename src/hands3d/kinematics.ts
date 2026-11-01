@@ -88,7 +88,7 @@ export function fingerLocal(f: FingerDef, p: FingerParams): [Q, Q, Q] {
   const ax = flexAxis(f);
   if (f.id === 1) {
     const d = dirOf(f);
-    const meta = qMul(qMul(qAxis(Z, -p[0]), qAxis(ax, p[1])), qAxis(d, -(p[0] * 0.35 + p[1] * 0.45))); // opposition roll
+    const meta = qMul(qMul(qAxis(Z, -p[0]), qAxis(ax, p[1])), qAxis(d, -(p[0] * 0.2 + p[1] * 0.3))); // opposition roll
     return [meta, qAxis(ax, p[2]), qAxis(ax, p[2] * LIMITS.thumbIpCoupling)];
   }
   return [qMul(qAxis(Z, -p[0]), qAxis(ax, p[1])), qAxis(ax, p[2]), qAxis(ax, p[2] * LIMITS.dipCoupling)];

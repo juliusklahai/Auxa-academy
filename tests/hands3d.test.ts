@@ -166,3 +166,26 @@ describe('MusicAnimationBridge + HandRig', () => {
     expect(x1 - x0).toBeLessThan(100);
   });
 });
+
+describe('Keyboard sizes and an idle hand', () => {
+  it('fixed sizes keep their key count and centre on the music', async () => {
+    const { keyboardRange } = await import('../src/ui/Piano');
+    const count = ([a, b]: [number, number]) => b - a + 1;
+    expect(count(keyboardRange(60, 72, 25))).toBe(25);
+    expect(keyboardRange(60, 72, 88)).toEqual([21, 108]);
+    expect(count(keyboardRange(40, 80, 61))).toBe(61);
+    const [a, b] = keyboardRange(72, 84, 25); expect(a <= 72 && b >= 84).toBe(true);
+    // auto: adds octaves while keys would be wider than the limit
+    const [l, h] = keyboardRange(60, 72, 'auto', 1300, 56);
+    let w = 0; for (let m = l; m <= h; m++) if (!isBlackKey(m)) w++;
+    expect(1300 / w).toBeLessThanOrEqual(56);
+  });
+  it('a hand with no notes rests beside the other hand, inside the keyboard', () => {
+    const br = new AnimationBridge([{ pitches: [60, 64, 67], beat: 0, beats: 2, hand: 'RH' }], [[1, 3, 5]], (b) => b * 0.5, { ...geo, lo: 36, hi: 84 });
+    expect(br.present.LH).toBe(true);
+    expect(br.idle.LH).toBe(true);
+    const x = -br.handAt('LH', 0).x; // mirrored model space back to keyboard mm
+    expect(x).toBeLessThan(keyX(60) - 23.5 * 3);
+    expect(x).toBeGreaterThan(keyX(36));
+  });
+});

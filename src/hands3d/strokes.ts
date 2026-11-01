@@ -69,9 +69,6 @@ export function buildStrokes(): Stroke[] {
     const cut = g[0].map((p, k) => { const n = nail.normal[0][k]; return projectToSurface(add(add(p, scl(n, 1.5)), scl(nrm(sub(g[0][k], g[1][k])), 1.6))); });
     S.push({ pts: cut, strength: 0.4, width: 0.7 });
   }
-  // thumb web (first dorsal interosseous) and thumb-base crease
-  S.push({ pts: lineOnSurface([-25, 86, 6], [-40, 52, 6], 4, 14, [-6, 4, 0]), strength: 0.4, width: 0.9 });
-  S.push({ pts: lineOnSurface([-42, 46, 2], [-18, 10, 4], 4, 12, [-4, 0, 0]), strength: 0.35, width: 0.9 });
   // wrist folds (dorsal) and the head of the ulna
   for (const [y, s] of [[-6, 0.4], [-13, 0.28]] as [number, number][]) S.push({ pts: lineOnSurface([-20, y, 10], [22, y + 2, 10], 6, 14, [0, 1.5, 0]), strength: s, width: 0.85 });
   // palmar creases (seen when the hand turns, hidden from straight above by the depth pre-pass)

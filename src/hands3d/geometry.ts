@@ -187,7 +187,7 @@ export function projectToSurface(p: V3): V3 {
 
 // ---------- skin weights ----------
 /** Position along a finger chain from its first joint, and the chain segment lengths. */
-function chainParam(p: V3, f: FingerDef): { u: number; L: number[] } {
+function chainParam(p: V3, f: FingerDef): { u: number; L: number[]; dist: number } {
   const pts: V3[] = [f.joints[0], f.joints[1], f.joints[2], f.joints[3]];
   const L = segLens(f);
   let best = Infinity, bu = 0, acc = 0;
@@ -201,7 +201,7 @@ function chainParam(p: V3, f: FingerDef): { u: number; L: number[] } {
     acc += L[s];
     t = 0;
   }
-  return { u: bu, L };
+  return { u: bu, L, dist: best };
 }
 
 /** Up to 4 (bone, weight) pairs for a point on the hand (bind pose). */
@@ -210,25 +210,29 @@ export function skinWeights(p: V3, part: number): [number[], number[]] {
   const add = (b: number, x: number) => { if (x > 1e-4) w.set(b, (w.get(b) ?? 0) + x); };
   // forearm / palm
   const forearm = smoothstep(14, -14, p[1]);
-  if (part === 0) {
-    add(0, forearm);
-    let palm = 1 - forearm;
-    // thenar region follows the thumb metacarpal
+  if (part === 0 || part === 1) {
+    // The thumb and the palm share ONE continuous weight field (no switch at the part border), so the
+    // thenar region and the thumb base bend together without a seam when the thumb moves.
     const th = FINGERS[0];
-    const { u } = chainParam(p, th);
-    const dx = Math.hypot(p[0] - th.joints[0][0] - (th.joints[1][0] - th.joints[0][0]) * clamp(u / 38, 0, 1), p[1] - th.joints[0][1] - (th.joints[1][1] - th.joints[0][1]) * clamp(u / 38, 0, 1));
-    const thenar = (1 - smoothstep(9, 19, dx)) * smoothstep(-6, 12, u) * 0.85 * palm;
-    add(2, thenar);
-    palm -= thenar;
-    add(1, palm);
+    const { u, L, dist } = chainParam(p, th);
+    const near = 1 - smoothstep(13, 23, dist);
+    const s0 = smoothstep(-8, 16, u) * near;
+    const s1 = smoothstep(L[0] - 5, L[0] + 5, u) * near;
+    const s2 = smoothstep(L[0] + L[1] - 4, L[0] + L[1] + 4, u) * near;
+    const base = 1 - s0;
+    add(0, base * forearm);
+    add(1, base * (1 - forearm));
+    add(2, s0 - s1);
+    add(3, s1 - s2);
+    add(4, s2);
   } else {
     const f = FINGERS[part - 1];
     const { u, L } = chainParam(p, f);
     const b0 = chainStart(part);
-    const s0 = f.id === 1 ? smoothstep(-6, 10, u) : smoothstep(-8, 4, u);
+    const s0 = smoothstep(-8, 4, u);
     const s1 = smoothstep(L[0] - 4.5, L[0] + 4.5, u);
     const s2 = smoothstep(L[0] + L[1] - 3.5, L[0] + L[1] + 3.5, u);
-    add(f.id === 1 ? 1 : 1, (1 - s0) * (1 - forearm));
+    add(1, (1 - s0) * (1 - forearm));
     add(0, (1 - s0) * forearm);
     add(b0, s0 * (1 - s1));
     add(b0 + 1, s1 * (1 - s2));

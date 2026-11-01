@@ -81,7 +81,7 @@ export const ScoreView = forwardRef<ScoreViewHandle, Props>(function ScoreView({
         if (dead || !host.current) return;
         host.current.innerHTML = '';
         const mod = await import('opensheetmusicdisplay');
-        const o = new OpenSheetMusicDisplay(host.current, { autoResize: false, backend: 'svg', drawTitle: true, drawComposer: true, drawPartNames: true, followCursor: false, cursorsOptions: [{ type: 0, color: '#14b8a6', alpha: 0.55, follow: false }] });
+        const o = new OpenSheetMusicDisplay(host.current, { autoResize: false, backend: 'svg', drawTitle: false, drawSubtitle: false, drawComposer: false, drawLyricist: false, drawCredits: false, drawPartNames: true, followCursor: false, cursorsOptions: [{ type: 0, color: '#14b8a6', alpha: 0.55, follow: false }] });
         try { (o as unknown as { TransposeCalculator: unknown }).TransposeCalculator = new (mod as unknown as { TransposeCalculator: new () => unknown }).TransposeCalculator(); } catch { /* optional */ }
         await o.load(xml);
         if (dead) return;

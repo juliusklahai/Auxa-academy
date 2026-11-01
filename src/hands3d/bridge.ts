@@ -20,6 +20,9 @@ export interface KeyGeo {
   x: (midi: number) => number;
   whiteLen: number;   // visible white key length, mm
   blackLen: number;   // black key length, mm
+  /** lowest / highest key on screen (lets an idle hand rest where it can be seen) */
+  lo?: number;
+  hi?: number;
 }
 export const WHITE_MM = 23.5;
 export const BLACK_H = 12;     // black key top above the white key surface, mm
@@ -70,7 +73,21 @@ export class AnimationBridge {
       });
       this.keysX[h] = this.planHand(h);
     }
+    // a hand with nothing to play rests on the keys, clear of the other hand, so both are visible
+    for (const h of ['RH', 'LH'] as Hand[]) {
+      if (this.present[h]) continue;
+      const other = this.notes[h === 'RH' ? 'LH' : 'RH'].map((n) => n.midi);
+      if (!other.length) continue;
+      let mid = h === 'RH' ? Math.max(64, Math.max(...other) + 9) : Math.min(52, Math.min(...other) - 9);
+      if (geo.lo !== undefined && geo.hi !== undefined) mid = clamp(mid, geo.lo + 5, geo.hi - 5);
+      if (isBlackKey(mid)) mid -= 1;
+      if (h === 'RH' ? mid - 4 <= Math.max(...other) : mid + 4 >= Math.min(...other)) continue; // no room
+      this.keysX[h] = [{ t: -1, x: this.mx(h, mid), y: this.restLine, free: -1 }];
+      this.present[h] = true;
+      this.idle[h] = true;
+    }
   }
+  readonly idle: Record<Hand, boolean> = { RH: false, LH: false };
 
   /** Model-space x of a key for a hand (left hand mirrored). */
   mx(h: Hand, midi: number) { return h === 'RH' ? this.geo.x(midi) : -this.geo.x(midi); }

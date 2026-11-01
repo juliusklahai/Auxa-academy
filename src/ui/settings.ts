@@ -33,6 +33,12 @@ export interface AppSettings {
   handColor: 'white' | 'skin' | 'blue' | 'pink';
   handStroke: number;
   handsShow: 'both' | 'RH' | 'LH';
+  /** hands also play along while listening (My Music) */
+  handsListen: boolean;
+  /** on-screen keyboard: shown, size (drag handle) and number of keys */
+  keyboard: boolean;
+  kbScale: number;
+  kbKeys: 'auto' | 25 | 37 | 49 | 61 | 88;
 }
 
 const KEY = 'maestro.settings.v1';
@@ -40,6 +46,7 @@ const DEFAULTS: AppSettings = {
   labels: 'letters', fingers: true, keyHints: false, highContrast: false, a4: 440, volume: 0.8, metronomeVolume: 0.6,
   latencyMs: 60, noiseGate: 0.012, micSensitivity: 0.85, wrongBeep: false, mistakePolicy: 'restart', hands: true, micMode: 'piano', voiceLow: 57, voiceHigh: 74, outputMode: 'headphones', latencyMode: 'smooth', micDeviceId: '', micInstrument: 'piano', autoFocus: true,
   handStyle: '3d', handOpacity: 0.8, handColor: 'white', handStroke: 1, handsShow: 'both',
+  handsListen: true, keyboard: true, kbScale: 1, kbKeys: 'auto',
 };
 
 const kv = browserKV();

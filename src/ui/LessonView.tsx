@@ -8,7 +8,7 @@ import { onLearnerNote } from '../input/bus';
 import { setExpected } from '../input/expect';
 import { mic, micHelp } from '../input/mic';
 import { midiIn } from '../input/midi';
-import { HandControls, HandsLayer, HANDS_MIN_ASPECT, handsBelow } from './HandsLayer';
+import { KeyboardArea } from './KeyboardArea';
 import { Icon } from './Icon';
 import { Piano, type KeyMark } from './Piano';
 import { bumpProgress, progress, setSettings, useProgressVersion, useSettings } from './settings';
@@ -375,14 +375,12 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
                 targets={() => { const c = clock.current; return c ? exercise.events.filter((e) => e.pitches.length).map((e) => ({ midi: e.pitches[0], startMs: c.t0 + e.beat * c.mspb, endMs: c.t0 + (e.beat + e.beats) * c.mspb - 40 })) : []; }} />
             </div>
           )}
-          <div className="card keys-card">
-            <Piano lo={lo} hi={hi} marks={marks} labels={labels} showKeyHints={settings.keyHints} height={exercise.voice ? 120 : fm.focus ? 200 : 180} scrollTo={curEv?.pitches[0] ?? allPitches[0]}
-              below={settings.hands && !exercise.voice ? handsBelow : 0} minAspect={settings.hands && !exercise.voice && settings.handStyle === '3d' ? HANDS_MIN_ASPECT : 0}
-              overlay={settings.hands && !exercise.voice ? (g) => <HandsLayer g={g} events={exercise.events} exerciseId={exercise.id} timeOf={(b) => (b * msPerBeat(bpm)) / 1000} timeKey={bpm}
-                clock={() => { const c = clock.current; return c ? (performance.now() - c.t0) / 1000 * (c.mspb / msPerBeat(bpm)) : null; }}
-                index={handIdx} active={handsActive} demo={exercise.mode === 'wait' && s.state === 'LISTENING' && reveal && demoIdx === null} correction={fix && exercise.mode === 'wait'} /> : undefined} />
-            {!exercise.voice && <HandControls events={exercise.events} exerciseId={exercise.id} index={handIdx} />}
-          </div>
+          <KeyboardArea lo={lo} hi={hi} marks={marks} labels={labels} showKeyHints={settings.keyHints} baseHeight={exercise.voice ? 120 : fm.focus ? 200 : 180} scrollTo={curEv?.pitches[0] ?? allPitches[0]}
+            hands={exercise.voice ? undefined : {
+              events: exercise.events, exerciseId: exercise.id, timeOf: (b) => (b * msPerBeat(bpm)) / 1000, timeKey: bpm,
+              clock: () => { const c = clock.current; return c ? (performance.now() - c.t0) / 1000 : null; },
+              index: handIdx, active: handsActive, demo: exercise.mode === 'wait' && s.state === 'LISTENING' && reveal && demoIdx === null, correction: fix && exercise.mode === 'wait',
+            }} />
         </div>
         <aside className="side">
           <FloatHead title="Teacher" onClose={fm.closePanel} />

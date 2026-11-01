@@ -19,10 +19,10 @@ import { buildPractice, rangeQ, toSrcQ, type PracticeBuild } from '../musicxml/p
 import { Timeline } from '../musicxml/tempo';
 import { makeBand, BAND_KEYS, type BandParts } from '../musicxml/band';
 import { transposedKey } from './keyname';
-import { HandControls, HandsLayer, HANDS_MIN_ASPECT, handsBelow } from './HandsLayer';
+import { KeyboardArea } from './KeyboardArea';
 import { Icon } from './Icon';
 import { icon, Metric, ReportCard } from './LessonView';
-import { Piano, type KeyMark } from './Piano';
+import type { KeyMark } from './Piano';
 import { PitchRoll } from './PitchRoll';
 import { ScoreView, noteKey, type ScoreViewHandle } from './ScoreView';
 import { useFocusMode } from './focus';
@@ -121,6 +121,19 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
   const speakers = settings.outputMode === 'speakers';
   const accVol = (k: string) => (mix[k]?.vol ?? 0.8) * (speakers && (mic.active || sing) ? 0.55 : 0.85);
   const tempos = score?.tempoMap.map((t) => t.bpm) ?? [];
+  const handBuild = useMemo(() => {
+    if (!score || sing) return null;
+    const parts = new Set([...targets].map((k) => k.split('|')[0]));
+    const pianoParts = score.parts.filter((p) => p.staves > 1 && parts.has(p.id)).map((p) => p.id);
+    const keys = pianoParts.length ? score.tracks.filter((t) => pianoParts.includes(t.partId)).map((t) => t.key) : [...targets];
+    if (!keys.length) return null;
+    try {
+      const r = buildPractice(score, { tracks: keys, fromMeasure: from, toMeasure: to, mode: 'timed', transpose: tr }, bpm);
+      return r.exercise.events.length ? r : null;
+    } catch { return null; }
+  }, [score, targets, from, to, tr, bpm, sing]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [fix, setFix] = useState(false);
+  const fixTimer = useRef(0);
   const bandNotes = useMemo(() => (score && (band.pad || band.bass || band.melody) ? makeBand(score, band) : []), [score, band]);
   const allNotes = useMemo(() => (score ? [...score.notes, ...bandNotes].sort((a, b) => a.startQ - b.startQ) : []), [score, bandNotes]);
 
@@ -327,6 +340,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
     const s = session.current, b = build.current;
     if (!fb || !s || !b || fb.kind === 'ignored' || (fb.kind === 'progress' && !fb.message)) { force((x) => x + 1); return; }
     pushFeed(fb.kind, fb.message);
+    if (fb.kind === 'wrong') { setFix(true); window.clearTimeout(fixTimer.current); fixTimer.current = window.setTimeout(() => setFix(false), 2600); }
     if (mode === 'wait' && (fb.kind === 'correct' || fb.kind === 'partial') && fb.eventIndex !== undefined) {
       // play the other voices for this moment, then move the cursor on
       if (accomp && score) {
@@ -384,7 +398,19 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
 
   // keyboard + hands for the practiced part
   const curIdx = s ? (mode === 'wait' ? Math.max(0, s.currentIndex()) : cursorIdx) : 0;
-  const targetPitches = score ? score.notes.filter((n) => targets.has(n.track)).map((n) => n.midi + tr) : [];
+  // The guide hands play every staff of the piano part (so the other hand plays its accompaniment
+  // while you practice one hand), and they also play during Listen.
+  const hb = handBuild;
+  const handIdx = (() => {
+    if (!hb || !b || !s || mode !== 'wait') return 0;
+    const ev = b.exercise.events[curIdx];
+    if (!ev) return 0;
+    const q = b.startQ + ev.beat - hb.startQ;
+    let k = 0;
+    hb.exercise.events.forEach((e, i) => { if (e.beat <= q + 1e-6) k = i; });
+    return k;
+  })();
+  const targetPitches = score ? [...score.notes.filter((n) => targets.has(n.track)).map((n) => n.midi + tr), ...(hb ? hb.exercise.events.flatMap((e) => e.pitches) : [])] : [];
   const lo = targetPitches.length ? Math.max(21, Math.floor((Math.min(...targetPitches) - 3) / 12) * 12) : 48;
   const hi = targetPitches.length ? Math.min(108, Math.ceil((Math.max(...targetPitches) + 3) / 12) * 12) : 84;
   const marks = new Map<number, KeyMark>();
@@ -477,16 +503,16 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
                 targets={() => { const c = clock.current, bb = build.current; return c && bb && mode === 'timed' ? bb.exercise.events.map((e) => ({ midi: e.pitches[0], startMs: c.t0 + c.tl.msAt(bb.startQ + e.beat), endMs: c.t0 + c.tl.msAt(bb.startQ + e.beat + e.beats) - 40 })) : []; }} />
             </div>
           ) : (
-            <div className="card keys-card">
-              <Piano lo={lo} hi={hi} marks={marks} labels={settings.labels} height={170} scrollTo={curEv?.pitches[0] ?? targetPitches[0]}
-                below={settings.hands && b ? handsBelow : 0} minAspect={settings.hands && b && settings.handStyle === '3d' ? HANDS_MIN_ASPECT : 0}
-                overlay={settings.hands && b ? (g) => <HandsLayer g={g} events={b.exercise.events} exerciseId={b.exercise.id}
-                  timeOf={(beat) => { const tl = clock.current?.tl ?? tlFor(b.startQ); return (tl.msAt(b.startQ + beat) - tl.msAt(b.startQ)) / 1000; }}
-                  timeKey={`${tempoPct}|${followTempo}|${b.startQ}`}
-                  clock={() => { const c = clock.current; if (!c || run !== 'practice' || mode !== 'timed') return null; return (performance.now() - c.t0 - c.tl.msAt(b.startQ)) / 1000; }}
-                  index={curIdx} active={!!s && s.state === 'LISTENING'} demo={!!s && s.state === 'LISTENING' && mode === 'wait'} /> : undefined} />
-              {b && <HandControls events={b.exercise.events} exerciseId={b.exercise.id} index={curIdx} />}
-            </div>
+            <KeyboardArea lo={lo} hi={hi} marks={marks} labels={settings.labels} baseHeight={170} scrollTo={curEv?.pitches[0] ?? targetPitches[0]}
+              handsVisible={run !== 'listen' || settings.handsListen}
+              extra={<button className={`kb-btn ${settings.handsListen ? 'on' : ''}`} onClick={() => setSettings({ handsListen: !settings.handsListen })} title="Show the hands playing while you listen"><Icon name="wave" size={13} /><span>Hands in Listen {settings.handsListen ? 'on' : 'off'}</span></button>}
+              hands={hb ? {
+                events: hb.exercise.events, exerciseId: hb.exercise.id,
+                timeOf: (beat) => { const tl = clock.current?.tl ?? tlFor(hb.startQ); return (tl.msAt(hb.startQ + beat) - tl.msAt(hb.startQ)) / 1000; },
+                timeKey: `${tempoPct}|${followTempo}|${hb.startQ}|${run}`,
+                clock: () => { const c = clock.current; if (!c || !(run === 'listen' || (run === 'practice' && mode === 'timed'))) return null; return (performance.now() - c.t0 - (c.tl.msAt(hb.startQ) - c.tl.msAt(c.q0))) / 1000; },
+                index: handIdx, active: run !== 'idle', demo: !!s && run === 'practice' && s.state === 'LISTENING' && mode === 'wait', correction: fix && mode === 'wait' && run === 'practice',
+              } : undefined} />
           )}
         </div>
         <aside className="side">
@@ -576,7 +602,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
       <div className="dock">
         <button className={`dock-btn lime ${run === 'practice' ? 'live' : ''}`} onClick={run === 'practice' ? stop : () => { if (settings.autoFocus && !fm.focus) fm.enter(); void practice(); }} disabled={!targets.size} aria-label={run === 'practice' ? 'Stop practicing' : 'Practice'}><Icon name={run === 'practice' ? 'pause' : 'play'} size={18} /></button>
         <span className="dock-label">{run === 'practice' ? 'Stop' : 'Practice'}</span>
-        <button className={`dock-btn ${run === 'listen' ? 'on' : ''}`} onClick={run === 'listen' ? stop : listen} aria-label={run === 'listen' ? 'Stop playback' : 'Listen'}><Icon name={run === 'listen' ? 'pause' : 'wave'} size={17} /></button>
+        <button className={`dock-btn ${run === 'listen' ? 'on' : ''}`} onClick={run === 'listen' ? stop : () => { if (settings.autoFocus && settings.hands && settings.handsListen && !fm.focus) fm.enter(); listen(); }} aria-label={run === 'listen' ? 'Stop playback' : 'Listen'}><Icon name={run === 'listen' ? 'pause' : 'wave'} size={17} /></button>
         <span className="dock-label">{run === 'listen' ? 'Stop' : 'Listen'}</span>
         <span className="dock-sep" />
         <div className="dock-group">
