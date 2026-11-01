@@ -115,20 +115,18 @@ function PathTimeline({ lessons, openLesson }: { lessons: Lesson[]; openLesson: 
 function PracticeLog() {
   const days = Array.from({ length: 14 }, (_, i) => Date.now() - (13 - i) * 86400000);
   const mins = days.map((t) => Math.round((progress.data.practiceLog[dayKey(t)] ?? 0) / 60));
-  const max = Math.max(10, ...mins);
   const active = mins.filter((m) => m > 0).length;
   const total = mins.reduce((a, b) => a + b, 0);
   return (
-    <div className="card">
-      <div className="card-head"><b>Minutes practiced, last 14 days</b><span className="muted small">{active} of 14 days · {Math.floor(total / 60)}h {total % 60}m</span></div>
-      <div className="log">
+    <div className="days-strip" role="list" aria-label="Practice days, last 14 days">
+      <div className="days-head"><span className="ic"><Icon name="clock" size={18} /></span><div><b>Last 14 days</b><small>{active} of 14 days · {Math.floor(total / 60)}h {total % 60}m</small></div></div>
+      <div className="days">
         {days.map((t, i) => {
           const d = new Date(t);
           return (
-            <div key={i} className={`log-day ${i === 13 ? 'today' : ''}`} title={`${d.toDateString()}: ${mins[i]} min`}>
-              <span className="log-val">{mins[i] || ''}</span>
-              <div className="log-bar"><i style={{ height: `${(mins[i] / max) * 100}%` }} /></div>
-              <small>{i === 13 ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 2)}</small>
+            <div key={i} role="listitem" className={`day ${mins[i] ? 'done' : ''} ${i === 13 ? 'today' : ''}`} title={`${d.toDateString()}: ${mins[i]} min`}>
+              <i><Icon name={mins[i] ? 'check' : 'note'} size={13} /></i>
+              <small>{d.toLocaleDateString('en-US', { weekday: 'short' })[0]}{d.getDate()}</small>
             </div>
           );
         })}

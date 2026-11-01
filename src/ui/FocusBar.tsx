@@ -7,10 +7,11 @@ export function FocusBar({ title, panel, onPanel, onExit, infoLabel = 'Info', se
   return (
     <div className="focus-bar" role="toolbar" aria-label="Practice view controls">
       <span className="focus-title">{title}</span>
-      <span className="focus-fill" />
+      <div className="focus-actions">
       {settingsLabel && <button className={`fbtn ${panel === 'settings' ? 'on' : ''}`} onClick={() => onPanel('settings')}><Icon name="sliders" size={15} /> {settingsLabel}</button>}
       <button className={`fbtn ${panel === 'info' ? 'on' : ''}`} onClick={() => onPanel('info')}><Icon name="doc" size={15} /> {infoLabel}</button>
       <button className="fbtn exit" onClick={onExit} title="Leave full screen (Esc)"><Icon name="close" size={15} /> Exit <kbd>Esc</kbd></button>
+      </div>
     </div>
   );
 }

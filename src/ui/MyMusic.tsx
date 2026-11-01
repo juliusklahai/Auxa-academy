@@ -133,6 +133,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
     } catch { return null; }
   }, [score, targets, from, to, tr, bpm, sing]); // eslint-disable-line react-hooks/exhaustive-deps
   const [fix, setFix] = useState(false);
+  const [more, setMore] = useState(false);
   const fixTimer = useRef(0);
   const bandNotes = useMemo(() => (score && (band.pad || band.bass || band.melody) ? makeBand(score, band) : []), [score, band]);
   const allNotes = useMemo(() => (score ? [...score.notes, ...bandNotes].sort((a, b) => a.startQ - b.startQ) : []), [score, bandNotes]);
@@ -599,32 +600,37 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
               </div>}
         </aside>
       </section>
-      <div className="dock">
+      <div className="dock has-more">
         <button className={`dock-btn lime ${run === 'practice' ? 'live' : ''}`} onClick={run === 'practice' ? stop : () => { if (settings.autoFocus && !fm.focus) fm.enter(); void practice(); }} disabled={!targets.size} aria-label={run === 'practice' ? 'Stop practicing' : 'Practice'}><Icon name={run === 'practice' ? 'pause' : 'play'} size={18} /></button>
         <span className="dock-label">{run === 'practice' ? 'Stop' : 'Practice'}</span>
         <button className={`dock-btn ${run === 'listen' ? 'on' : ''}`} onClick={run === 'listen' ? stop : () => { if (settings.autoFocus && settings.hands && settings.handsListen && !fm.focus) fm.enter(); listen(); }} aria-label={run === 'listen' ? 'Stop playback' : 'Listen'}><Icon name={run === 'listen' ? 'pause' : 'wave'} size={17} /></button>
         <span className="dock-label">{run === 'listen' ? 'Stop' : 'Listen'}</span>
         <span className="dock-sep" />
-        <div className="dock-group">
+        <button className={`dock-btn ${more ? 'on' : ''}`} onClick={() => setMore(!more)} aria-expanded={more} aria-label="Tempo, bars, key, loop and click"><Icon name="sliders" size={16} /></button>
+        <span className="dock-summary">{Math.round(bpm)} bpm · bars {from + 1}–{to + 1}{tr ? ` · ${tr > 0 ? '+' : ''}${tr}` : ''}{loop ? ' · loop' : ''}</span>
+        <div className={`dock-more ${more ? 'open' : ''}`}>
+        <div className="row"><div className="dock-group">
           {[50, 75, 100].map((p) => <button key={p} className={`dock-chip ${tempoPct === p ? 'on' : ''}`} disabled={run !== 'idle'} onClick={() => setTempoPct(p)}>{p}%</button>)}
           <input className="dock-range" type="range" min={20} max={150} step={5} value={tempoPct} disabled={run !== 'idle'} onChange={(e) => setTempoPct(+e.target.value)} aria-label="Tempo percent" />
           <span className="dock-label">{Math.round(bpm)} bpm</span>
         </div>
-        <span className="dock-sep" />
+        </div><div className="row">
         <span className="dock-label">Bars</span>
         <select className="dock-select" value={from} disabled={run !== 'idle'} onChange={(e) => { const v = +e.target.value; setFrom(v); if (to < v) setTo(v); }} aria-label="From measure">{measOpts}</select>
         <span className="dock-label">to</span>
         <select className="dock-select" value={to} disabled={run !== 'idle'} onChange={(e) => { const v = +e.target.value; setTo(v); if (from > v) setFrom(v); }} aria-label="To measure">{measOpts}</select>
-        <span className="dock-sep" />
+        </div><div className="row">
         <span className="dock-label">Key</span>
         <button className="dock-btn sm" disabled={run !== 'idle' || tr <= -12} onClick={() => setTr(tr - 1)} aria-label="Transpose down a semitone">−</button>
         <span className="dock-label keylabel" title="Transpose for playback, practice and the notation">{tr === 0 ? 'Written' : `${tr > 0 ? '+' : ''}${tr} · ${transposedKey(score.keyFifths, tr).replace(' major', '')}`}</span>
         <button className="dock-btn sm" disabled={run !== 'idle' || tr >= 12} onClick={() => setTr(tr + 1)} aria-label="Transpose up a semitone">+</button>
-        <span className="dock-sep" />
+        </div><div className="row">
         <button className={`dock-btn ${loop ? 'on' : ''}`} onClick={() => setLoop(!loop)} aria-label="Loop"><Icon name="restart" size={16} /></button>
         <span className="dock-label">Loop</span>
         <button className={`dock-btn ${metro ? 'on' : ''}`} onClick={() => setMetro(!metro)} aria-label="Metronome"><Icon name="metro" size={16} /></button>
         <span className="dock-label">Click</span>
+          </div>
+        </div>
         <span className="dock-fill" />
         <span className="dock-status"><Icon name={sing || input === 'Microphone' ? 'mic' : input === 'MIDI' ? 'midi' : 'keys'} size={15} /> Input: {input}</span>
         <button className={`dock-btn ${fm.focus ? 'on' : ''}`} onClick={fm.toggle} aria-label={fm.focus ? 'Leave full screen (Esc)' : 'Full screen practice'} title={fm.focus ? 'Leave full screen (Esc)' : 'Full screen practice'}><Icon name={fm.focus ? 'close' : 'expand'} size={16} /></button>

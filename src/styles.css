@@ -431,7 +431,8 @@ select.inst { font-size: 11.5px; padding: 2px 6px; border-radius: 8px; box-shado
 .practice-root.focus .focus-bar { display: flex; position: fixed; top: 10px; left: 14px; right: 14px; z-index: 220; gap: 8px; align-items: center; }
 .focus-title { font-weight: 600; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .focus-fill { flex: 1; }
-.fbtn { height: 38px; border-radius: 999px; border: 0; background: var(--white); color: var(--ink); padding: 0 14px; display: inline-flex; gap: 6px; align-items: center; font-weight: 600; font-size: 13px; box-shadow: 0 4px 14px rgba(0,0,0,.12); flex: none; }
+.fbtn { height: 38px; border-radius: 999px; border: 0; background: var(--white); color: var(--ink); padding: 0 14px; display: inline-flex; gap: 6px; align-items: center; font-weight: 600; font-size: 13px; box-shadow: 0 4px 14px rgba(0,0,0,.12); flex: none; white-space: nowrap; width: auto; }
+.focus-actions { display: flex; gap: 8px; align-items: center; margin: 0 auto; }
 .fbtn.on { background: var(--ink); color: var(--lime); }
 .fbtn.exit { background: var(--ink); color: #fff; }
 .fbtn kbd { font: inherit; font-size: 10px; opacity: .7; border: 1px solid rgba(255,255,255,.35); border-radius: 5px; padding: 0 4px; }
@@ -444,7 +445,8 @@ select.inst { font-size: 11.5px; padding: 2px 6px; border-radius: 8px; box-shado
 .fclose { width: 30px; height: 30px; border-radius: 50%; border: 0; background: #e8e7e1; display: grid; place-items: center; }
 .practice-root.focus .side .card { box-shadow: none; }
 .practice-root.focus .feed { min-height: 0; }
-@media (max-width: 820px) { .practice-root.focus { padding: 54px 6px 6px; } .focus-title { display: none; } .fbtn { padding: 0 11px; } }
+@media (max-width: 820px) { .practice-root.focus { padding: 54px 6px 6px; } .focus-title { display: none; } .fbtn { padding: 0 12px; } }
+@media (max-width: 420px) { .fbtn kbd { display: none; } }
 
 .practice-root:not(.focus) { display: flex; flex-direction: column; flex: 1; }
 .practice-root:not(.focus) > .dock { margin-top: 18px; }
@@ -474,9 +476,9 @@ select.inst { font-size: 11.5px; padding: 2px 6px; border-radius: 8px; box-shado
 .hp-fing { display: grid; gap: 6px; border-top: 1px solid rgba(0,0,0,.08); padding-top: 8px; }
 .hp-note { display: flex; align-items: center; gap: 5px; }
 .hp-note b { width: 34px; } .hp-note small { width: 12px; color: var(--muted, #888); }
-.fbtn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); background: transparent; font-weight: 700; padding: 0; display: inline-grid; place-items: center; line-height: 1; }
-.fbtn.on { background: #1c1c1a; color: #fff; }
-.fbtn.own { box-shadow: 0 0 0 2px var(--lime); }
+.fing-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); background: transparent; font-weight: 700; padding: 0; display: inline-grid; place-items: center; line-height: 1; }
+.fing-btn.on { background: #1c1c1a; color: #fff; }
+.fing-btn.own { box-shadow: 0 0 0 2px var(--lime); }
 .link-btn { border: 0; background: none; padding: 0; text-align: left; text-decoration: underline; font-size: 12px; cursor: pointer; }
 
 /* keyboard toolbar: drag handle, size, hands, hide */
@@ -489,3 +491,23 @@ select.inst { font-size: 11.5px; padding: 2px 6px; border-radius: 8px; box-shado
 .kb-btn { display: inline-flex; align-items: center; gap: 5px; border: 0; border-radius: 999px; padding: 6px 11px; font-size: 12px; font-weight: 700; background: rgba(0,0,0,.06); cursor: pointer; }
 .keys-card.kb-hidden { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; }
 @media (max-width: 520px) { .kb-btn span { display: none; } .kb-size { font-size: 0; } .kb-size select { font-size: 12px; } }
+
+/* My Music dock: secondary controls live in a floating panel */
+.dock.has-more { overflow: visible; }
+.dock-more { display: none; position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%); width: max-content; max-width: calc(100vw - 24px); background: #383836; border-radius: 22px; padding: 12px 14px; box-shadow: 0 18px 40px rgba(0,0,0,.35); flex-wrap: wrap; align-items: center; gap: 9px 10px; z-index: 30; }
+.dock-more.open { display: flex; }
+.dock-more .row { display: flex; align-items: center; gap: 9px; flex-wrap: nowrap; }
+.dock-summary { font-size: 12px; color: #bebdb6; white-space: nowrap; }
+/* overview: practice days as circles */
+.days-strip { display: flex; align-items: center; gap: 12px; background: #383836; color: #eceae4; border-radius: var(--r-lg); padding: 10px 14px; overflow-x: auto; scrollbar-width: none; }
+.days-strip::-webkit-scrollbar { display: none; }
+.days-head { display: flex; align-items: center; gap: 10px; flex: none; padding-right: 12px; border-right: 1px solid #565653; }
+.days-head .ic { width: 42px; height: 42px; border-radius: 50%; background: #4d4d4a; display: grid; place-items: center; color: #fff; }
+.days-head b { font-weight: 600; font-size: 14px; display: block; } .days-head small { color: #a9a8a1; font-size: 11px; }
+.days { display: flex; gap: 8px; flex: 1; justify-content: space-between; min-width: max-content; }
+.day { display: grid; justify-items: center; gap: 4px; }
+.day i { width: 34px; height: 34px; border-radius: 50%; background: #4a4a47; display: grid; place-items: center; color: #8b8a84; box-shadow: inset 0 0 0 2px #2e2e2c; }
+.day.done i { background: #262624; color: var(--lime); box-shadow: inset 0 0 0 2px #1d1d1c; }
+.day.today i { box-shadow: 0 0 0 2px var(--lime); }
+.day small { font-size: 10px; color: #a9a8a1; }
+.day.today small { color: #fff; font-weight: 700; }

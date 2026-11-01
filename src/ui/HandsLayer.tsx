@@ -113,7 +113,7 @@ export function HandControls({ events, exerciseId, index }: { events: ScoreEvent
                 return (
                   <div key={i} className="hp-note">
                     <b>{midiToName(m)}</b><small>{handOfPitch(ev, m) === 'RH' ? 'R' : 'L'}</small>
-                    {[1, 2, 3, 4, 5].map((f) => <button key={f} className={`fbtn ${fingering[evIdx]?.[i] === f ? 'on' : ''} ${own === f ? 'own' : ''}`} onClick={() => { saveOverride(exerciseId, evIdx, i, own === f ? null : f); bumpFing(); }}>{f}</button>)}
+                    {[1, 2, 3, 4, 5].map((f) => <button key={f} className={`fing-btn ${fingering[evIdx]?.[i] === f ? 'on' : ''} ${own === f ? 'own' : ''}`} onClick={() => { saveOverride(exerciseId, evIdx, i, own === f ? null : f); bumpFing(); }}>{f}</button>)}
                   </div>
                 );
               })}
