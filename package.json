@@ -10,7 +10,8 @@
     "build:single": "vite build --mode single",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:hand": "esbuild tools/build-hand.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/build-hand.mjs && node node_modules/.cache/build-hand.mjs"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "^5.3.0",
@@ -18,11 +19,13 @@
     "opensheetmusicdisplay": "^2.2.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "three": "^0.171.0",
     "vexflow": "^4.2.5"
   },
   "devDependencies": {
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
+    "@types/three": "^0.171.0",
     "@vitejs/plugin-react": "^4.7.0",
     "@xmldom/xmldom": "^0.9.12",
     "typescript": "^7.0.2",

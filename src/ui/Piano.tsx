@@ -16,14 +16,16 @@ interface Props {
   scrollTo?: number;
   overlay?: (g: PianoGeom) => ReactNode;
   minKeyWidth?: number;
-  /** extra space under the keys (for the guide hands' palms) */
-  below?: number;
+  /** extra space under the keys (for the guide hands' palms); may depend on the key width */
+  below?: number | ((whiteW: number) => number);
+  /** keep keys at least this many key-widths long (real keys are ~6.4x longer than wide) */
+  minAspect?: number;
 }
 
 const MARK_TEXT: Record<KeyMark, string> = { target: '', correct: '✓', wrong: '✗', partial: '~', played: '', demo: '', show: '' };
 
 /** Interactive keyboard. Mouse, touch and pen via pointer events; correct white/black key geometry. */
-export function Piano({ lo, hi, marks, labels = 'letters', fingers, showKeyHints, height = 170, scrollTo, overlay, minKeyWidth = 34, below = 0 }: Props) {
+export function Piano({ lo, hi, marks, labels = 'letters', fingers, showKeyHints, height = 170, scrollTo, overlay, minKeyWidth = 34, below: belowProp = 0, minAspect = 0 }: Props) {
   const wrap = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
   const pressed = useRef(new Map<number, number>());
@@ -68,6 +70,8 @@ export function Piano({ lo, hi, marks, labels = 'letters', fingers, showKeyHints
   };
 
   const whiteW = width / whites.length;
+  const below = typeof belowProp === 'function' ? (width ? belowProp(whiteW) : 0) : belowProp;
+  if (minAspect && whiteW) height = Math.round(Math.max(height, Math.min(height * 1.6, whiteW * minAspect)));
   const keyX = (m: number) => {
     if (!isBlackKey(m)) return (whites.indexOf(m) + 0.5) * whiteW;
     return (whites.indexOf(m - 1) + 1) * whiteW;

@@ -32,3 +32,8 @@ Mic and MIDI require a secure context: `https://`, `http://localhost`, or (in Ch
 ## Test coverage
 
 `npm test` runs 77 tests: polyphonic detection on synthesized piano chords (including wrong-note-in-chord, held notes, repeated notes, onset timing and noise),: note math, YIN on synthesized harmonic tones (C3 to C6, with noise, intonation in cents), low confidence for noise, onset de-duplication, spec tests 1, 2, 3 (including chord grouping), 4, 7, 8, 9, 10, rubric redistribution and spaced repetition. Hardware tests (real piano, real MIDI keyboard, real singing, latency measurement) must be run manually; use Settings for live verification.
+
+## 3D hands
+- The hand model is procedurally generated from anatomical measurements, not sculpted by an artist. The renderer only needs a skinned mesh with the same 17-bone layout, so a professionally sculpted rigged GLB can replace `handData.ts` later without touching the IK, fingering or animation code.
+- Seen straight from above, a thumb passing under the hand is (correctly) hidden by the palm; its finger number label still shows where it plays.
+- Fingering suggestions follow standard teaching rules; unusual passages may need a learner correction in the Hands panel.

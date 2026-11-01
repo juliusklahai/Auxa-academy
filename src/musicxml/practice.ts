@@ -48,9 +48,13 @@ export function buildPractice(score: Score, spec: PracticeSpec, tempoBpm: number
     eventNotes.push(g);
     const pitches = [...new Set(g.map((n) => n.midi + tr))].sort((a, b) => a - b);
     const staves = new Set(g.map((n) => staffOf(n.track)));
+    const noteOf = (p: number) => g.find((n) => n.midi + tr === p)!;
+    const fingers = pitches.map((p) => noteOf(p).finger ?? 0);
     return {
       pitches, beat: g[0].startQ - q0, beats: Math.min(...g.map((n) => n.durQ)),
       hand: pianoLike && staves.size === 1 ? (staves.has(1) ? 'RH' : 'LH') : undefined,
+      hands: pianoLike && staves.size > 1 ? pitches.map((p) => (staffOf(noteOf(p).track) === 1 ? 'RH' : 'LH')) : undefined,
+      fingers: fingers.some((f) => f) ? fingers : undefined,
     };
   });
   const m0 = score.measures[spec.fromMeasure];

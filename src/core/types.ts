@@ -18,7 +18,8 @@ export interface ScoreEvent {
   beat: number;           // start position in beats from exercise start (0-based)
   beats: number;          // written duration in beats
   hand?: Hand;
-  fingers?: number[];     // suggested fingering, parallel to pitches
+  fingers?: number[];     // suggested fingering, parallel to pitches (0 = none)
+  hands?: Hand[];         // per-pitch hand when one event has notes for both hands
 }
 
 export type AssessMode = 'wait' | 'timed';

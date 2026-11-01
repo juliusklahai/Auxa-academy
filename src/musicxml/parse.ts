@@ -15,6 +15,8 @@ export interface ScoreNote {
   measure: number;    // index into Score.measures (performance order)
   lyric?: string;
   grace?: boolean;
+  /** written fingering (1 = thumb), from <technical><fingering> */
+  finger?: number;
 }
 
 export interface MeasureInfo { srcIndex: number; number: string; startQ: number; srcStartQ: number; lengthQ: number; beats: number; beatType: number; tempo: number }
@@ -66,7 +68,7 @@ export function musicXmlText(bytes: Uint8Array, filename = ''): string {
   return strFromU8(files[path]);
 }
 
-interface RawNote { midi: number; startQ: number; durQ: number; track: string; tieStart: boolean; tieStop: boolean; srcMeasure: number; lyric?: string; grace: boolean }
+interface RawNote { midi: number; startQ: number; durQ: number; track: string; tieStart: boolean; tieStop: boolean; srcMeasure: number; lyric?: string; grace: boolean; finger?: number }
 
 export function parseMusicXml(doc: Document, xml = ''): Score {
   const root = doc.documentElement;
@@ -193,11 +195,14 @@ export function parseMusicXml(doc: Document, xml = ''): Score {
           const midi = (num(txt(pitch, 'octave'), 4) + 1) * 12 + STEP[step] + Math.round(num(txt(pitch, 'alter'), 0)) + transposeChromatic;
           const ties = kids(c, 'tie').map((t) => t.getAttribute('type'));
           const lyricEl = kid(c, 'lyric');
+          const fingEl = c.getElementsByTagName('fingering')[0];
+          const fing = fingEl ? parseInt((fingEl.textContent ?? '').trim(), 10) : NaN;
           raw.push({
             midi, startQ: srcStarts[mi] + start, durQ: grace ? 0.125 : dur,
             track: `${pid}|${num(txt(c, 'staff'), 1)}|${txt(c, 'voice') ?? '1'}`,
             tieStart: ties.includes('start'), tieStop: ties.includes('stop'), srcMeasure: mi,
             lyric: lyricEl ? txt(lyricEl, 'text') : undefined, grace,
+            finger: fing >= 1 && fing <= 5 ? fing : undefined,
           });
         }
       }
@@ -266,7 +271,7 @@ export function parseMusicXml(doc: Document, xml = ''): Score {
   const notes: ScoreNote[] = [];
   measures.forEach((M, idx) => {
     for (const n of bySrc.get(M.srcIndex) ?? []) {
-      notes.push({ midi: n.midi, startQ: M.startQ + (n.startQ - M.srcStartQ), durQ: n.durQ, srcStartQ: n.startQ, track: n.track, measure: idx, lyric: n.lyric, grace: n.grace });
+      notes.push({ midi: n.midi, startQ: M.startQ + (n.startQ - M.srcStartQ), durQ: n.durQ, srcStartQ: n.startQ, track: n.track, measure: idx, lyric: n.lyric, grace: n.grace, finger: n.finger });
     }
   });
   notes.sort((a, b) => a.startQ - b.startQ || a.midi - b.midi);

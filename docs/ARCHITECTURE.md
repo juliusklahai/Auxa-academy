@@ -109,3 +109,21 @@ create table scores (            -- uploaded MusicXML (Phase 3), file in object 
   created_at timestamptz default now()
 );
 ```
+
+## 3D virtual pianist (src/hands3d)
+
+Replaces the 2D line-art hands (still available as "Line art" in the Hands panel and as the automatic fallback when WebGL is missing).
+
+| Module | File | Role |
+|---|---|---|
+| HandGeometry | `anatomy.ts`, `geometry.ts` | Adult hand proportions (mm). One continuous surface from a smooth signed-distance model (palm, thenar/hypothenar, knuckles, tapered fingers, finger pads, wrist) polygonised with Surface Nets, relaxed and projected back onto the surface. 17-bone skin weights with smooth joint blends. Curved nail plates. |
+| AnatomicalStrokes | `strokes.ts` | Joint and knuckle creases, nail outlines and cuticles, extensor tendons, thumb web, wrist folds, palm creases. Every stroke point lies on the surface and carries the skin weights of the mesh under it, so strokes bend with the fingers. |
+| (build step) | `tools/build-hand.ts` → `handData.ts` | Precomputes mesh, nails and strokes (quantised, deflated, ~200 KB) so phones never run the 2 s extraction. `npm run build:hand`. |
+| HandMaterial + renderer | `render.ts` | Three.js, orthographic top-down camera, 1 unit = 1 CSS px over the DOM keyboard. Passes: depth pre-pass (front-most surface only, no X-ray), skinned inverted-hull contour, matte semi-transparent skin with light hatching and skin-weighted finger highlight, nails, stroke ribbons. Opacity, colour and line weight are live settings. |
+| HandRig + FingerIK | `kinematics.ts` | Bone hierarchy, joint limits, DIP/PIP and thumb IP coupling, damped-least-squares IK per finger (3 DOF) warm-started each frame. Left hand = mirrored right-hand model. |
+| FingeringPlanner | `fingering.ts` | Dynamic programming over note groups (thumb-under, finger-over, spans, black-key thumb, chord shapes). MusicXML `<fingering>` and learner corrections (localStorage `maestro.fingering.<exerciseId>`) are hard constraints. |
+| MusicAnimationBridge | `bridge.ts` | Score + fingering + clock (seconds) to hand placement and finger targets: lazy hand shifts with preparation, white/black key contact points and heights, press/hold/release, staccato and repeated-note lifts. Pure function of time, so pause/seek/loop/tempo follow the audio clock. |
+| Poser | `pose.ts` | Places the palm, solves the fingers, lets the wrist follow what fingers cannot reach and rotates the forearm toward the thumb or little finger. |
+| UI | `src/ui/Hands3D.tsx`, `src/ui/HandsLayer.tsx` | Lazy-loaded canvas over the piano, finger-number labels, step-mode demonstration loop, correction highlight, and the floating Hands panel. |
+
+Modes: demo (Demo button), slow (tempo buttons), step-by-step (wait mode: the hand prepares over the next notes and shows the press), separate or combined hands (Hands panel), correction (after a wrong note the correct finger turns orange and shows the press).

@@ -13,7 +13,7 @@ export const absWhite = (m: number) => Math.floor(m / 12) * 7 + WHITE_OFF[((m % 
 export interface HandState { base: number; active: { finger: number; midi: number }[] }
 export type HandsAt = Partial<Record<Hand, HandState>>;
 
-const handOf = (ev: ScoreEvent, p: number): Hand => ev.hand ?? (p < 60 ? 'LH' : 'RH');
+const handOf = (ev: ScoreEvent, p: number): Hand => ev.hand ?? ev.hands?.[ev.pitches.indexOf(p)] ?? (p < 60 ? 'LH' : 'RH');
 const slotOf = (hand: Hand, base: number, finger: number) => (hand === 'RH' ? base + finger - 1 : base + 5 - finger);
 
 /** Finger and hand position for every event (positions carry over between events). */

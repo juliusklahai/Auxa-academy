@@ -8,7 +8,7 @@ import { onLearnerNote } from '../input/bus';
 import { setExpected } from '../input/expect';
 import { mic, micHelp } from '../input/mic';
 import { midiIn } from '../input/midi';
-import { computeHandStates, HandsOverlay, PALM_SPACE } from './Hands';
+import { HandControls, HandsLayer, HANDS_MIN_ASPECT, handsBelow } from './HandsLayer';
 import { Icon } from './Icon';
 import { Piano, type KeyMark } from './Piano';
 import { bumpProgress, progress, setSettings, useProgressVersion, useSettings } from './settings';
@@ -151,6 +151,8 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
   const [demoKeys, setDemoKeys] = useState<Set<number>>(new Set());
   const [demoIdx, setDemoIdx] = useState<number | null>(null);
   const [timedIdx, setTimedIdx] = useState(0);
+  const [fix, setFix] = useState(false);
+  const fixTimer = useRef(0);
   const [report, setReport] = useState<AssessmentReport | null>(null);
   const [beatFlash, setBeatFlash] = useState(-1);
   const [nice, setNice] = useState<{ id: number; text: string } | null>(null);
@@ -159,7 +161,6 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
   const fid = useRef(0);
   const s = session.current;
   const latest = useRef<{ handleFeedback: (fb: Feedback | null) => void; finishIfDone: () => void; start: (fresh?: boolean) => void }>(null!);
-  const handStates = useMemo(() => computeHandStates(exercise.events), [exercise.events]);
 
   const pushFeed = (kind: Feedback['kind'], text: string) => {
     if (!text) return;
@@ -203,7 +204,10 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
       streak.current++;
       const words = ['Nice!', 'Good!', 'Great!', 'Yes!', 'Perfect!'];
       setNice({ id: Date.now(), text: streak.current >= 5 ? `${streak.current} in a row!` : words[streak.current % words.length] });
-    } else if (fb.kind === 'wrong' || fb.kind === 'restart') streak.current = 0;
+    } else if (fb.kind === 'wrong' || fb.kind === 'restart') {
+      streak.current = 0;
+      if (fb.kind === 'wrong') { setFix(true); if (fixTimer.current) clearTimeout(fixTimer.current); fixTimer.current = window.setTimeout(() => setFix(false), 2600); }
+    }
     pushFeed(fb.kind, fb.message);
     if (fb.kind === 'restart') {
       clearTimers();
@@ -372,8 +376,12 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
             </div>
           )}
           <div className="card keys-card">
-            <Piano lo={lo} hi={hi} marks={marks} labels={labels} showKeyHints={settings.keyHints} height={exercise.voice ? 120 : fm.focus ? 200 : 180} below={settings.hands && !exercise.voice ? PALM_SPACE : 0} scrollTo={curEv?.pitches[0] ?? allPitches[0]}
-              overlay={settings.hands && !exercise.voice ? (g) => <HandsOverlay g={g} states={handStates} index={handIdx} showActive={handsActive} /> : undefined} />
+            <Piano lo={lo} hi={hi} marks={marks} labels={labels} showKeyHints={settings.keyHints} height={exercise.voice ? 120 : fm.focus ? 200 : 180} scrollTo={curEv?.pitches[0] ?? allPitches[0]}
+              below={settings.hands && !exercise.voice ? handsBelow : 0} minAspect={settings.hands && !exercise.voice && settings.handStyle === '3d' ? HANDS_MIN_ASPECT : 0}
+              overlay={settings.hands && !exercise.voice ? (g) => <HandsLayer g={g} events={exercise.events} exerciseId={exercise.id} timeOf={(b) => (b * msPerBeat(bpm)) / 1000} timeKey={bpm}
+                clock={() => { const c = clock.current; return c ? (performance.now() - c.t0) / 1000 * (c.mspb / msPerBeat(bpm)) : null; }}
+                index={handIdx} active={handsActive} demo={exercise.mode === 'wait' && s.state === 'LISTENING' && reveal && demoIdx === null} correction={fix && exercise.mode === 'wait'} /> : undefined} />
+            {!exercise.voice && <HandControls events={exercise.events} exerciseId={exercise.id} index={handIdx} />}
           </div>
         </div>
         <aside className="side">

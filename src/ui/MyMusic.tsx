@@ -19,7 +19,7 @@ import { buildPractice, rangeQ, toSrcQ, type PracticeBuild } from '../musicxml/p
 import { Timeline } from '../musicxml/tempo';
 import { makeBand, BAND_KEYS, type BandParts } from '../musicxml/band';
 import { transposedKey } from './keyname';
-import { computeHandStates, HandsOverlay, PALM_SPACE } from './Hands';
+import { HandControls, HandsLayer, HANDS_MIN_ASPECT, handsBelow } from './HandsLayer';
 import { Icon } from './Icon';
 import { icon, Metric, ReportCard } from './LessonView';
 import { Piano, type KeyMark } from './Piano';
@@ -383,7 +383,6 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
   });
 
   // keyboard + hands for the practiced part
-  const handStates = useMemo(() => (b ? computeHandStates(b.exercise.events) : []), [b]);
   const curIdx = s ? (mode === 'wait' ? Math.max(0, s.currentIndex()) : cursorIdx) : 0;
   const targetPitches = score ? score.notes.filter((n) => targets.has(n.track)).map((n) => n.midi + tr) : [];
   const lo = targetPitches.length ? Math.max(21, Math.floor((Math.min(...targetPitches) - 3) / 12) * 12) : 48;
@@ -479,8 +478,14 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
             </div>
           ) : (
             <div className="card keys-card">
-              <Piano lo={lo} hi={hi} marks={marks} labels={settings.labels} height={170} below={settings.hands && b ? PALM_SPACE : 0} scrollTo={curEv?.pitches[0] ?? targetPitches[0]}
-                overlay={settings.hands && b ? (g) => <HandsOverlay g={g} states={handStates} index={curIdx} showActive={!!s && s.state === 'LISTENING'} /> : undefined} />
+              <Piano lo={lo} hi={hi} marks={marks} labels={settings.labels} height={170} scrollTo={curEv?.pitches[0] ?? targetPitches[0]}
+                below={settings.hands && b ? handsBelow : 0} minAspect={settings.hands && b && settings.handStyle === '3d' ? HANDS_MIN_ASPECT : 0}
+                overlay={settings.hands && b ? (g) => <HandsLayer g={g} events={b.exercise.events} exerciseId={b.exercise.id}
+                  timeOf={(beat) => { const tl = clock.current?.tl ?? tlFor(b.startQ); return (tl.msAt(b.startQ + beat) - tl.msAt(b.startQ)) / 1000; }}
+                  timeKey={`${tempoPct}|${followTempo}|${b.startQ}`}
+                  clock={() => { const c = clock.current; if (!c || run !== 'practice' || mode !== 'timed') return null; return (performance.now() - c.t0 - c.tl.msAt(b.startQ)) / 1000; }}
+                  index={curIdx} active={!!s && s.state === 'LISTENING'} demo={!!s && s.state === 'LISTENING' && mode === 'wait'} /> : undefined} />
+              {b && <HandControls events={b.exercise.events} exerciseId={b.exercise.id} index={curIdx} />}
             </div>
           )}
         </div>

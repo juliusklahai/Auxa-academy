@@ -138,3 +138,16 @@ describe('Transposition', () => {
     expect(transposedKey(-3, -12)).toBe('Eb major');
   });
 });
+
+describe('MusicXML fingering for the guide hands', () => {
+  it('reads <technical><fingering> and carries it into practice events', async () => {
+    const { buildPractice: bp } = await import('../src/musicxml/practice');
+    const f = (k: number) => `<notations><technical><fingering>${k}</fingering></technical></notations>`;
+    const s = parse(wrap(`<measure number="1">${attrs}${n('C', 4, 1, f(1))}${n('D', 4, 1, f(2))}${n('E', 4, 1)}${n('F', 4, 1, f(1))}</measure>`));
+    expect(s.notes.map((x) => x.finger)).toEqual([1, 2, undefined, 1]);
+    const b = bp(s, { tracks: s.tracks.map((t) => t.key), fromMeasure: 0, toMeasure: 0, mode: 'wait' }, 90);
+    expect(b.exercise.events.map((e) => e.fingers?.[0] ?? 0)).toEqual([1, 2, 0, 1]);
+    const { planFingering } = await import('../src/hands3d/fingering');
+    expect(planFingering(b.exercise.events).flat()).toEqual([1, 2, 3, 1]); // gap filled, written fingers kept
+  });
+});

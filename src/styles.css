@@ -448,3 +448,33 @@ select.inst { font-size: 11.5px; padding: 2px 6px; border-radius: 8px; box-shado
 
 .practice-root:not(.focus) { display: flex; flex-direction: column; flex: 1; }
 .practice-root:not(.focus) > .dock { margin-top: 18px; }
+
+/* ---------- 3D guide hands ---------- */
+.keys-card { position: relative; }
+.hands3d { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 3; }
+.hands3d canvas { display: block; }
+.fing-labels { position: absolute; inset: 0; pointer-events: none; }
+.fing { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #2b2622; background: rgba(255,255,255,.88); box-shadow: 0 0 0 1.5px #2b2622; opacity: 0; transition: opacity .15s; will-change: transform; }
+.fing.on { background: var(--lime); }
+.fing.fix { background: #ff8a3d; color: #fff; box-shadow: 0 0 0 1.5px #7a3510; }
+.hands-chip { position: absolute; right: 18px; bottom: 18px; z-index: 6; display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 999px; padding: 7px 12px; font-size: 12px; font-weight: 700; background: rgba(28,28,26,.82); color: #fff; backdrop-filter: blur(6px); }
+.hands-chip.on { background: var(--lime); color: #1c1c1a; }
+.hands-panel { position: absolute; right: 14px; bottom: 58px; z-index: 7; width: min(330px, calc(100% - 28px)); background: var(--white, #fff); border-radius: 18px; padding: 12px 14px; box-shadow: 0 18px 40px rgba(0,0,0,.28); display: grid; gap: 10px; font-size: 13px; }
+.hp-head { display: flex; justify-content: space-between; align-items: center; }
+.hp-head .icon-btn { border: 0; background: transparent; padding: 4px; }
+.hp-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.hp-row > span { font-weight: 600; white-space: nowrap; }
+.hp-row small { color: var(--muted, #888); font-weight: 500; }
+.hp-row input[type=range] { flex: 1; max-width: 170px; accent-color: #1c1c1a; }
+.hp-row .seg button { padding: 5px 10px; font-size: 12px; }
+.hp-row.check { justify-content: flex-start; font-weight: 600; }
+.swatches { display: flex; gap: 8px; }
+.sw { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.15); padding: 0; }
+.sw.on { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #1c1c1a; }
+.hp-fing { display: grid; gap: 6px; border-top: 1px solid rgba(0,0,0,.08); padding-top: 8px; }
+.hp-note { display: flex; align-items: center; gap: 5px; }
+.hp-note b { width: 34px; } .hp-note small { width: 12px; color: var(--muted, #888); }
+.fbtn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); background: transparent; font-weight: 700; padding: 0; display: inline-grid; place-items: center; line-height: 1; }
+.fbtn.on { background: #1c1c1a; color: #fff; }
+.fbtn.own { box-shadow: 0 0 0 2px var(--lime); }
+.link-btn { border: 0; background: none; padding: 0; text-align: left; text-decoration: underline; font-size: 12px; cursor: pointer; }
