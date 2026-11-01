@@ -4,7 +4,7 @@
 import { audio } from '../audio/engine';
 import { freqToNote } from '../core/music';
 import { OnsetTracker, yin } from './pitch';
-import { PolyTracker } from './poly';
+import { PolyTracker, type SoundProfile } from './poly';
 import { getExpected } from './expect';
 
 export interface MicFrame { freq: number; midi: number; cents: number; confidence: number; rms: number; suppressed: boolean }
@@ -34,6 +34,8 @@ export class MicListener {
   onNote: ((n: MicNote) => void) | null = null;
   onChord: ((c: MicChord) => void) | null = null;
   sensitivity = 1;
+  /** keyboard sound type for chord detection */
+  profile: SoundProfile = 'piano';
   /** last start-up problem, shown on the Setup page */
   lastError = '';
   /** chosen input device (empty = system default) */
@@ -101,6 +103,7 @@ export class MicListener {
     if (!this.poly) return;
     this.poly.noiseGate = this.settings.noiseGate;
     this.poly.sensitivity = this.sensitivity;
+    this.poly.profile = this.profile;
     const ev = this.poly.process(this.buf, now);
     if (!ev) return;
     const at = ev.onsetMs - this.settings.latencyMs;

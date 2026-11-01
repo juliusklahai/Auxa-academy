@@ -26,6 +26,7 @@ const P: Record<string, string> = {
   keys: 'M4 4h16v16H4zM9 4v9M15 4v9',
   chord: 'M6 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM6 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM6 6a2 2 0 1 0 0-4M8 16V4h12',
   wave: 'M2 12h3l3-7 4 14 3-9 2 2h5',
+  expand: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
 };
 
 export function Icon({ name, size = 18, stroke = 1.8, className }: { name: keyof typeof P | string; size?: number; stroke?: number; className?: string }) {

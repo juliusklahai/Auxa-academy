@@ -146,3 +146,50 @@ describe('Echo gate: microphone ignores the app\'s own accompaniment', () => {
     expect(ev).toEqual([65]);
   });
 });
+
+// ---------- other keyboard sounds ----------
+type Timbre = (out: Float32Array, midi: number, startS: number, durS?: number) => void;
+const organ: Timbre = (out, midi, startS, durS = 0.8) => {
+  // drawbars 8' + 4' + 2' (harmonics 1, 2, 4) plus a little 3rd; sustained, no decay, 15 ms attack/release
+  const f0 = midiToFreq(midi), s0 = Math.floor(startS * SR), n = Math.min(out.length - s0, Math.floor(durS * SR));
+  const parts: [number, number][] = [[1, 0.5], [2, 0.38], [3, 0.08], [4, 0.25]];
+  for (const [h, a] of parts) { const ph = rnd() * 6.28; for (let i = 0; i < n; i++) { const t = i / SR; const env = Math.min(1, t / 0.015, (durS - t) / 0.015); out[s0 + i] += a * env * Math.sin(2 * Math.PI * f0 * h * t + ph); } }
+};
+const epiano: Timbre = (out, midi, startS, durS = 1.2) => {
+  // tine sound: strong fundamental, weak 2nd, fast-decaying metallic bell partial
+  const f0 = midiToFreq(midi), s0 = Math.floor(startS * SR), n = Math.min(out.length - s0, Math.floor(durS * SR));
+  const parts: [number, number, number][] = [[1, 0.6, 1.6], [2, 0.08, 0.8], [7.1, 0.12, 0.05]];
+  for (const [h, a, tau] of parts) { const ph = rnd() * 6.28; for (let i = 0; i < n; i++) { const t = i / SR; out[s0 + i] += a * Math.min(1, t / 0.003, (durS - t) / 0.03) * Math.exp(-t / tau) * Math.sin(2 * Math.PI * f0 * h * t + ph); } }
+};
+const synth: Timbre = (out, midi, startS, durS = 0.8) => {
+  // band-limited sawtooth with a low-pass feel, sustained
+  const f0 = midiToFreq(midi), s0 = Math.floor(startS * SR), n = Math.min(out.length - s0, Math.floor(durS * SR));
+  for (let h = 1; h <= 10; h++) { const a = 0.35 / h / (1 + h * f0 / 3000); const ph = rnd() * 6.28; for (let i = 0; i < n; i++) { const t = i / SR; out[s0 + i] += a * Math.min(1, t / 0.01, (durS - t) / 0.03) * Math.sin(2 * Math.PI * f0 * h * t + ph); } }
+};
+function runProfile(signal: Float32Array, profile: 'organ' | 'epiano' | 'synth', expected: number[] | null) {
+  const tr = new PolyTracker(SR, () => expected);
+  tr.noiseGate = 0.005; tr.profile = profile;
+  const evs: number[][] = [];
+  for (let end = 4096; end <= signal.length; end += 960) {
+    const ev = tr.process(signal.subarray(end - 4096, end), (end / SR) * 1000);
+    if (ev) evs.push(ev.notes.filter((x) => x.confidence >= 0.85).map((x) => x.midi));
+  }
+  return evs;
+}
+describe('Microphone: organ, electric piano and synth keyboards', () => {
+  const sounds: [string, Timbre, 'organ' | 'epiano' | 'synth'][] = [['organ', organ, 'organ'], ['electric piano', epiano, 'epiano'], ['synth', synth, 'synth']];
+  for (const [name, timbre, profile] of sounds) {
+    it(`${name}: single notes in a melody`, () => {
+      const s = sig(3.4); [60, 62, 64, 65, 67].forEach((m, i) => timbre(s, m, 0.2 + i * 0.6, 0.5)); addNoise(s, 0.002);
+      expect(runProfile(s, profile, null)).toEqual([[60], [62], [64], [65], [67]]);
+    });
+    it(`${name}: C major chord (lesson knows the notes)`, () => {
+      const s = sig(1.4); [60, 64, 67].forEach((m) => timbre(s, m, 0.3, 1)); addNoise(s, 0.002);
+      expect(runProfile(s, profile, [60, 64, 67])[0]).toEqual([60, 64, 67]);
+    });
+    it(`${name}: a wrong note is still caught`, () => {
+      const s = sig(1.4); [60, 65].forEach((m) => timbre(s, m, 0.3, 1)); addNoise(s, 0.002);
+      expect(runProfile(s, profile, [60, 64])[0]).toEqual([60, 65]);
+    });
+  }
+});

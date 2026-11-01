@@ -14,6 +14,8 @@ import { Piano, type KeyMark } from './Piano';
 import { bumpProgress, progress, setSettings, useProgressVersion, useSettings } from './settings';
 import { Staff } from './Staff';
 import { PitchRoll } from './PitchRoll';
+import { useFocusMode } from './focus';
+import { FocusBar, FloatHead } from './FocusBar';
 
 function rangeFor(pitches: number[]): [number, number] {
   if (!pitches.length) return [48, 84];
@@ -133,6 +135,7 @@ interface FeedItem { kind: Feedback['kind']; text: string; id: number }
 
 function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesson: Lesson; exercise: Exercise; index: number; chips: React.ReactNode; onNext?: () => void }) {
   const settings = useSettings();
+  const fm = useFocusMode();
   const [tempoPct, setTempoPct] = useState(100);
   const [metroOn, setMetroOn] = useState(base.mode === 'timed');
   const exercise = useMemo<Exercise>(() => settings.mistakePolicy === 'pause' ? { ...base, maxConsecutiveMistakes: 99 } : base, [base, settings.mistakePolicy]);
@@ -331,7 +334,8 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
   const best = progress.ex(exercise.id).best;
 
   return (
-    <>
+    <div className={`practice-root ${fm.focus ? 'focus' : ''} ${fm.panel ? 'show-' + fm.panel : ''}`}>
+      {fm.focus && <FocusBar title={exercise.title} panel={fm.panel} onPanel={fm.togglePanel} onExit={fm.exit} infoLabel="Teacher" />}
       <section className="head-row">
         <div className="id-card">
           <span className="avatar"><Icon name={exercise.events.some((e) => e.pitches.length > 1) ? 'chord' : 'note'} size={22} /></span>
@@ -354,7 +358,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
               <span className="legend"><i className="lg correct" />correct <i className="lg partial" />timing <i className="lg wrong" />wrong <i className="lg pending" />to play</span>
             </div>
             {nice && <span key={nice.id} className="nice">{nice.text}</span>}
-            <Staff events={exercise.events} clef={exercise.clef} timeSig={exercise.timeSig} statuses={statuses} current={glowIdx} playhead={playhead} highContrast={settings.highContrast} />
+            <Staff events={exercise.events} clef={exercise.clef} timeSig={exercise.timeSig} statuses={statuses} current={glowIdx} playhead={playhead} highContrast={settings.highContrast} height={fm.focus ? 240 : 168} measureWidth={fm.focus ? 340 : 250} />
             {feed[0] && !report && <div key={feed[0].id} className={`latest fb ${feed[0].kind}`}><span className="ic">{icon(feed[0].kind)}</span>{feed[0].text}</div>}
             {report && <div className={`latest fb ${report.passed ? 'correct' : 'wrong'}`}><span className="ic">{report.passed ? '✓' : '✗'}</span>Score {Math.round(report.score)}/100 · {report.grade}{report.passed ? '' : '. 80 needed to pass.'}</div>}
           </div>
@@ -368,15 +372,16 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
             </div>
           )}
           <div className="card keys-card">
-            <Piano lo={lo} hi={hi} marks={marks} labels={labels} showKeyHints={settings.keyHints} height={exercise.voice ? 120 : 180} below={settings.hands && !exercise.voice ? PALM_SPACE : 0} scrollTo={curEv?.pitches[0] ?? allPitches[0]}
+            <Piano lo={lo} hi={hi} marks={marks} labels={labels} showKeyHints={settings.keyHints} height={exercise.voice ? 120 : fm.focus ? 200 : 180} below={settings.hands && !exercise.voice ? PALM_SPACE : 0} scrollTo={curEv?.pitches[0] ?? allPitches[0]}
               overlay={settings.hands && !exercise.voice ? (g) => <HandsOverlay g={g} states={handStates} index={handIdx} showActive={handsActive} /> : undefined} />
           </div>
         </div>
         <aside className="side">
+          <FloatHead title="Teacher" onClose={fm.closePanel} />
           {report
             ? <ReportCard r={report} onRetry={() => start(true)} onNext={onNext} mastered={progress.ex(exercise.id).passes >= exercise.requiredPasses} required={exercise.requiredPasses} passes={progress.ex(exercise.id).passes} />
             : (
-              <div className="card feed" aria-live="polite">
+              <div className="card feed panel-info" aria-live="polite">
                 <div className="card-head"><b>Teacher</b><span className={`state-pill ${s.state.toLowerCase()}`}>{s.state.replace('_', '-')}</span></div>
                 {curEv && s.state === 'LISTENING' && !exercise.hideLabels && <div className="next"><small>Next</small><b>{curEv.pitches.map(midiToName).join(' + ')}</b>{curEv.fingers && <span>finger{curEv.fingers.length > 1 ? 's' : ''} {curEv.fingers.join('-')}</span>}</div>}
                 {feed.length === 0 && <p className="muted small">Press <b>Demo</b> to see and hear it, then the lime <b>Start</b> button. I'll explain every mistake. Three in a row restarts the attempt, never your course.</p>}
@@ -386,7 +391,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
         </aside>
       </section>
       <div className="dock">
-        <button className={`dock-btn lime ${listening ? 'live' : ''}`} onClick={() => start(true)} aria-label={listening ? 'Restart' : 'Start'}>
+        <button className={`dock-btn lime ${listening ? 'live' : ''}`} onClick={() => { if (settings.autoFocus && !fm.focus) fm.enter(); start(true); }} aria-label={listening ? 'Restart' : 'Start'}>
           <Icon name={listening || s.state === 'COMPLETED' || s.state === 'RESTART' ? 'restart' : 'play'} size={18} />
         </button>
         <span className="dock-label">{listening ? 'Restart' : s.state === 'RESTART' ? `Attempt ${s.attempt + 1}` : s.state === 'COMPLETED' ? 'Again' : 'Start'}</span>
@@ -408,8 +413,9 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
         <span className="dock-label">Hands {settings.hands ? 'on' : 'off'}</span></>}
         <span className="dock-fill" />
         <span className="dock-status" title="Where your playing is coming from"><Icon name={input === 'MIDI' ? 'midi' : input === 'Microphone' || input === 'Voice' ? 'mic' : 'keys'} size={15} /> Input: {input}</span>
+        <button className={`dock-btn ${fm.focus ? 'on' : ''}`} onClick={fm.toggle} aria-label={fm.focus ? 'Leave full screen (Esc)' : 'Full screen practice'} title={fm.focus ? 'Leave full screen (Esc)' : 'Full screen practice'}><Icon name={fm.focus ? 'close' : 'expand'} size={16} /></button>
       </div>
-    </>
+    </div>
   );
 }
 

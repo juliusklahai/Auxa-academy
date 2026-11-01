@@ -363,7 +363,7 @@ export function SettingsView() {
       <section className="head-row">
         <div className="id-card"><span className="avatar"><Icon name="settings" size={22} /></span><div><small>Input, sound and aids</small><b>Setup</b></div></div>
         <div className="metrics">
-          <Metric label="Input" value={midiIn.devices.length ? 'MIDI keyboard' : micOn ? `Microphone (${st.micMode})` : 'Touch and keys'} big />
+          <Metric label="Input" value={midiIn.devices.length ? 'MIDI keyboard' : micOn ? `Microphone (${{ piano: 'piano', epiano: 'digital piano', organ: 'organ', synth: 'keyboard', mono: 'one-note instrument', voice: 'voice' }[st.micInstrument]})` : 'Touch and keys'} big />
           <Metric label="A4" value={st.a4} unit="Hz" />
           <Metric label="Latency" value={st.latencyMs} unit="ms" />
           <Metric label="Strictness" value={Math.round(st.micSensitivity * 100)} unit="%" />
@@ -376,10 +376,17 @@ export function SettingsView() {
           <button className="btn dark" onClick={connectMidi} disabled={!midiIn.supported}>Connect MIDI</button>
           <p className="small">{midiIn.supported ? (midiState || 'Not connected yet.') : 'This browser has no Web MIDI. Use Chrome or Edge on a computer, or the microphone.'}</p>
           <div className="card-head" style={{ marginTop: 18 }}><b>Microphone</b></div>
-          <div className="seg">
-            <button className={st.micMode === 'piano' ? 'on' : ''} onClick={() => setSettings({ micMode: 'piano' })}>Acoustic piano (chords)</button>
-            <button className={st.micMode === 'voice' ? 'on' : ''} onClick={() => setSettings({ micMode: 'voice' })}>Voice (one note)</button>
-          </div>
+          <label className="field">What are you playing into the microphone?
+            <select value={st.micInstrument} onChange={(e) => { const v = e.target.value as typeof st.micInstrument; setSettings({ micInstrument: v, micMode: v === 'mono' || v === 'voice' ? 'voice' : 'piano' }); }}>
+              <option value="piano">Acoustic piano (chords)</option>
+              <option value="epiano">Digital / electric piano, stage piano (chords)</option>
+              <option value="organ">Organ, harmonium, church organ (chords)</option>
+              <option value="synth">Keyboard / synthesizer (chords)</option>
+              <option value="mono">One-note instrument: violin, flute, sax, trumpet, guitar melody</option>
+              <option value="voice">Voice (singing)</option>
+            </select>
+            <small className="muted">Each sound has its own detector settings. Keyboards with a USB or MIDI socket are even more precise: connect them with "Connect MIDI".</small>
+          </label>
           <div className="row wrap" style={{ marginTop: 10 }}>
             <button className="btn dark" onClick={toggleMic}>{micOn ? 'Stop microphone' : 'Start microphone'}</button>
             <button className="btn" onClick={calibrate}>Measure background noise</button>
@@ -435,6 +442,7 @@ export function SettingsView() {
           <div className="card-head" style={{ marginTop: 18 }}><b>Learning aids</b></div>
           <label className="field">Key labels<select value={st.labels} onChange={(e) => setSettings({ labels: e.target.value as 'letters' })}><option value="letters">Letters (C D E)</option><option value="solfege">Solfège (Do Re Mi)</option><option value="none">None</option></select></label>
           <label className="check"><input type="checkbox" checked={st.hands} onChange={(e) => setSettings({ hands: e.target.checked })} /> Show guide hands on the keyboard</label>
+          <label className="check"><input type="checkbox" checked={st.autoFocus} onChange={(e) => setSettings({ autoFocus: e.target.checked })} /> Full-screen practice when I press Start (Esc returns)</label>
           <label className="check"><input type="checkbox" checked={st.keyHints} onChange={(e) => setSettings({ keyHints: e.target.checked })} /> Show computer-keyboard letters on keys</label>
           <label className="field">Mistake policy<select value={st.mistakePolicy} onChange={(e) => setSettings({ mistakePolicy: e.target.value as 'restart' })}><option value="restart">Challenge: 3 in a row restarts (earns mastery)</option><option value="pause">Supported: never restart (practice only)</option></select></label>
           <label className="check"><input type="checkbox" checked={st.highContrast} onChange={(e) => setSettings({ highContrast: e.target.checked })} /> High-contrast mode</label>

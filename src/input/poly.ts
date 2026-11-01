@@ -44,7 +44,11 @@ export function fftMag(frame: Float32Array, n: number): Float32Array {
 // ---------- Multi-pitch estimation ----------
 export interface PolyNote { midi: number; confidence: number; expected: boolean; salience: number }
 
+/** What kind of keyboard sound the microphone is hearing. */
+export type SoundProfile = 'piano' | 'epiano' | 'organ' | 'synth';
+
 export interface PolyOptions {
+  profile?: SoundProfile;
   lo?: number; hi?: number;   // MIDI search range
   expected?: number[] | null; // score-informed prior (current target notes)
   sensitivity?: number;       // 0.5 (strict) .. 1.5 (sensitive), default 1
@@ -58,6 +62,8 @@ const MAX_FREQ = 5000;
 
 function partialFreq(f0: number, h: number) { return f0 * h * Math.sqrt(1 + B_INHARM * h * h); }
 
+let sideLobeRef: Float32Array | null = null;
+
 /** Strongest LOCAL MAXIMUM within +-tolSemi of f, with the extent of its spectral lobe (valley to valley).
  *  Using true peaks (not window maxima) stops a note's leakage from creating ghost notes a semitone away. */
 function peakAt(mag: Float32Array, binHz: number, f: number, tolSemi: number): { v: number; i0: number; i1: number } {
@@ -68,6 +74,13 @@ function peakAt(mag: Float32Array, binHz: number, f: number, tolSemi: number): {
     if (mag[i] >= mag[i - 1] && mag[i] >= mag[i + 1] && mag[i] > v) { v = mag[i]; at = i; }
   }
   if (at < 0) return { v: 0, i0: lo, i1: lo - 1 };
+  // ignore window side-lobes: a real partial is not tiny next to a much bigger peak a few bins away
+  // (judged on the original spectrum, so side-lobes do not become "peaks" once the main peak is removed)
+  const ref = sideLobeRef ?? mag;
+  let near = 0;
+  for (let i = Math.max(1, at - 6); i <= Math.min(ref.length - 1, at + 6); i++) if (ref[i] > near) near = ref[i];
+  if (sideLobeRef) v = Math.min(v, Math.max(0, mag[at]));
+  if (v < near * 0.1) return { v: 0, i0: lo, i1: lo - 1 };
   let i0 = at, i1 = at;
   while (i0 > 1 && mag[i0 - 1] <= mag[i0] && at - i0 < 8) i0--;
   while (i1 < mag.length - 2 && mag[i1 + 1] <= mag[i1] && i1 - at < 8) i1++;
@@ -82,13 +95,13 @@ function harmonics(f0: number) {
 
 /** Remove a note's partials from a spectrum. Partials much louder than their neighbours are shared
  *  with another note (octave, fifth...), so only this note's share is removed there. */
-function subtractNote(mag: Float32Array, binHz: number, midi: number) {
+function subtractNote(mag: Float32Array, binHz: number, midi: number, full = false) {
   const f0 = midiToFreq(midi);
   const hs = harmonics(f0);
   const amps = hs.map((h) => peakAt(mag, binHz, partialFreq(f0, h), h === 1 ? 0.45 : 0.3));
   amps.forEach((pk, k) => {
     const nb = Math.max(amps[k - 1]?.v ?? 0, amps[k + 1]?.v ?? 0);
-    const sub = nb > 0 && pk.v > 1.5 * nb ? nb * 1.1 : pk.v;
+    const sub = !full && nb > 0 && pk.v > 1.5 * nb ? nb * 1.1 : pk.v;
     for (let i = pk.i0; i <= pk.i1; i++) mag[i] = Math.max(0, mag[i] - sub * (mag[i] / Math.max(pk.v, 1e-12)));
   });
 }
@@ -99,7 +112,12 @@ export function estimateNotes(magIn: Float32Array, sampleRate: number, fftSize: 
   const lo = opts.lo ?? 36, hi = opts.hi ?? 96;
   const expected = new Set(opts.expected ?? []);
   const sens = opts.sensitivity ?? 1;
+  const pureOk = opts.profile === 'epiano' || opts.profile === 'organ';
+  let peakAll = 0;
+  for (let i = 0; i < magIn.length; i++) if (magIn[i] > peakAll) peakAll = magIn[i];
+  peakAll /= Math.max(floor, 1e-7);
   const mag = Float32Array.from(magIn);
+  sideLobeRef = magIn;
   const ref = Math.max(floor, 1e-7);
   const found: PolyNote[] = [];
   let first = 0;
@@ -113,19 +131,23 @@ export function estimateNotes(magIn: Float32Array, sampleRate: number, fftSize: 
     for (let p = lo; p <= hi; p++) {
       if (found.some((n) => n.midi === p) || masked.has(p)) continue;
       const f0 = midiToFreq(p);
-      let s = 0, hits = 0;
+      let s = 0, hits = 0, fundA = 0;
       const hs = harmonics(f0);
       for (const h of hs) {
         const a = peakAt(mag, binHz, partialFreq(f0, h), h === 1 ? 0.45 : 0.3).v / ref;
         const v = Math.log1p(Math.max(0, a - 1));
         if (a > 3) hits++;
+        if (h === 1) fundA = a;
         s += v / Math.pow(h, 0.7);
       }
       // a real note shows several partials; a lone peak is not a note
-      if (hits < Math.min(2, hs.length)) continue;
+      // Pure-toned sounds (electric piano, organ flute stops) may show only the fundamental:
+      // allowed for those profiles when the fundamental itself is strong.
+      const needHits = pureOk ? (fundA > 8 && fundA >= 0.2 * peakAll ? 1 : 2) : 2;
+      if (hits < Math.min(needHits, hs.length)) continue;
       // the fundamental region must show energy for mid/high notes (rejects sub-octave ghosts)
       const fund = peakAt(mag, binHz, f0, 0.45).v / ref;
-      if (p >= 48 && fund < 2) continue;
+      if ((p >= 48 || pureOk) && fund < 2) continue;
       const prior = expected.has(p) ? 1.2 : 1;
       if (opts.debug && expected.has(p)) opts.debug(`iter${iter} p${p} s=${s.toFixed(2)} hits=${hits} fund=${fund.toFixed(1)}`);
       if (s * prior > bestS) { bestS = s * prior; best = p; bestRaw = s; }
@@ -137,7 +159,9 @@ export function estimateNotes(magIn: Float32Array, sampleRate: number, fftSize: 
     const minAbs = 2.2 / sens;
     if (bestRaw < minAbs || bestRaw < first * 0.18) break;
 
-    subtractNote(mag, binHz, best);
+    // Organ stops (4', 2') put strong energy on octaves of the note itself: remove it all,
+    // expected octave notes are recovered by the joint check below.
+    subtractNote(mag, binHz, best, pureOk);
 
     // Confidence = absolute evidence AND strength relative to the loudest new note of this onset.
     // Leakage and overtone residue is typically < 25% of the main note, a real chord tone > 40%.
@@ -172,6 +196,7 @@ export function estimateNotes(magIn: Float32Array, sampleRate: number, fftSize: 
       }
     });
   }
+  sideLobeRef = null;
   return found.sort((a, b) => a.midi - b.midi);
 }
 
@@ -231,6 +256,7 @@ export class PolyTracker {
   private pending: { t: number; pre: Float32Array | null } | null = null;
   noiseGate = 0.01;
   sensitivity = 1;
+  profile: SoundProfile = 'piano';
   analysisDelayMs = 95;
   lastFlux = 0;
 
@@ -260,7 +286,12 @@ export class PolyTracker {
     if (this.longHist.length > 10) this.longHist.shift();
 
     const isOnset = rmsShort > this.noiseGate && flux > mean * 1.6 + 25 / this.sensitivity && nowMs - this.lastOnset > 70;
-    if (isOnset && !this.pending) {
+    if (isOnset && this.pending && nowMs - this.pending.t >= 30) {
+      // a newer attack (e.g. the real note after a key-release click): analyse from here, keep the
+      // spectrum from before the first onset so both are measured as new energy
+      this.pending.t = nowMs;
+      this.lastOnset = nowMs;
+    } else if (isOnset && !this.pending) {
       this.lastOnset = nowMs;
       // the long window that ended just before this onset = what was already sounding
       const window = (buf.length / this.sampleRate) * 1000;
@@ -274,7 +305,7 @@ export class PolyTracker {
       const fresh = new Float32Array(long.length);
       for (let i = 0; i < long.length; i++) fresh[i] = Math.max(0, long[i] - (pre ? pre[i] * 1.1 : 0));
       const floor = Math.max(medianFloor(long, this.sampleRate, this.fftSize), 2e-6);
-      const notes = estimateNotes(fresh, this.sampleRate, this.fftSize, floor, { expected: this.getExpected(), sensitivity: this.sensitivity, masked: this.getMasked(t - (1024 / this.sampleRate) * 1000) });
+      const notes = estimateNotes(fresh, this.sampleRate, this.fftSize, floor, { expected: this.getExpected(), sensitivity: this.sensitivity, profile: this.profile, masked: this.getMasked(t - (1024 / this.sampleRate) * 1000) });
       // onset time = start of the attack inside the short window (~ half a short window earlier)
       return notes.length ? { notes, onsetMs: t - (1024 / this.sampleRate) * 1000 } : null;
     }

@@ -17,6 +17,7 @@ import { deleteScore, listScores, saveScore, scoreId, type LibItem } from '../mu
 import { musicXmlText, parseMusicXml, type Score, type ScoreNote } from '../musicxml/parse';
 import { buildPractice, rangeQ, toSrcQ, type PracticeBuild } from '../musicxml/practice';
 import { Timeline } from '../musicxml/tempo';
+import { makeBand, BAND_KEYS, type BandParts } from '../musicxml/band';
 import { transposedKey } from './keyname';
 import { computeHandStates, HandsOverlay, PALM_SPACE } from './Hands';
 import { Icon } from './Icon';
@@ -24,6 +25,8 @@ import { icon, Metric, ReportCard } from './LessonView';
 import { Piano, type KeyMark } from './Piano';
 import { PitchRoll } from './PitchRoll';
 import { ScoreView, noteKey, type ScoreViewHandle } from './ScoreView';
+import { useFocusMode } from './focus';
+import { FocusBar, FloatHead } from './FocusBar';
 import { progress, bumpProgress, setSettings, useSettings } from './settings';
 
 interface Mix { mute: boolean; solo: boolean; vol: number; inst: Instrument }
@@ -77,6 +80,7 @@ export function parseXmlString(xml: string): Score {
 
 export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { singPart?: 'S' | 'A' | 'T' | 'B' | null; onSingHandled?: () => void; songId?: string | null; onSongHandled?: () => void }) {
   const settings = useSettings();
+  const fm = useFocusMode();
   const [score, setScore] = useState<Score | null>(null);
   const [err, setErr] = useState('');
   const [lib, setLib] = useState<LibItem[]>([]);
@@ -91,6 +95,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
   const [loop, setLoop] = useState(false);
   const [accomp, setAccomp] = useState(true);
   const [groove, setGroove] = useState<Groove>('none');
+  const [band, setBand] = useState<BandParts>({ pad: false, bass: false, melody: false });
   const [grooveVol, setGrooveVol] = useState(0.5);
   const [zoom, setZoom] = useState(0.85);
   const [run, setRun] = useState<'idle' | 'listen' | 'practice'>('idle');
@@ -116,6 +121,8 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
   const speakers = settings.outputMode === 'speakers';
   const accVol = (k: string) => (mix[k]?.vol ?? 0.8) * (speakers && (mic.active || sing) ? 0.55 : 0.85);
   const tempos = score?.tempoMap.map((t) => t.bpm) ?? [];
+  const bandNotes = useMemo(() => (score && (band.pad || band.bass || band.melody) ? makeBand(score, band) : []), [score, band]);
+  const allNotes = useMemo(() => (score ? [...score.notes, ...bandNotes].sort((a, b) => a.startQ - b.startQ) : []), [score, bandNotes]);
 
   useEffect(() => { listScores().then(setLib); }, []);
 
@@ -128,6 +135,9 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
       const song = songByTitle(s.title);
       setMix(Object.fromEntries(s.tracks.map((t) => [t.key, { mute: false, solo: false, vol: 0.8, inst: song?.colors[t.partId] ?? guessInstrument(s.parts.find((p) => p.id === t.partId)) }])));
       setGroove(song?.groove ?? 'none');
+      // imported scores get a play-along band made from their own harmony (built-in songs have real parts)
+      setBand(song ? { pad: false, bass: false, melody: false } : { pad: true, bass: true, melody: false });
+      setMix((x) => ({ ...x, [BAND_KEYS.pad]: { mute: false, solo: false, vol: 0.55, inst: 'strings' }, [BAND_KEYS.bass]: { mute: false, solo: false, vol: 0.7, inst: 'bass' }, [BAND_KEYS.melody]: { mute: false, solo: false, vol: 0.6, inst: 'violin' } }));
       // default part to practice: the piano right hand if there is a piano, otherwise the top line
       const pianoPart = s.parts.find((p) => p.staves === 2);
       const first = pianoPart ? s.tracks.filter((t) => t.partId === pianoPart.id && t.staff === 1) : s.tracks.filter((t) => t.staff === 1 && t.partId === s.tracks[0].partId);
@@ -164,7 +174,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
   };
 
   // ---------- mixer ----------
-  const anySolo = Object.values(mix).some((m) => m.solo);
+  const anySolo = Object.entries(mix).some(([k, m]) => m.solo && (!k.startsWith('band|') || band[k.slice(5) as keyof BandParts]));
   const audible = (k: string) => { const m = mix[k]; return !!m && !m.mute && (!anySolo || m.solo); };
 
   // ---------- scheduling ----------
@@ -254,7 +264,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
     if (mic.active) { micWasOn.current = true; mic.stop(); }
     const [q0, q1] = rangeQ(score, from, to);
     const tl = tlFor(q0);
-    const notes = score.notes.filter((n) => n.startQ >= q0 - 1e-9 && n.startQ < q1 && audible(n.track));
+    const notes = allNotes.filter((n) => n.startQ >= q0 - 1e-9 && n.startQ < q1 && audible(n.track));
     const t0 = performance.now() + 300;
     clock.current = { t0, tl, q0, q1 };
     streamNotes(notes, tl, t0);
@@ -282,7 +292,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
     session.current = s;
     setReport(null); setFeed([]); setCursorIdx(0);
     s.begin();
-    const others = score.notes.filter((n) => n.startQ >= b.startQ - 1e-9 && n.startQ < b.endQ && !targets.has(n.track) && audible(n.track));
+    const others = allNotes.filter((n) => n.startQ >= b.startQ - 1e-9 && n.startQ < b.endQ && !targets.has(n.track) && audible(n.track));
     if (mode === 'wait') {
       view.current?.moveTo(b.srcQ[0]);
       setExpected(b.exercise.events[0].pitches);
@@ -324,7 +334,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
         const nextQ = fb.eventIndex + 1 < b.exercise.events.length ? b.startQ + b.exercise.events[fb.eventIndex + 1].beat : b.endQ;
         const ctx = audio.ensure();
         const tl = tlFor(evQ);
-        score.notes.filter((n) => n.startQ >= evQ - 1e-9 && n.startQ < nextQ - 1e-9 && !targets.has(n.track) && audible(n.track))
+        allNotes.filter((n) => n.startQ >= evQ - 1e-9 && n.startQ < nextQ - 1e-9 && !targets.has(n.track) && audible(n.track))
           .forEach((n) => audio.scheduleNote(n.midi + tr, ctx.currentTime + tl.msAt(n.startQ) / 1000, (tl.msAt(Math.min(n.startQ + n.durQ, nextQ + 0.5)) - tl.msAt(n.startQ)) / 1000, accVol(n.track), false, mix[n.track]?.inst ?? 'piano'));
       }
       const ni = s.currentIndex();
@@ -426,7 +436,8 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
   }
 
   return (
-    <div className="page">
+    <div className={`page practice-root ${fm.focus ? 'focus' : ''} ${fm.panel ? 'show-' + fm.panel : ''}`}>
+      {fm.focus && <FocusBar title={score.title} panel={fm.panel} onPanel={fm.togglePanel} onExit={fm.exit} infoLabel="Teacher" settingsLabel="Parts & mixer" />}
       <section className="head-row">
         <div className="id-card"><span className="avatar"><Icon name="doc" size={22} /></span><div><small>{score.composer || 'Imported score'}</small><b>{score.title}</b></div></div>
         <div className="metrics">
@@ -474,7 +485,8 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
           )}
         </div>
         <aside className="side">
-          <div className="card">
+          <FloatHead title={fm.panel === 'settings' ? 'Parts & mixer' : 'Teacher'} onClose={fm.closePanel} />
+          <div className="card panel-settings">
             <div className="card-head"><b>Your part</b><span className="muted small">Scored</span></div>
             <div className="row wrap">
               {pianoLike && <>
@@ -500,7 +512,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
             <p className="muted small" style={{ margin: '6px 0 0' }}>{speakers ? 'Speakers: the microphone ignores the notes the app plays, and the play-along is a little quieter so your own playing stands out.' : 'Headphones: the play-along goes to your ears only.'}</p>
             <label className="check"><input type="checkbox" checked={followTempo} onChange={(e) => setFollowTempo(e.target.checked)} disabled={run !== 'idle'} /> Follow tempo changes in the score{tempos.length > 1 ? ` (${tempos.length} marks)` : ''}</label>
           </div>
-          <div className="card mixer">
+          <div className="card mixer panel-settings">
             <div className="card-head"><b>Mixer</b><span className="muted small">mute · solo · volume</span></div>
             {score.tracks.map((t) => {
               const m: Mix = mix[t.key] ?? { mute: false, solo: false, vol: 0.8, inst: 'piano' };
@@ -514,6 +526,23 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
                   <button className={`mini ${m.mute ? 'on' : ''}`} onClick={() => set({ mute: !m.mute })} aria-label={`Mute ${t.name}`}>M</button>
                   <button className={`mini ${m.solo ? 'on' : ''}`} onClick={() => set({ solo: !m.solo })} aria-label={`Solo ${t.name}`}>S</button>
                   <input type="range" min={0} max={1} step={0.05} value={m.vol} onChange={(e) => set({ vol: +e.target.value })} aria-label={`${t.name} volume`} />
+                </div>
+              );
+            })}
+            <div className="band-head"><b>Play-along band</b><span className="muted small">made from this score's harmony</span></div>
+            {([['pad', 'Chords (pad)'], ['bass', 'Bass line'], ['melody', 'Melody guide']] as const).map(([k, label]) => {
+              const key = BAND_KEYS[k];
+              const m: Mix = mix[key] ?? { mute: false, solo: false, vol: 0.6, inst: 'strings' };
+              const set = (p: Partial<Mix>) => setMix((x) => ({ ...x, [key]: { ...m, ...p } }));
+              return (
+                <div key={k} className={`mix-row band ${band[k] ? '' : 'off'}`}>
+                  <input type="checkbox" checked={band[k]} disabled={run !== 'idle'} onChange={(e) => setBand((b) => ({ ...b, [k]: e.target.checked }))} aria-label={`${label} on or off`} />
+                  <span className="mix-name">{label}
+                    <select className="inst" value={m.inst} onChange={(e) => set({ inst: e.target.value as Instrument })} aria-label={`Sound for ${label}`}>{INSTRUMENTS.map((i) => <option key={i.id} value={i.id}>{i.label}</option>)}</select>
+                  </span>
+                  <button className={`mini ${m.mute ? 'on' : ''}`} onClick={() => set({ mute: !m.mute })} aria-label={`Mute ${label}`}>M</button>
+                  <button className={`mini ${m.solo ? 'on' : ''}`} onClick={() => set({ solo: !m.solo })} aria-label={`Solo ${label}`}>S</button>
+                  <input type="range" min={0} max={1} step={0.05} value={m.vol} onChange={(e) => set({ vol: +e.target.value })} aria-label={`${label} volume`} />
                 </div>
               );
             })}
@@ -531,8 +560,8 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
             <p className="muted small" style={{ margin: '4px 0 0' }}>Choose a sound for each part: the other instruments play along with you in Listen and in "Keeps time" practice. The groove plays in time modes only.</p>
           </div>
           {report
-            ? <ReportCard r={report} onRetry={practice} mastered={false} required={1} passes={report.passed ? 1 : 0} />
-            : <div className="card feed" aria-live="polite">
+            ? <div className="panel-info"><ReportCard r={report} onRetry={practice} mastered={false} required={1} passes={report.passed ? 1 : 0} /></div>
+            : <div className="card feed panel-info" aria-live="polite">
                 <div className="card-head"><b>Teacher</b><span className={`state-pill ${(s?.state ?? 'ready').toLowerCase()}`}>{run === 'listen' ? 'PLAYING' : (s?.state ?? 'READY').replace('_', '-')}</span></div>
                 {feed.length === 0 && <p className="muted small">Choose your part, then press <b>Practice</b>. In "Waits for me" the score stops on each note until you play it on your keyboard (MIDI, microphone or touch), then moves on and the other parts answer. "Listen" plays the whole score.</p>}
                 {feed.slice(1).map((f) => <div key={f.id} className={`fb ${f.kind}`}><span className="ic">{icon(f.kind)}</span>{f.text}</div>)}
@@ -540,7 +569,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
         </aside>
       </section>
       <div className="dock">
-        <button className={`dock-btn lime ${run === 'practice' ? 'live' : ''}`} onClick={run === 'practice' ? stop : practice} disabled={!targets.size} aria-label={run === 'practice' ? 'Stop practicing' : 'Practice'}><Icon name={run === 'practice' ? 'pause' : 'play'} size={18} /></button>
+        <button className={`dock-btn lime ${run === 'practice' ? 'live' : ''}`} onClick={run === 'practice' ? stop : () => { if (settings.autoFocus && !fm.focus) fm.enter(); void practice(); }} disabled={!targets.size} aria-label={run === 'practice' ? 'Stop practicing' : 'Practice'}><Icon name={run === 'practice' ? 'pause' : 'play'} size={18} /></button>
         <span className="dock-label">{run === 'practice' ? 'Stop' : 'Practice'}</span>
         <button className={`dock-btn ${run === 'listen' ? 'on' : ''}`} onClick={run === 'listen' ? stop : listen} aria-label={run === 'listen' ? 'Stop playback' : 'Listen'}><Icon name={run === 'listen' ? 'pause' : 'wave'} size={17} /></button>
         <span className="dock-label">{run === 'listen' ? 'Stop' : 'Listen'}</span>
@@ -567,6 +596,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
         <span className="dock-label">Click</span>
         <span className="dock-fill" />
         <span className="dock-status"><Icon name={sing || input === 'Microphone' ? 'mic' : input === 'MIDI' ? 'midi' : 'keys'} size={15} /> Input: {input}</span>
+        <button className={`dock-btn ${fm.focus ? 'on' : ''}`} onClick={fm.toggle} aria-label={fm.focus ? 'Leave full screen (Esc)' : 'Full screen practice'} title={fm.focus ? 'Leave full screen (Esc)' : 'Full screen practice'}><Icon name={fm.focus ? 'close' : 'expand'} size={16} /></button>
       </div>
     </div>
   );

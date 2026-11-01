@@ -23,12 +23,16 @@ export interface AppSettings {
   outputMode: 'headphones' | 'speakers';
   latencyMode: 'smooth' | 'low';
   micDeviceId: string;
+  /** what the microphone is hearing */
+  micInstrument: 'piano' | 'epiano' | 'organ' | 'synth' | 'mono' | 'voice';
+  /** go full screen automatically when practice starts */
+  autoFocus: boolean;
 }
 
 const KEY = 'maestro.settings.v1';
 const DEFAULTS: AppSettings = {
   labels: 'letters', fingers: true, keyHints: false, highContrast: false, a4: 440, volume: 0.8, metronomeVolume: 0.6,
-  latencyMs: 60, noiseGate: 0.012, micSensitivity: 0.85, wrongBeep: false, mistakePolicy: 'restart', hands: true, micMode: 'piano', voiceLow: 57, voiceHigh: 74, outputMode: 'headphones', latencyMode: 'smooth', micDeviceId: '',
+  latencyMs: 60, noiseGate: 0.012, micSensitivity: 0.85, wrongBeep: false, mistakePolicy: 'restart', hands: true, micMode: 'piano', voiceLow: 57, voiceHigh: 74, outputMode: 'headphones', latencyMode: 'smooth', micDeviceId: '', micInstrument: 'piano', autoFocus: true,
 };
 
 const kv = browserKV();
@@ -44,6 +48,7 @@ function apply(s: AppSettings) {
   mic.settings.minConfidence = s.micSensitivity;
   mic.settings.mode = s.micMode;
   mic.deviceId = s.micDeviceId;
+  if (s.micInstrument === 'piano' || s.micInstrument === 'epiano' || s.micInstrument === 'organ' || s.micInstrument === 'synth') mic.profile = s.micInstrument;
   void audio.setLatencyMode(s.latencyMode);
   document.documentElement.classList.toggle('hc', s.highContrast);
 }
