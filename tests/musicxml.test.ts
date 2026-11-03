@@ -151,3 +151,42 @@ describe('MusicXML fingering for the guide hands', () => {
     expect(planFingering(b.exercise.events).flat()).toEqual([1, 2, 3, 1]); // gap filled, written fingers kept
   });
 });
+
+describe('Guide hands for choir scores', () => {
+  // five parts like a MuseScore choir export: every part carries a hidden, empty second staff
+  const part = (id: string, step: string, oct: number) => `<part id="${id}"><measure number="1"><attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time><staves>2</staves></attributes>` +
+    `<note><pitch><step>${step}</step><octave>${oct}</octave></pitch><duration>4</duration><voice>1</voice><staff>1</staff></note><backup><duration>4</duration></backup><note><rest measure="yes"/><duration>4</duration><voice>5</voice><staff>2</staff></note></measure></part>`;
+  const names = [['P1', 'Lead', 'E', 5], ['P2', 'Soprano', 'C', 5], ['P3', 'Alto', 'G', 4], ['P4', 'Tenor', 'E', 4], ['P5', 'Bass', 'C', 3]] as const;
+  const xml = `<?xml version="1.0"?><score-partwise version="4.0"><part-list>${names.map(([id, n]) => `<score-part id="${id}"><part-name>${n}</part-name></score-part>`).join('')}</part-list>${names.map(([id, , s, o]) => part(id, s, o)).join('')}</score-partwise>`;
+  it('hidden empty staves are not called hands, and every voice is played: S A (Lead) right, T B left', async () => {
+    const { handTracksFor, buildPractice: bp } = await import('../src/musicxml/practice');
+    const s = parse(xml);
+    expect(s.tracks.some((t) => /hand/.test(t.name))).toBe(false);
+    const plan = handTracksFor(s, [s.tracks[0].key]);
+    expect(plan.keys.length).toBe(5);
+    const b = bp(s, { tracks: plan.keys, fromMeasure: 0, toMeasure: 0, mode: 'timed', handOf: plan.handOf }, 90);
+    const ev = b.exercise.events[0];
+    expect(ev.pitches).toEqual([48, 64, 67, 72, 76]);
+    expect(ev.hands).toEqual(['LH', 'LH', 'RH', 'RH', 'RH']);
+  });
+  it('a real piano part still gives the hands its own two staves', async () => {
+    const { handTracksFor } = await import('../src/musicxml/practice');
+    const s = parse(wrap(`<measure number="1"><attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time><staves>2</staves></attributes>${n('C', 5, 4, '<staff>1</staff>')}<backup><duration>4</duration></backup>${n('C', 3, 4, '<staff>2</staff>')}</measure>`));
+    const plan = handTracksFor(s, []);
+    expect(plan.keys.map(plan.handOf)).toEqual(['RH', 'LH']);
+  });
+});
+
+describe('Display clean-up', () => {
+  it('removes a hidden empty second staff but keeps every note and the timing', async () => {
+    const { hideEmptyStaves } = await import('../src/musicxml/display');
+    const xml = wrap(`<measure number="1"><attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time><staves>2</staves><clef number="1"><sign>G</sign><line>2</line></clef><clef number="2"><sign>F</sign><line>4</line></clef></attributes>${n('C', 5, 2, '<voice>1</voice><staff>1</staff>')}${n('D', 5, 2, '<voice>1</voice><staff>1</staff>')}<backup><duration>4</duration></backup><note><rest measure="yes"/><duration>4</duration><voice>5</voice><staff>2</staff></note></measure>`);
+    const doc = new DOMParser().parseFromString(xml, 'text/xml') as unknown as Document;
+    expect(hideEmptyStaves(doc)).toBe(1);
+    const { XMLSerializer } = await import('@xmldom/xmldom');
+    const out = new XMLSerializer().serializeToString(doc as never);
+    expect(out).not.toMatch(/<staves>|<staff>|number="2"|<backup>/);
+    const s = parse(out);
+    expect(s.notes.map((x) => [x.midi, x.startQ])).toEqual([[72, 0], [74, 2]]);
+  });
+});

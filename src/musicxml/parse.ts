@@ -299,7 +299,7 @@ export function parseMusicXml(doc: Document, xml = ''): Score {
     return {
       key, partId, partName: part.name, staff: +staff, voice, noteCount: ns.length,
       avgMidi: ns.reduce((a, b) => a + b.midi, 0) / ns.length,
-      name: part.name + (part.staves === 2 ? (staff === '1' ? ' · right hand' : ' · left hand') : part.staves > 2 ? ` · staff ${staff}` : '') + (tracksInSameStaff(tmap, partId, staff) > 1 ? ` · voice ${voice}` : ''),
+      name: part.name + staffLabel(tmap, part, staff) + (tracksInSameStaff(tmap, partId, staff) > 1 ? ` · voice ${voice}` : ''),
     };
   });
   assignSATB(tracks);
@@ -308,6 +308,15 @@ export function parseMusicXml(doc: Document, xml = ''): Score {
     title, composer, parts: partInfo, tracks, measures, notes,
     tempo: tempoList[0].bpm, tempoMap: tempoList, keyFifths, timeSig: [sigs[0].beats, sigs[0].beatType], totalQ: t, warnings, xml,
   };
+}
+
+/** Only staves that hold notes count: many exports carry a hidden, empty second staff on every part. */
+function staffLabel(tmap: Map<string, ScoreNote[]>, part: PartInfo, staff: string) {
+  const used = new Set([...tmap.keys()].filter((k) => k.startsWith(`${part.id}|`)).map((k) => k.split('|')[1]));
+  if (used.size < 2) return '';
+  const vocal = /choir|chorus|satb|voice|vocal|soprano|alto|tenor|bass(?! guitar)|lead|solo/i.test(part.name) && !/piano|keyboard|organ/i.test(part.name);
+  if (used.size === 2) return vocal ? (staff === '1' ? ' · upper staff' : ' · lower staff') : (staff === '1' ? ' · right hand' : ' · left hand');
+  return ` · staff ${staff}`;
 }
 
 function tracksInSameStaff(tmap: Map<string, ScoreNote[]>, pid: string, staff: string) {
@@ -331,7 +340,17 @@ function assignSATB(tracks: Track[]) {
     const sorted = [...tracks].sort((a, b) => b.avgMidi - a.avgMidi);
     (['S', 'A', 'T', 'B'] as const).forEach((r, i) => (sorted[i].role = r));
   }
+  // a choir part in closed score (4 voices on 2 staves) next to other parts, e.g. Lead + Choir
+  if (!any) {
+    const byPart = new Map<string, Track[]>();
+    for (const t of tracks) (byPart.get(t.partId) ?? byPart.set(t.partId, []).get(t.partId)!).push(t);
+    for (const group of byPart.values()) {
+      if (group.length !== 4 || !/choir|chorus|satb|hymn|voices/i.test(group[0].partName) || group.some((t) => t.role)) continue;
+      [...group].sort((a, b) => b.avgMidi - a.avgMidi).forEach((t, i) => (t.role = (['S', 'A', 'T', 'B'] as const)[i]));
+      group.forEach((t) => (t.name = '')); // plain role names below
+    }
+  }
   const full: Record<string, string> = { S: 'Soprano', A: 'Alto', T: 'Tenor', B: 'Bass' };
-  for (const t of tracks) if (t.role) t.name = `${full[t.role]}${tracks.length > 4 ? ` (${t.name})` : ''}`;
+  for (const t of tracks) if (t.role) t.name = `${full[t.role]}${tracks.length > 4 && t.name && t.name.toLowerCase() !== full[t.role].toLowerCase() ? ` (${t.name})` : ''}`;
   tracks.sort((a, b) => ('SATB'.indexOf(a.role ?? 'Z') - 'SATB'.indexOf(b.role ?? 'Z')) || b.avgMidi - a.avgMidi);
 }

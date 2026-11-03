@@ -1,7 +1,7 @@
 // Turns an imported score + the learner's chosen part(s) into an assessable exercise.
 // Only the chosen tracks are scored; every other unmuted track becomes accompaniment.
 
-import type { Exercise, ScoreEvent } from '../core/types';
+import type { Exercise, Hand, ScoreEvent } from '../core/types';
 import type { Score, ScoreNote } from './parse';
 
 export interface PracticeSpec {
@@ -12,6 +12,36 @@ export interface PracticeSpec {
   transpose?: number;       // semitones applied to targets and playback
   voice?: boolean;          // singing
   octaveFree?: boolean;
+  /** which hand plays each track (guide hands); default: staff 1 = right, staff 2 = left in keyboard parts */
+  handOf?: (trackKey: string) => Hand;
+}
+
+const VOCAL = /choir|chorus|satb|voice|vocal|soprano|alto|tenor|\bbass\b(?! guitar)|baritone|lead|solo|melody|singer/i;
+const KEYBOARD = /piano|keyboard|organ|harpsichord|clavi|e-?piano|rhodes/i;
+/** A part played by two hands: named like a keyboard, or two staves that both hold notes and is not a voice part. */
+export function isKeyboardPart(score: Score, partId: string): boolean {
+  const part = score.parts.find((p) => p.id === partId);
+  if (!part) return false;
+  if (KEYBOARD.test(part.name)) return true;
+  const used = new Set(score.tracks.filter((t) => t.partId === partId).map((t) => t.staff));
+  return used.size >= 2 && !VOCAL.test(part.name);
+}
+
+/**
+ * What the guide hands play for a score: the keyboard part you practice; otherwise the score's
+ * keyboard part (the accompaniment); otherwise a piano reduction of every pitched part, upper
+ * voices in the right hand and lower voices (tenor, bass, low instruments) in the left.
+ */
+export function handTracksFor(score: Score, targets: Iterable<string>): { keys: string[]; handOf: (key: string) => Hand } {
+  const targetParts = new Set([...targets].map((k) => k.split('|')[0]));
+  const kb = score.parts.filter((p) => isKeyboardPart(score, p.id)).map((p) => p.id);
+  const kbPart = kb.find((id) => targetParts.has(id)) ?? kb[0];
+  const byStaff = (key: string): Hand => (score.tracks.find((t) => t.key === key)?.staff ?? 1) === 1 ? 'RH' : 'LH';
+  if (kbPart) return { keys: score.tracks.filter((t) => t.partId === kbPart).map((t) => t.key), handOf: byStaff };
+  const tracks = score.tracks.filter((t) => t.noteCount > 0);
+  const lowRoles = new Set(['T', 'B']);
+  const hand = new Map<string, Hand>(tracks.map((t) => [t.key, t.role ? (lowRoles.has(t.role) ? 'LH' : 'RH') : t.avgMidi < 60 ? 'LH' : 'RH']));
+  return { keys: tracks.map((t) => t.key), handOf: (k) => hand.get(k) ?? 'RH' };
 }
 
 /** Written-score position (for the notation cursor) of a performance-timeline position. */
@@ -40,20 +70,23 @@ export function buildPractice(score: Score, spec: PracticeSpec, tempoBpm: number
   for (const n of notes) { const k = n.startQ.toFixed(4); (groups.get(k) ?? groups.set(k, []).get(k)!).push(n); }
   const tr = spec.transpose ?? 0;
   const staffOf = (key: string) => score.tracks.find((t) => t.key === key)?.staff ?? 1;
-  const pianoLike = score.parts.some((p) => p.staves > 1);
+  // two staves that both hold notes are played as two hands (piano, or a choir in closed score)
+  const twoStaves = (pid: string) => new Set(score.tracks.filter((t) => t.partId === pid).map((t) => t.staff)).size >= 2;
+  const handOfTrack = spec.handOf ?? ((key: string): Hand | undefined => (twoStaves(key.split('|')[0]) ? (staffOf(key) === 1 ? 'RH' : 'LH') : undefined));
   const srcQ: number[] = [];
   const eventNotes: ScoreNote[][] = [];
   const events: ScoreEvent[] = [...groups.values()].sort((a, b) => a[0].startQ - b[0].startQ).map((g) => {
     srcQ.push(g[0].srcStartQ);
     eventNotes.push(g);
     const pitches = [...new Set(g.map((n) => n.midi + tr))].sort((a, b) => a - b);
-    const staves = new Set(g.map((n) => staffOf(n.track)));
     const noteOf = (p: number) => g.find((n) => n.midi + tr === p)!;
+    const handsOf = pitches.map((p) => handOfTrack(noteOf(p).track));
+    const handSet = new Set(handsOf);
     const fingers = pitches.map((p) => noteOf(p).finger ?? 0);
     return {
       pitches, beat: g[0].startQ - q0, beats: Math.min(...g.map((n) => n.durQ)),
-      hand: pianoLike && staves.size === 1 ? (staves.has(1) ? 'RH' : 'LH') : undefined,
-      hands: pianoLike && staves.size > 1 ? pitches.map((p) => (staffOf(noteOf(p).track) === 1 ? 'RH' : 'LH')) : undefined,
+      hand: handSet.size === 1 ? handsOf[0] : undefined,
+      hands: handSet.size > 1 && !handSet.has(undefined) ? (handsOf as Hand[]) : undefined,
       fingers: fingers.some((f) => f) ? fingers : undefined,
     };
   });

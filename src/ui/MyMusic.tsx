@@ -15,8 +15,9 @@ import { midiIn } from '../input/midi';
 import { demoChoraleXml } from '../musicxml/demo';
 import { deleteScore, listScores, saveScore, scoreId, type LibItem } from '../musicxml/library';
 import { musicXmlText, parseMusicXml, type Score, type ScoreNote } from '../musicxml/parse';
-import { buildPractice, rangeQ, toSrcQ, type PracticeBuild } from '../musicxml/practice';
+import { buildPractice, handTracksFor, rangeQ, toSrcQ, type PracticeBuild } from '../musicxml/practice';
 import { Timeline } from '../musicxml/tempo';
+import { displayXml } from '../musicxml/display';
 import { makeBand, BAND_KEYS, type BandParts } from '../musicxml/band';
 import { transposedKey } from './keyname';
 import { KeyboardArea } from './KeyboardArea';
@@ -123,15 +124,14 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
   const tempos = score?.tempoMap.map((t) => t.bpm) ?? [];
   const handBuild = useMemo(() => {
     if (!score || sing) return null;
-    const parts = new Set([...targets].map((k) => k.split('|')[0]));
-    const pianoParts = score.parts.filter((p) => p.staves > 1 && parts.has(p.id)).map((p) => p.id);
-    const keys = pianoParts.length ? score.tracks.filter((t) => pianoParts.includes(t.partId)).map((t) => t.key) : [...targets];
-    if (!keys.length) return null;
+    const plan = handTracksFor(score, targets);
+    if (!plan.keys.length) return null;
     try {
-      const r = buildPractice(score, { tracks: keys, fromMeasure: from, toMeasure: to, mode: 'timed', transpose: tr }, bpm);
+      const r = buildPractice(score, { tracks: plan.keys, fromMeasure: from, toMeasure: to, mode: 'timed', transpose: tr, handOf: plan.handOf }, bpm);
       return r.exercise.events.length ? r : null;
     } catch { return null; }
   }, [score, targets, from, to, tr, bpm, sing]); // eslint-disable-line react-hooks/exhaustive-deps
+  const shownXml = useMemo(() => (score ? displayXml(score.xml) : ''), [score]);
   const [fix, setFix] = useState(false);
   const [more, setMore] = useState(false);
   const fixTimer = useRef(0);
@@ -493,7 +493,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
               <span className="legend"><i className="lg correct" />correct <i className="lg partial" />timing/tuning <i className="lg wrong" />wrong</span>
               <div className="zoom"><button onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(2)))} aria-label="Zoom out">−</button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom((z) => Math.min(1.6, +(z + 0.1).toFixed(2)))} aria-label="Zoom in">+</button></div>
             </div>
-            <ScoreView ref={view} xml={score.xml} zoom={zoom} transpose={tr} onError={setErr} />
+            <ScoreView ref={view} xml={shownXml} zoom={zoom} transpose={tr} onError={setErr} />
             {feed[0] && !report && <div key={feed[0].id} className={`latest fb ${feed[0].kind}`}><span className="ic">{icon(feed[0].kind)}</span>{feed[0].text}</div>}
           </div>
           {sing ? (
