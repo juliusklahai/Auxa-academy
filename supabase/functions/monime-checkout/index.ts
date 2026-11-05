@@ -26,8 +26,8 @@ Deno.serve(async (req) => {
       name: pass.name,
       reference: `${user.id}:${plan}`.slice(0, 255),
       lineItems: [{ type: 'custom', name: pass.name, price: { currency: 'SLE', value }, quantity: 1 }],
-      successUrl: `${APP_URL()}?pro=monime`,
-      cancelUrl: `${APP_URL()}?pro=cancel`,
+      successUrl: `${APP_URL(req)}?pro=monime`,
+      cancelUrl: `${APP_URL(req)}?pro=cancel`,
       metadata: { user_id: user.id, plan },
     }),
   });

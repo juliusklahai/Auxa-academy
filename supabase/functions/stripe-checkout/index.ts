@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
           metadata: { ...sub.metadata, plan },
         });
       }
-      return json({ url: `${APP_URL()}?pro=success` }); // the webhook updates the plan
+      return json({ url: `${APP_URL(req)}?pro=success` }); // the webhook updates the plan
     }
   }
 
@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription', customer, line_items: [{ price, quantity: 1 }], client_reference_id: user.id,
     subscription_data: { metadata: { user_id: user.id, plan } }, allow_promotion_codes: true,
-    success_url: `${APP_URL()}?pro=success`, cancel_url: `${APP_URL()}?pro=cancel`,
+    success_url: `${APP_URL(req)}?pro=success`, cancel_url: `${APP_URL(req)}?pro=cancel`,
   });
   return json({ url: session.url });
 });

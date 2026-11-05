@@ -10,6 +10,6 @@ Deno.serve(async (req) => {
   if (!user) return json({ error: 'Please sign in first.' }, 401);
   const { data: prof } = await admin().from('profiles').select('stripe_customer_id').eq('id', user.id).single();
   if (!prof?.stripe_customer_id) return json({ error: 'No card subscription on this account.' }, 400);
-  const s = await stripe.billingPortal.sessions.create({ customer: prof.stripe_customer_id, return_url: APP_URL() });
+  const s = await stripe.billingPortal.sessions.create({ customer: prof.stripe_customer_id, return_url: APP_URL(req) });
   return json({ url: s.url });
 });

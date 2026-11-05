@@ -96,7 +96,7 @@ export async function signOut() { await (await supabase()).auth.signOut(); }
 
 async function callFn(name: string, body: Record<string, unknown>) {
   const sb = await supabase();
-  const { data, error } = await sb.functions.invoke(name, { body });
+  const { data, error } = await sb.functions.invoke(name, { body, headers: { 'x-return-to': location.origin + location.pathname } });
   if (error) throw new Error((data as { error?: string })?.error ?? error.message);
   return data as { url?: string; id?: string; ok?: boolean; status?: string; error?: string };
 }

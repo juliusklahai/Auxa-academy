@@ -3,7 +3,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
 export const cors = {
   'Access-Control-Allow-Origin': Deno.env.get('APP_ORIGIN') ?? '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-return-to',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 export const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
@@ -18,4 +18,9 @@ export async function caller(req: Request) {
   return data.user ?? null;
 }
 
-export const APP_URL = () => Deno.env.get('APP_URL') ?? 'https://juliusklahai.github.io/maestro-academy/';
+const BASE_URL = Deno.env.get('APP_URL') ?? 'https://juliusklahai.github.io/maestro-academy/';
+/** Where to send people back to: the page they came from (live or /preview/), but only inside our own site. */
+export const APP_URL = (req?: Request) => {
+  const r = req?.headers.get('x-return-to') ?? '';
+  return r.startsWith(BASE_URL) && !r.includes('?') ? r : BASE_URL;
+};
