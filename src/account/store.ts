@@ -8,7 +8,7 @@ import { entitlementFrom, LOCAL_ENTITLEMENT, type Entitlement } from './gate';
 import { mergeProgress } from './merge';
 import type { ProgressData } from '../progress/store';
 
-export interface Profile { id: string; email: string; display_name: string | null; role: 'user' | 'admin' | 'teacher'; pro_until: string | null; pro_source: string | null; stripe_status: string | null; progress: ProgressData | Record<string, never>; progress_updated_at: string | null }
+export interface Profile { id: string; email: string; display_name: string | null; role: 'user' | 'admin' | 'teacher'; pro_until: string | null; plus_until: string | null; pro_source: string | null; stripe_status: string | null; progress: ProgressData | Record<string, never>; progress_updated_at: string | null }
 export interface AccountState { ready: boolean; user: User | null; profile: Profile | null; ent: Entitlement; syncing: boolean; error: string }
 
 const CACHE = 'maestro.account.v1';
@@ -22,7 +22,7 @@ export const useAccount = () => useSyncExternalStore((cb) => { subs.add(cb); ret
 try {
   if (ACCOUNTS_ENABLED) {
     const c = JSON.parse(localStorage.getItem(CACHE) || 'null');
-    state = { ...state, ent: c ? entitlementFrom(c) : { pro: false, admin: false, enabled: true } };
+    state = { ...state, ent: c ? entitlementFrom(c) : entitlementFrom(null) };
     progress.unlockAll = state.ent.admin;
   }
 } catch { /* ignore */ }
@@ -35,13 +35,13 @@ export function supabase(): Promise<SupabaseClient> {
 }
 
 async function loadProfile(user: User | null) {
-  if (!user) { set({ user: null, profile: null, ent: { pro: false, admin: false, enabled: true }, ready: true }); localStorage.removeItem(CACHE); return; }
+  if (!user) { set({ user: null, profile: null, ent: entitlementFrom(null), ready: true }); localStorage.removeItem(CACHE); return; }
   const sb = await supabase();
   const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
   if (error || !data) { set({ user, ready: true, error: error?.message ?? '' }); return; }
   const profile = data as Profile;
   const ent = entitlementFrom(profile);
-  localStorage.setItem(CACHE, JSON.stringify({ role: profile.role, pro_until: profile.pro_until }));
+  localStorage.setItem(CACHE, JSON.stringify({ role: profile.role, pro_until: profile.pro_until, plus_until: profile.plus_until }));
   set({ user, profile, ent, ready: true, error: '' });
   await syncProgress(profile);
 }
@@ -116,13 +116,13 @@ export async function verifyMonime(id: string) {
 // ---------- admin ----------
 export async function adminSearch(q: string) {
   const sb = await supabase();
-  let query = sb.from('profiles').select('id,email,display_name,role,pro_until,pro_source,stripe_status,created_at').order('created_at', { ascending: false }).limit(50);
+  let query = sb.from('profiles').select('id,email,display_name,role,pro_until,plus_until,pro_source,stripe_status,created_at').order('created_at', { ascending: false }).limit(50);
   if (q.trim()) query = query.ilike('email', `%${q.trim()}%`);
   const { data, error } = await query;
   if (error) throw error;
   return data as (Profile & { created_at: string })[];
 }
-export async function adminGrant(email: string, days: number) { const { data, error } = await (await supabase()).rpc('admin_grant', { p_email: email, p_days: days }); if (error) throw error; return data as string; }
+export async function adminGrant(email: string, days: number, tier: 'pro' | 'plus' = 'pro') { const { data, error } = await (await supabase()).rpc('admin_grant', { p_email: email, p_days: days, p_tier: tier }); if (error) throw error; return data as string; }
 export async function adminSetRole(email: string, role: string) { const { error } = await (await supabase()).rpc('admin_set_role', { p_email: email, p_role: role }); if (error) throw error; }
 export async function adminPayments() {
   const { data, error } = await (await supabase()).from('payments').select('*').order('created_at', { ascending: false }).limit(50);

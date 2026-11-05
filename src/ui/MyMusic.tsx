@@ -174,7 +174,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
     load(songXml(id), false);
   };
   const pickFile = () => {
-    if (!allowFeature(getAccount().ent, 'import')) { openUpgrade('Open your own MusicXML scores with Pro'); return; }
+    if (!allowFeature(getAccount().ent, 'import')) { openUpgrade('Open your own MusicXML and choir scores with Plus'); return; }
     fileIn.current?.click();
   };
 

@@ -1,6 +1,7 @@
 // Account UI: sign in, plan status, upgrade (Stripe subscriptions or Monime passes), and the admin page.
 import { useEffect, useState } from 'react';
-import { ACCOUNTS_ENABLED, MONIME_ENABLED, PLANS } from '../account/config';
+import { ACCOUNTS_ENABLED, MONIME_ENABLED, PLANS, type PlanOption } from '../account/config';
+import { TIER_NAME } from '../account/gate';
 import {
   adminGrant, adminPayments, adminSearch, adminSetRole, closeUpgrade, openBillingPortal, openUpgrade, refreshProfile, signInWithEmail,
   signInWithGoogle, signOut, startCheckout, useAccount, useUpgrade, type Profile,
@@ -43,11 +44,12 @@ export function AccountCard() {
         <>
           <div className="acct-who">
             <span className="avatar">{(p?.email ?? '?')[0].toUpperCase()}</span>
-            <div><b>{p?.email}</b><small className="muted">{a.ent.admin ? 'Admin: every course unlocked' : a.ent.pro ? `Pro until ${fmtDate(p?.pro_until ?? null)}${p?.pro_source === 'stripe' ? ' (renews automatically)' : ''}` : 'Free plan'}</small></div>
+            <div><b>{p?.email}</b><small className="muted">{a.ent.admin ? 'Admin: every course unlocked' : a.ent.pro ? `${TIER_NAME[a.ent.tier]} until ${fmtDate((a.ent.plus ? p?.plus_until : p?.pro_until) ?? null)}${p?.pro_source === 'stripe' ? ' (renews automatically)' : ''}` : 'Free plan'}</small></div>
           </div>
           <div className="acct-actions">
-            {!a.ent.pro && <button className="btn lime" onClick={() => openUpgrade('Unlock every level and song')}>Upgrade to Pro</button>}
-            {p?.pro_source === 'monime' && a.ent.pro && !a.ent.admin && <button className="btn ghost" onClick={() => openUpgrade('Add more time to your pass')}>Add time</button>}
+            {!a.ent.pro && <button className="btn lime" onClick={() => openUpgrade('Choose your plan')}>Upgrade</button>}
+            {a.ent.pro && !a.ent.plus && !a.ent.admin && <button className="btn lime" onClick={() => openUpgrade('Go further with Plus')}>Upgrade to Plus</button>}
+            {p?.pro_source === 'monime' && a.ent.pro && !a.ent.admin && <button className="btn ghost" onClick={() => openUpgrade('Add another month')}>Add a month</button>}
             {p?.stripe_status && <button className="btn ghost" onClick={() => openBillingPortal().catch((e) => alert(e.message))}>Manage card subscription</button>}
             <button className="btn ghost" onClick={() => void refreshProfile()}>Refresh</button>
             <button className="btn ghost" onClick={() => void signOut()}>Sign out</button>
@@ -58,40 +60,49 @@ export function AccountCard() {
   );
 }
 
-/** The paywall: plans from Stripe (cards, auto-renew) and Monime (mobile money passes). */
+const PERKS: Record<'pro' | 'plus', string[]> = {
+  pro: ['Levels 3 to 6: hands together, rhythm, keys and scales, chords', 'The whole song library', 'Standard singing coach', 'Progress saved on all your devices'],
+  plus: ['Everything in Pro', 'Levels 7 to 9: sight-reading, advanced technique, performance', 'Strict and Pro coach singing', 'Your own MusicXML and choir (SATB) scores'],
+};
+
+/** The paywall: Pro and Plus, each by card (Stripe, renews monthly) or mobile money (Monime, 1-month pass). */
 export function UpgradeSheet() {
   const reason = useUpgrade();
   const a = useAccount();
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
   if (!reason || !ACCOUNTS_ENABLED) return null;
-  const plans = PLANS.filter((p) => p.provider === 'stripe' || MONIME_ENABLED);
+  const buy = async (p: PlanOption) => {
+    setBusy(p.id); setErr('');
+    try { await startCheckout(p.id, p.provider); } catch (x) { setErr((x as Error).message); setBusy(''); }
+  };
+  const tiers = (['pro', 'plus'] as const).filter((t) => !(t === 'pro' && a.ent.pro && !a.ent.plus && a.profile?.pro_source === 'stripe'));
   return (
     <div className="sheet-back" onClick={closeUpgrade}>
-      <div className="sheet" role="dialog" aria-label="Upgrade to Pro" onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-head"><div><small className="muted">Maestro Pro</small><b>{reason}</b></div><button className="icon-btn" onClick={closeUpgrade} aria-label="Close"><Icon name="close" size={16} /></button></div>
-        <ul className="pro-list">
-          <li><Icon name="check" size={14} /> All 10 levels: hands together, scales, chords, sight-reading, advanced technique</li>
-          <li><Icon name="check" size={14} /> The full song library, and your own MusicXML scores</li>
-          <li><Icon name="check" size={14} /> Every singing level up to Pro coach</li>
-          <li><Icon name="check" size={14} /> Progress saved on all your devices</li>
-        </ul>
-        {!a.user ? <SignInForm compact /> : (
-          <div className="plan-grid">
-            {plans.map((p) => (
-              <button key={p.id} className={`plan ${p.best ? 'best' : ''}`} disabled={!!busy} onClick={async () => {
-                setBusy(p.id); setErr('');
-                try { await startCheckout(p.id, p.provider); } catch (x) { setErr((x as Error).message); setBusy(''); }
-              }}>
-                {p.best && <span className="tag">Best value</span>}
-                <b>{p.title}</b><span className="price">{p.price}</span><small>{p.note}</small>
-                {busy === p.id && <small>Opening checkout…</small>}
-              </button>
-            ))}
-          </div>
-        )}
+      <div className="sheet" role="dialog" aria-label="Upgrade" onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-head"><div><small className="muted">Maestro Academy</small><b>{reason}</b></div><button className="icon-btn" onClick={closeUpgrade} aria-label="Close"><Icon name="close" size={16} /></button></div>
+        {!a.user && <SignInForm compact />}
+        <div className="tier-grid">
+          {tiers.map((t) => {
+            const opts = PLANS.filter((p) => p.tier === t && (p.provider === 'stripe' || MONIME_ENABLED));
+            return (
+              <div key={t} className={`tier ${t}`}>
+                <div className="tier-head"><b>{TIER_NAME[t]}</b>{t === 'plus' && <span className="tag">Everything</span>}</div>
+                <ul className="pro-list">{PERKS[t].map((x) => <li key={x}><Icon name="check" size={14} /> {x}</li>)}</ul>
+                <div className="tier-buy">
+                  {opts.map((p) => (
+                    <button key={p.id} className={`btn ${p.provider === 'stripe' ? (t === 'plus' ? 'lime' : 'dark') : 'ghost'}`} disabled={!a.user || !!busy} onClick={() => void buy(p)}
+                      title={p.note}>
+                      {busy === p.id ? 'Opening…' : <>{p.provider === 'stripe' ? 'Card' : 'Mobile money'} · {p.price}</>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
         {err && <p className="err small">{err}</p>}
-        <p className="muted small">Levels 0 to 2, the beginner songs and Easy singing stay free.</p>
+        <p className="muted small">{a.user ? 'Card plans renew monthly and can be cancelled any time. Mobile money passes last 1 month and never auto-renew.' : 'Sign in first, then pick a plan.'} Levels 0 to 2, beginner songs and Easy singing stay free.</p>
       </div>
     </div>
   );
@@ -130,18 +141,20 @@ export function AdminView() {
         </form>
         {msg && <p className="small">{msg}</p>}
         <table className="admin-table">
-          <thead><tr><th>Email</th><th>Role</th><th>Pro until</th><th>Source</th><th /></tr></thead>
+          <thead><tr><th>Email</th><th>Role</th><th>Pro until</th><th>Plus until</th><th>Source</th><th /></tr></thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.id}>
                 <td>{r.email}</td>
                 <td><select value={r.role} onChange={(e) => act(() => adminSetRole(r.email, e.target.value), `Role updated for ${r.email}`)}><option>user</option><option>teacher</option><option>admin</option></select></td>
                 <td>{fmtDate(r.pro_until) || '-'}</td>
+                <td>{fmtDate(r.plus_until) || '-'}</td>
                 <td>{r.pro_source ?? '-'}{r.stripe_status ? ` (${r.stripe_status})` : ''}</td>
                 <td className="admin-acts">
-                  <button className="btn ghost sm" onClick={() => act(() => adminGrant(r.email, 31), `+1 month for ${r.email}`)}>+1 month</button>
-                  <button className="btn ghost sm" onClick={() => act(() => adminGrant(r.email, 366), `+1 year for ${r.email}`)}>+1 year</button>
-                  <button className="btn ghost sm" onClick={() => act(() => adminGrant(r.email, 0), `Pro removed for ${r.email}`)}>Remove</button>
+                  <button className="btn ghost sm" onClick={() => act(() => adminGrant(r.email, 31, 'pro'), `+1 month Pro for ${r.email}`)}>Pro +1 mo</button>
+                  <button className="btn ghost sm" onClick={() => act(() => adminGrant(r.email, 31, 'plus'), `+1 month Plus for ${r.email}`)}>Plus +1 mo</button>
+                  <button className="btn ghost sm" onClick={() => act(() => adminGrant(r.email, 366, 'plus'), `+1 year Plus for ${r.email}`)}>Plus +1 yr</button>
+                  <button className="btn ghost sm" onClick={() => act(() => adminGrant(r.email, 0), `Paid access removed for ${r.email}`)}>Remove</button>
                 </td>
               </tr>
             ))}

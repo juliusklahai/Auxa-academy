@@ -5,7 +5,7 @@ import { midiToName } from '../core/music';
 import type { Lesson, SkillId } from '../core/types';
 import { LEVEL_GROUP, LEVEL_NAMES } from '../curriculum/levels';
 import { AccountCard } from './Account';
-import { allowLesson } from '../account/gate';
+import { allowLesson, lessonTier, TIER_NAME } from '../account/gate';
 import { getAccount, useAccount } from '../account/store';
 import { LESSONS, PIANO_LESSONS, VOICE_LESSONS } from '../curriculum/lessons';
 import { onLearnerNote } from '../input/bus';
@@ -65,7 +65,7 @@ function LessonCard({ l, onOpen }: { l: Lesson; onOpen: () => void }) {
       {unlocked ? <Spark values={scores} /> : <p className="muted small">{l.summary}</p>}
       <div className="lcard-foot">
         <span>Average: <b>{avg ?? '-'}</b><small>/100</small></span>
-        {pro && <span className="pro-tag inline">Pro</span>}
+        {pro && <span className={`pro-tag inline ${lessonTier(l)}`}>{TIER_NAME[lessonTier(l)]}</span>}
         {delta !== null && <span className={`delta ${delta >= 0 ? 'up' : 'down'}`}>{delta >= 0 ? '+' : ''}{delta}</span>}
         {!unlocked && !pro && <span className="muted small">Locked</span>}
       </div>

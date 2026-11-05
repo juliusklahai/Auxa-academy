@@ -47,19 +47,20 @@ Enter them in **Edge Functions → Secrets**, or with `supabase secrets set NAME
 |---|---|
 | STRIPE_SECRET_KEY | Stripe → Developers → API keys (`sk_live_...`) |
 | STRIPE_WEBHOOK_SECRET | Shown when you create the webhook in step 4 (`whsec_...`) |
-| STRIPE_PRICE_MONTHLY | The ID of the monthly price (`price_...`) |
-| STRIPE_PRICE_YEARLY | The ID of the yearly price (`price_...`) |
+| STRIPE_PRICE_PRO | The ID of the $8.99/month price |
+| STRIPE_PRICE_PLUS | The ID of the $15.99/month price |
 | MONIME_ACCESS_TOKEN | Monime dashboard → Developers |
 | MONIME_SPACE_ID | Monime dashboard (`spc-...`) |
-| MONIME_PRICE_1M | 1-month pass in minor units of SLE, for example `9900` |
-| MONIME_PRICE_12M | 12-month pass in minor units of SLE |
+| MONIME_PRICE_PRO | Pro pass in minor units of SLE: `20000` (SLE 200) |
+| MONIME_PRICE_PLUS | Plus pass in minor units of SLE: `40000` (SLE 400) |
 | MONIME_WEBHOOK_SECRET | Any long random string you make up |
 | APP_URL | `https://juliusklahai.github.io/maestro-academy/` |
 | APP_ORIGIN | `https://juliusklahai.github.io` |
 
 ## 4. Stripe
 
-1. Go to **Products**. Create "Maestro Pro" with two recurring prices, monthly and yearly.
+1. Go to **Products**. You have two monthly prices: $8.99 (Pro) and $15.99 (Plus).
+   Check which ID is which before setting STRIPE_PRICE_PRO and STRIPE_PRICE_PLUS.
 2. Go to **Developers → Webhooks → Add endpoint**:
    - URL: `https://<ref>.supabase.co/functions/v1/stripe-webhook`
    - Events: `checkout.session.completed`, `invoice.paid`, `customer.subscription.updated`, `customer.subscription.deleted`
@@ -67,7 +68,7 @@ Enter them in **Edge Functions → Secrets**, or with `supabase secrets set NAME
 
 ## 5. Monime
 
-Monime has no auto-renewal, so these are sold as passes: 31 or 366 days.
+Monime has no auto-renewal, so these are sold as 31-day passes: Pro for SLE 200, Plus for SLE 400.
 
 1. Create a webhook pointing to `https://<ref>.supabase.co/functions/v1/monime-verify`.
 2. Use the event `checkout_session.completed`.
@@ -82,18 +83,20 @@ These go in the GitHub repo's Actions variables, or in `.env.local` for testing:
 ```
 VITE_SUPABASE_URL=https://<ref>.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon key>
-VITE_PRICE_MONTHLY_LABEL=$4.99 / month
-VITE_PRICE_YEARLY_LABEL=$39 / year
-VITE_PRICE_PASS_1M_LABEL=SLE 99 for 1 month
-VITE_PRICE_PASS_12M_LABEL=SLE 790 for 12 months
+VITE_PRICE_PRO_LABEL=\$8.99 / month
+VITE_PRICE_PLUS_LABEL=\$15.99 / month
+VITE_PRICE_PASS_PRO_LABEL=SLE 200
+VITE_PRICE_PASS_PLUS_LABEL=SLE 400
 VITE_MONIME_ENABLED=true
 ```
 
 ## Free vs Pro
 
 - **Free:** Levels 0 to 2, the Beginner songs, Easy singing, and microphone and MIDI listening.
-- **Pro:** everything else, including MusicXML import and syncing progress across devices.
-- **Admin:** everything, plus the Admin tab (grant or remove time, change roles, see payments).
+- **Pro ($8.99 or SLE 200 a month):** Levels 3 to 6, the whole song library, Standard singing, and progress synced across devices.
+- **Plus ($15.99 or SLE 400 a month):** everything, including Levels 7 to 9, Strict and Pro coach singing, and your own MusicXML and choir scores.
+- A card Pro subscriber who picks Plus gets their subscription switched (prorated), not a second one.
+- **Admin:** everything, plus the Admin tab (grant Pro or Plus time, remove it, change roles, see payments).
 
 ## Known limit
 

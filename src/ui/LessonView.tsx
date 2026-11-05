@@ -10,7 +10,7 @@ import { mic, micHelp } from '../input/mic';
 import { midiIn } from '../input/midi';
 import { KeyboardArea } from './KeyboardArea';
 import { applyVoiceLevel, VOICE_LEVELS } from '../assessment/voiceLevels';
-import { allowVoiceLevel } from '../account/gate';
+import { allowVoiceLevel, voiceLevelTier, TIER_NAME } from '../account/gate';
 import { getAccount, openUpgrade } from '../account/store';
 import { Icon } from './Icon';
 import { Piano, type KeyMark } from './Piano';
@@ -418,7 +418,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
           {exercise.voice && (
             <div className="card voice-level">
               <div className="card-head"><b>Singing level</b></div>
-              <div className="seg wide">{VOICE_LEVELS.map((v) => <button key={v.id} className={settings.voiceLevel === v.id ? 'on' : ''} disabled={s.state === 'LISTENING'} onClick={() => { if (!allowVoiceLevel(getAccount().ent, v.id)) { openUpgrade(`${v.label} singing is part of Pro`); return; } setSettings({ voiceLevel: v.id }); }}>{v.label}{!allowVoiceLevel(getAccount().ent, v.id) ? ' · Pro' : ''}</button>)}</div>
+              <div className="seg wide">{VOICE_LEVELS.map((v) => <button key={v.id} className={settings.voiceLevel === v.id ? 'on' : ''} disabled={s.state === 'LISTENING'} onClick={() => { if (!allowVoiceLevel(getAccount().ent, v.id)) { openUpgrade(`${v.label} singing is part of ${TIER_NAME[voiceLevelTier(v.id)]}`); return; } setSettings({ voiceLevel: v.id }); }}>{v.label}{!allowVoiceLevel(getAccount().ent, v.id) ? ` · ${TIER_NAME[voiceLevelTier(v.id)]}` : ''}</button>)}</div>
               <p className="muted small">{VOICE_LEVELS.find((v) => v.id === settings.voiceLevel)?.blurb}</p>
             </div>
           )}

@@ -8,6 +8,7 @@ const free = entitlementFrom({ role: 'user', pro_until: null });
 const pro = entitlementFrom({ role: 'user', pro_until: new Date(Date.now() + 86400000).toISOString() });
 const expired = entitlementFrom({ role: 'user', pro_until: new Date(Date.now() - 1000).toISOString() });
 const admin = entitlementFrom({ role: 'admin', pro_until: null });
+const plus = entitlementFrom({ role: 'user', pro_until: null, plus_until: new Date(Date.now() + 86400000).toISOString() });
 
 describe('Free and Pro', () => {
   it('free: Levels 0-2, voice lessons, beginner songs, Easy singing', () => {
@@ -22,8 +23,19 @@ describe('Free and Pro', () => {
     expect(allowVoiceLevel(free, 'pro')).toBe(false);
     expect(allowFeature(free, 'import')).toBe(false);
   });
-  it('pro and admin unlock everything; an expired pass falls back to free', () => {
-    for (const e of [pro, admin]) { expect(LESSONS.every((l) => allowLesson(e, l))).toBe(true); expect(SONGS.every((s) => allowSong(e, s))).toBe(true); expect(allowFeature(e, 'import')).toBe(true); }
+  it('pro: Levels 3-6, every song, Standard singing; not Levels 7-9, strict singing or import', () => {
+    const lv = (n: number) => LESSONS.find((l) => l.level === n && (l.track ?? 'piano') === 'piano')!;
+    expect(pro.tier).toBe('pro');
+    expect(allowLesson(pro, lv(3)) && allowLesson(pro, lv(6))).toBe(true);
+    expect(allowLesson(pro, lv(7))).toBe(false);
+    expect(SONGS.every((s) => allowSong(pro, s))).toBe(true);
+    expect(allowVoiceLevel(pro, 'standard')).toBe(true);
+    expect(allowVoiceLevel(pro, 'strict')).toBe(false);
+    expect(allowFeature(pro, 'import')).toBe(false);
+  });
+  it('plus and admin unlock everything; an expired pass falls back to free', () => {
+    for (const e of [plus, admin]) { expect(LESSONS.every((l) => allowLesson(e, l))).toBe(true); expect(SONGS.every((s) => allowSong(e, s))).toBe(true); expect(allowFeature(e, 'import')).toBe(true); expect(allowVoiceLevel(e, 'pro')).toBe(true); }
+    expect(plus.pro && plus.tier === 'plus').toBe(true);
     expect(admin.admin).toBe(true);
     expect(allowLesson(expired, LESSONS.find((l) => l.level === 5)!)).toBe(false);
   });

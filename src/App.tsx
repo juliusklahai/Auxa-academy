@@ -12,7 +12,7 @@ import { MyMusic } from './ui/MyMusic';
 import { VoiceStudio } from './ui/VoiceStudio';
 import { AccountButton, AdminView, UpgradeSheet } from './ui/Account';
 import { getAccount, initAccount, openUpgrade, useAccount } from './account/store';
-import { allowLesson } from './account/gate';
+import { allowLesson, lessonTier, TIER_NAME } from './account/gate';
 
 type Tab = 'home' | 'learn' | 'music' | 'voice' | 'studio' | 'settings' | 'admin';
 const TABS: { id: Tab; label: string; icon: string; title: string }[] = [
@@ -54,7 +54,7 @@ export default function App() {
   const account = useAccount();
   useEffect(() => { void initAccount(); }, []);
   const open = (l: Lesson, ex?: number) => {
-    if (!allowLesson(getAccount().ent, l)) { openUpgrade(`Level ${l.level} is part of Pro`); return; }
+    if (!allowLesson(getAccount().ent, l)) { openUpgrade(`Level ${l.level} is part of ${TIER_NAME[lessonTier(l)]}`); return; }
     setExStart(ex); setLesson(l); setTab(l.track === 'voice' ? 'voice' : 'learn');
   };
   const nextLesson = lesson ? LESSONS.find((l) => l !== lesson && (l.track ?? 'piano') === (lesson.track ?? 'piano') && !progress.lessonComplete(l) && progress.lessonUnlocked(l, LESSONS)) : undefined;

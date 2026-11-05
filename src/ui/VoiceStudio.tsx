@@ -9,7 +9,7 @@ import { Icon } from './Icon';
 import { Metric } from './LessonView';
 import { PitchRoll } from './PitchRoll';
 import { progress, setSettings, useProgressVersion, useSettings } from './settings';
-import { allowVoiceLevel } from '../account/gate';
+import { allowVoiceLevel, voiceLevelTier, TIER_NAME } from '../account/gate';
 import { getAccount, openUpgrade } from '../account/store';
 import { VOICE_LEVELS, voiceLevelInfo } from '../assessment/voiceLevels';
 
@@ -116,7 +116,7 @@ export function VoiceStudio({ openLesson, singChoir }: { openLesson: (l: Lesson)
       <section className="voice-grid">
         <div className="card voice-level">
           <div className="card-head"><b>Singing level</b><span className="muted small">{lvl.blurb}</span></div>
-          <div className="seg wide">{VOICE_LEVELS.map((v) => <button key={v.id} className={st.voiceLevel === v.id ? 'on' : ''} onClick={() => { if (!allowVoiceLevel(getAccount().ent, v.id)) { openUpgrade(`${v.label} singing is part of Pro`); return; } setSettings({ voiceLevel: v.id }); }}>{v.label}{!allowVoiceLevel(getAccount().ent, v.id) ? ' · Pro' : ''}</button>)}</div>
+          <div className="seg wide">{VOICE_LEVELS.map((v) => <button key={v.id} className={st.voiceLevel === v.id ? 'on' : ''} onClick={() => { if (!allowVoiceLevel(getAccount().ent, v.id)) { openUpgrade(`${v.label} singing is part of ${TIER_NAME[voiceLevelTier(v.id)]}`); return; } setSettings({ voiceLevel: v.id }); }}>{v.label}{!allowVoiceLevel(getAccount().ent, v.id) ? ` · ${TIER_NAME[voiceLevelTier(v.id)]}` : ''}</button>)}</div>
         </div>
         <div className="card">
           <div className="card-head"><b>Pitch matching</b><span className="muted small">Hold the note in tune for a moment. Any octave counts.</span></div>

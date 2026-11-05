@@ -1,11 +1,12 @@
-// Confirms Monime payments and credits Pro days. Called two ways:
+// Confirms Monime payments and credits 31 days of Pro or Plus. Called two ways:
 //  1. By Monime's webhook (checkout_session.completed / payment events) with our shared secret header.
 //  2. By the app when the learner returns from checkout (signed in), as a fallback if the webhook is late.
 // We never trust the payload: the checkout session is re-read from Monime's API with our secret token,
 // and it must be "completed" with our metadata. Each session can be credited only once.
 import { admin, caller, cors, json } from '../_shared/util.ts';
 
-const DAYS: Record<string, number> = { pass_1m: 31, pass_12m: 366 };
+const DAYS: Record<string, number> = { pass_pro: 31, pass_plus: 31 };
+const TIER: Record<string, string> = { pass_pro: 'pro', pass_plus: 'plus' };
 const H = () => ({ Authorization: `Bearer ${Deno.env.get('MONIME_ACCESS_TOKEN')}`, 'Monime-Space-Id': Deno.env.get('MONIME_SPACE_ID')! });
 
 async function credit(sessionId: string, expectUser?: string) {
@@ -18,7 +19,7 @@ async function credit(sessionId: string, expectUser?: string) {
   const amount = (s.lineItems?.data ?? s.lineItems ?? []).reduce((a: number, li: { price?: { value?: number }; quantity?: number }) => a + (li.price?.value ?? 0) * (li.quantity ?? 1), 0);
   const { error } = await db.from('payments').insert({ user_id: userId, provider: 'monime', external_id: s.id, plan, amount_minor: amount || null, currency: 'SLE', days_added: DAYS[plan] });
   if (error) return { ok: true, status: 'already credited' }; // unique(provider, external_id)
-  await db.rpc('extend_pro', { p_user: userId, p_days: DAYS[plan], p_source: 'monime' });
+  await db.rpc('extend_pro', { p_user: userId, p_days: DAYS[plan], p_source: 'monime', p_tier: TIER[plan] });
   return { ok: true, status: 'credited' };
 }
 
