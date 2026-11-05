@@ -22,9 +22,16 @@ Without the `VITE_SUPABASE_*` variables the app runs exactly as before: no sign-
    - Turn on Google if you want it. Google needs an OAuth client from Google Cloud Console.
 6. Go to **Project Settings → API** and copy the **Project URL** and the **anon public** key. These two are safe to share and go in the front end.
 
-## 2. Edge functions
+## 2. Database and edge functions
 
-Install the Supabase CLI, then run:
+Easiest: GitHub deploys them for you. In the repo go to **Settings → Secrets and variables → Actions** and add two secrets:
+
+- `SUPABASE_ACCESS_TOKEN`: supabase.com → Account → Access Tokens → Generate
+- `SUPABASE_DB_PASSWORD`: the database password you chose when creating the project
+
+Then run **Actions → Deploy Supabase → Run workflow**. It creates the tables and deploys all five functions. (If you do this, skip the SQL Editor step above.)
+
+Or by hand with the Supabase CLI:
 
 ```
 supabase login
