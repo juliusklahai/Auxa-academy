@@ -22,6 +22,14 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      # Preview of the accounts branch at /preview/ (the live app above is built from main only)
+      - uses: actions/checkout@v4
+        with:
+          ref: accounts
+          path: preview-src
+      - name: Build preview
+        working-directory: preview-src
+        run: npm ci && npx vite build --outDir ../dist/preview
       - uses: actions/configure-pages@v5
         with:
           enablement: true
