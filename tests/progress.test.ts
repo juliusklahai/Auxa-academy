@@ -25,6 +25,8 @@ describe('Test 4 (progression): 80% mastery gate', () => {
     p.record(rep(a.id, 90)); p.record(rep(b.id, 90));
     expect(p.lessonUnlocked(L2, LESSONS)).toBe(false);
     p.record(rep(a.id, 85));
+    expect(p.lessonUnlocked(L2, LESSONS)).toBe(false); // one play-along piece is part of mastery
+    p.record(rep(L1.exercises.find((e) => e.backing)!.id, 88));
     expect(p.lessonUnlocked(L2, LESSONS)).toBe(true);
   });
 });

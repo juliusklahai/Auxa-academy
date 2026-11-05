@@ -193,3 +193,22 @@ describe('Microphone: organ, electric piano and synth keyboards', () => {
     });
   }
 });
+
+describe('Sharper listening: room noise and second look', () => {
+  it('a steady mains hum and fan noise are learned and never heard as notes', () => {
+    const sig = new Float32Array(SR * 3);
+    // 50 Hz hum with harmonics (like a fridge or a lamp) plus broadband fan noise
+    for (let i = 0; i < sig.length; i++) { const t = i / SR; sig[i] = 0.02 * Math.sin(2 * Math.PI * 50 * t) + 0.012 * Math.sin(2 * Math.PI * 100 * t) + 0.008 * Math.sin(2 * Math.PI * 150 * t) + 0.006 * Math.sin(2 * Math.PI * 196 * t); }
+    addNoise(sig, 0.004);
+    addNote(sig, 64, 2.0, 0.9, 0.5);
+    const got = run(sig).flatMap((e) => e.notes);
+    expect(got).toContain(64);
+    expect(got.filter((m) => m !== 64 && m !== 76)).toEqual([]);
+  });
+  it('a sharp click or thump with no pitch is not reported as a note', () => {
+    const sig = new Float32Array(SR * 2);
+    addNoise(sig, 0.0015);
+    for (const at of [0.6, 1.2]) { const s0 = Math.floor(at * SR); for (let i = 0; i < 300; i++) sig[s0 + i] += (rnd() * 2 - 1) * 0.6 * Math.exp(-i / 60); }
+    expect(run(sig).flatMap((e) => e.notes)).toEqual([]);
+  });
+});

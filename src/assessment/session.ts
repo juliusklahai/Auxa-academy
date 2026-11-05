@@ -118,7 +118,44 @@ export class AssessmentSession {
       return { kind: 'uncertain', message: 'I could not hear that clearly, so it was not scored. Try again a little louder, or use MIDI.' };
     }
     if (this.exercise.octaveFree) n = { ...n, midi: this.foldOctave(n) };
+    if (this.exercise.pitchSlack) n = this.slack(n);
+    if (this.exercise.strictCents !== undefined && n.cents !== undefined && Math.abs(n.cents) > this.exercise.strictCents && this.candidates(n).includes(n.midi)) return this.outOfTune(n);
     return this.exercise.mode === 'wait' ? this.inputWait(n) : this.inputTimed(n);
+  }
+
+  private candidates(n: PerformedNote): number[] {
+    return this.exercise.mode === 'wait'
+      ? this.exercise.events[this.cursor]?.pitches ?? []
+      : this.events.filter((e) => Math.abs(n.time - e.expectedMs) <= this.window).flatMap((e) => this.exercise.events[e.index].pitches);
+  }
+
+  /** Gentle singing levels: a note close enough to the target counts as the target (with its real tuning). */
+  private slack(n: PerformedNote): PerformedNote {
+    const k = this.exercise.pitchSlack ?? 0;
+    const cands = this.candidates(n);
+    if (!cands.length || cands.includes(n.midi)) return n;
+    const dist = (p: number) => { const d = (((n.midi - p) % 12) + 12) % 12; return this.exercise.octaveFree ? Math.min(d, 12 - d) : Math.abs(n.midi - p); };
+    const best = cands.reduce((a, b) => (dist(b) < dist(a) ? b : a));
+    if (dist(best) > k) return n;
+    const signed = this.exercise.octaveFree ? ((((n.midi - best) % 12) + 18) % 12) - 6 : n.midi - best;
+    return { ...n, midi: best, cents: (n.cents ?? 0) + signed * 100 };
+  }
+
+  /** Strict (pro) singing: the right note sung out of tune does not count yet. */
+  private outOfTune(n: PerformedNote): Feedback {
+    const evIdx = this.exercise.mode === 'wait' ? this.cursor : this.events.filter((e) => Math.abs(n.time - e.expectedMs) <= this.window).sort((a, b) => Math.abs(n.time - a.expectedMs) - Math.abs(n.time - b.expectedMs))[0]?.index ?? this.cursor;
+    const ev = this.events[evIdx];
+    const c = Math.round(n.cents ?? 0);
+    const msg = `${midiToName(n.midi)} is the right note but ${Math.abs(c)} cents ${c > 0 ? 'sharp: release a little, lighter breath' : 'flat: lift the pitch, more breath support'}. Pro level needs ±${this.exercise.strictCents} cents.`;
+    if (!ev) return { kind: 'wrong', message: msg };
+    ev.wrongAttempts++;
+    this.consecutive++;
+    if (this.consecutive >= this.exercise.maxConsecutiveMistakes) {
+      this.hadThreeConsecutive = true;
+      this.state = 'RESTART';
+      return { kind: 'restart', message: `${msg} ${this.exercise.maxConsecutiveMistakes} in a row, so this attempt restarts.`, eventIndex: ev.index };
+    }
+    return { kind: 'wrong', message: msg, eventIndex: ev.index };
   }
 
   /** For singers: move the sung note into the octave of the nearest expected note with the same name. */
@@ -208,8 +245,32 @@ export class AssessmentSession {
     ev.wrongAttempts++;
     const key = `${midiToName(target[0]).replace(/-?\d+$/, '')}>${midiToName(n.midi).replace(/-?\d+$/, '')}`;
     this.confusions.set(key, (this.confusions.get(key) ?? 0) + 1);
+    if (this.exercise.gentle) return this.gentleFeedback(ev, target, n);
     this.consecutive++;
     return this.mistakeFeedback(ev, target, n.midi);
+  }
+
+  /** Encouraging levels: a miss is only a hint; after a few tries the exercise moves on. */
+  private gentleFeedback(ev: Internal, target: number[], n: PerformedNote): Feedback {
+    const t = target.reduce((a, b) => (Math.abs(b - n.midi) < Math.abs(a - n.midi) ? b : a));
+    let diff = n.midi - t;
+    if (this.exercise.octaveFree) diff = ((((diff % 12) + 18) % 12) - 6);
+    const dir = diff > 0 ? 'a little lower' : 'a little higher';
+    const far = Math.abs(diff) > 4 ? (diff > 0 ? 'quite a bit lower' : 'quite a bit higher') : dir;
+    const after = this.exercise.autoAdvanceAfter;
+    if (this.exercise.mode === 'wait' && after && ev.wrongAttempts >= after) {
+      ev.status = 'partial';
+      ev.playedPitches = [...ev.played, n.midi];
+      ev.attempts = ev.wrongAttempts;
+      ev.completedAt = n.time;
+      this.lastCompletionAt = n.time;
+      this.cursor++;
+      this.skipRests();
+      if (this.cursor >= this.events.length) this.finish();
+      return { kind: 'partial', message: `Good effort! Let's keep going. (That one was ${target.map(midiToName).join(' + ')}; it comes back later.)`, eventIndex: ev.index };
+    }
+    const words = ['Close!', 'Nearly there!', 'Keep going!'];
+    return { kind: 'wrong', message: `${words[ev.wrongAttempts % words.length]} Try ${far}${this.exercise.voice ? ': listen, hum it, then sing' : ''}.`, eventIndex: ev.index };
   }
 
   private mistakeFeedback(ev: Internal, target: number[], played: number): Feedback {

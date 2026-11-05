@@ -68,8 +68,11 @@ export class ProgressStore {
     return this.ex(id).passes >= requiredPasses;
   }
 
+  /** Core exercises all mastered, plus at least one play-along piece (when the lesson has them). */
   lessonComplete(lesson: Lesson): boolean {
-    return lesson.exercises.every((e) => this.exerciseMastered(e.id, e.requiredPasses));
+    const core = lesson.exercises.filter((e) => !e.backing);
+    const pieces = lesson.exercises.filter((e) => e.backing);
+    return core.every((e) => this.exerciseMastered(e.id, e.requiredPasses)) && (!pieces.length || pieces.some((e) => this.exerciseMastered(e.id, e.requiredPasses)));
   }
 
   /** A required lesson unlocks only when every prerequisite lesson is mastered (>= 80% and required passes). */

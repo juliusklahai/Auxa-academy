@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AssessmentSession, type Feedback } from '../assessment/session';
 import { audio, INSTRUMENTS, type Instrument, type Drum } from '../audio/engine';
-import { SONGS, songXml, songByTitle, type Groove } from '../songs';
+import { SONGS, SONG_LEVELS, songXml, songByTitle, type Groove, type SongLevel } from '../songs';
 import type { PartInfo } from '../musicxml/parse';
 import type { AssessmentReport, NoteStatus } from '../core/types';
 import { onLearnerNote } from '../input/bus';
@@ -478,7 +478,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
         <button className="chip" onClick={() => fileIn.current?.click()}><Icon name="plus" size={13} /> Open another</button>
         <button className="chip" onClick={() => load(demoChoraleXml(), false)}>Demo chorale</button>
         <select className="chip chip-select" value="" onChange={(e) => { if (e.target.value) load(songXml(e.target.value), false); }} aria-label="Open a song">
-          <option value="">Songs…</option>{SONGS.map((sg) => <option key={sg.id} value={sg.id}>{sg.title}</option>)}
+          <option value="">Songs…</option>{SONG_LEVELS.map((l) => <optgroup key={l} label={l}>{SONGS.filter((sg) => sg.level === l).map((sg) => <option key={sg.id} value={sg.id}>{sg.title}</option>)}</optgroup>)}
         </select>
         {lib.slice(0, 4).map((it) => <button key={it.id} className="chip" onClick={() => load(it.xml, false)}><Icon name="note" size={12} /> {it.title}</button>)}
         <button className="chip" onClick={() => { stop(); setScore(null); }}>Library</button>
@@ -641,22 +641,40 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
 
 const INST_ICON: Partial<Record<Instrument, string>> = { violin: 'Violin', viola: 'Viola', cello: 'Cello', flute: 'Flute', strings: 'Strings', bass: 'Bass', choir: 'Choir' };
 export function SongShelf({ onOpen }: { onOpen: (id: string) => void }) {
+  const [lvl, setLvl] = useState<SongLevel | 'All'>('All');
+  const [kind, setKind] = useState<'all' | 'classic' | 'original'>('all');
+  const list = SONGS.filter((sg) => (lvl === 'All' || sg.level === lvl) && (kind === 'all' || (kind === 'original') === !!sg.original));
   return (
     <div className="card">
-      <div className="card-head"><b>Songs with play-along</b><span className="muted small">Public-domain pieces, arranged for this app</span></div>
-      <div className="song-grid">
-        {SONGS.map((sg) => (
-          <button key={sg.id} className="song-card" onClick={() => onOpen(sg.id)}>
-            <span className={`lvl ${sg.level.toLowerCase()}`}>{sg.level}</span>
-            <b>{sg.title}</b>
-            <small className="muted">{sg.composer}</small>
-            <span className="small">{sg.about}</span>
-            <span className="inst-tags">
-              <i>Piano RH + LH</i>{Object.values(sg.colors).map((c) => <i key={c}>{INST_ICON[c!] ?? c}</i>)}{sg.groove !== 'none' && <i>Groove</i>}
-            </span>
-          </button>
-        ))}
+      <div className="card-head"><b>Song library</b><span className="muted small">{SONGS.length} pieces, easiest first. Public-domain classics arranged for this app, plus original practice pieces.</span></div>
+      <div className="shelf-filters">
+        <div className="seg">{(['All', ...SONG_LEVELS] as const).map((l) => <button key={l} className={lvl === l ? 'on' : ''} onClick={() => setLvl(l)}>{l}<small> {l === 'All' ? SONGS.length : SONGS.filter((x) => x.level === l).length}</small></button>)}</div>
+        <div className="seg">{([['all', 'All'], ['classic', 'Classics'], ['original', 'Originals']] as const).map(([k, t]) => <button key={k} className={kind === k ? 'on' : ''} onClick={() => setKind(k)}>{t}</button>)}</div>
       </div>
+      {SONG_LEVELS.filter((l) => list.some((x) => x.level === l)).map((l) => (
+        <div key={l} className="shelf-level">
+          <div className="shelf-head"><span className={`lvl ${l.toLowerCase()}`}>{l}</span><small className="muted">{LEVEL_HINT[l]}</small></div>
+          <div className="song-grid">
+            {list.filter((x) => x.level === l).map((sg) => (
+              <button key={sg.id} className="song-card" onClick={() => onOpen(sg.id)}>
+                <span className={`lvl ${sg.level.toLowerCase()}`}>{sg.level}{sg.original ? ' · Original' : ''}</span>
+                <b>{sg.title}</b>
+                <small className="muted">{sg.composer}</small>
+                <span className="small">{sg.about}</span>
+                <span className="inst-tags">
+                  <i>Piano RH + LH</i>{Object.values(sg.colors).map((c) => <i key={c}>{INST_ICON[c!] ?? c}</i>)}{sg.groove !== 'none' && <i>Groove</i>}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
+const LEVEL_HINT: Record<SongLevel, string> = {
+  Beginner: 'C position, steps and simple rhythms, one bass note at a time.',
+  Easy: 'One octave, dotted rhythms, waltz bass, first sharps and flats.',
+  Intermediate: 'Eighth and sixteenth notes, other keys, Alberti and arpeggio bass.',
+  Advanced: 'Fast runs, wide leaps, flat and sharp keys, full textures.',
+};

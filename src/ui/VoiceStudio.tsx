@@ -9,6 +9,7 @@ import { Icon } from './Icon';
 import { Metric } from './LessonView';
 import { PitchRoll } from './PitchRoll';
 import { progress, setSettings, useProgressVersion, useSettings } from './settings';
+import { VOICE_LEVELS, voiceLevelInfo } from '../assessment/voiceLevels';
 
 export function voiceType(lo: number, hi: number): { name: string; part: 'S' | 'A' | 'T' | 'B' } {
   const mid = (lo + hi) / 2;
@@ -51,15 +52,16 @@ export function VoiceStudio({ openLesson, singChoir }: { openLesson: (l: Lesson)
   const folded = sungFloat === null ? null : sungFloat + 12 * Math.round((target - sungFloat) / 12);
   const cents = folded === null ? null : Math.round((folded - target) * 100);
 
-  // pitch matching: hold within 25 cents for 0.6 s
+  // pitch matching: hold in tune (the singing level decides how close and how long)
+  const lvl = voiceLevelInfo(st.voiceLevel);
   useEffect(() => {
     if (!on || rec) return;
     const now = performance.now();
-    if (cents !== null && Math.abs(cents) <= 25) {
+    if (cents !== null && Math.abs(cents) <= lvl.matchCents) {
       inTuneSince.current ??= now;
       const h = now - inTuneSince.current;
       setHeld(h);
-      if (h >= 600 && !matched.current) {
+      if (h >= lvl.holdMs && !matched.current) {
         matched.current = true;
         setScore((s) => ({ hits: s.hits + 1, tries: s.tries + 1 }));
         setTimeout(() => nextTarget(), 900);
@@ -110,16 +112,20 @@ export function VoiceStudio({ openLesson, singChoir }: { openLesson: (l: Lesson)
       </section>
       {!on && <div className="card call"><div><b>Turn on the microphone to sing.</b><p className="muted small">Your voice is analyzed on this device only. Headphones help when the app plays notes.</p>{err && <p className="small tip">{err}</p>}</div><button className="btn dark" onClick={start}><Icon name="mic" size={15} /> Start microphone</button></div>}
       <section className="voice-grid">
+        <div className="card voice-level">
+          <div className="card-head"><b>Singing level</b><span className="muted small">{lvl.blurb}</span></div>
+          <div className="seg wide">{VOICE_LEVELS.map((v) => <button key={v.id} className={st.voiceLevel === v.id ? 'on' : ''} onClick={() => setSettings({ voiceLevel: v.id })}>{v.label}</button>)}</div>
+        </div>
         <div className="card">
           <div className="card-head"><b>Pitch matching</b><span className="muted small">Hold the note in tune for a moment. Any octave counts.</span></div>
           <div className="match">
             <div className="match-target"><small>Sing</small><b>{midiToName(target)}</b><span>{['Do', 'Di', 'Re', 'Ri', 'Mi', 'Fa', 'Fi', 'Sol', 'Si', 'La', 'Li', 'Ti'][target % 12]}</span></div>
             <div className="tunebar">
               <div className="tunebar-zone" />
-              <div className={`tunebar-needle ${cents !== null && Math.abs(cents) <= 25 ? 'ok' : cents !== null && Math.abs(cents) <= 60 ? 'near' : ''}`} style={{ left: `${50 + Math.max(-50, Math.min(50, (cents ?? 0) / 2))}%`, opacity: cents === null ? 0.25 : 1 }} />
+              <div className={`tunebar-needle ${cents !== null && Math.abs(cents) <= lvl.matchCents ? 'ok' : cents !== null && Math.abs(cents) <= 60 ? 'near' : ''}`} style={{ left: `${50 + Math.max(-50, Math.min(50, (cents ?? 0) / 2))}%`, opacity: cents === null ? 0.25 : 1 }} />
               <span className="tb-l">flat</span><span className="tb-r">sharp</span>
             </div>
-            <p className="match-msg">{matched.current ? 'Matched! Next note coming…' : cents === null ? (on ? 'Sing on "ah" or "loo".' : 'Start the microphone first.') : Math.abs(cents) <= 25 ? `In tune, hold it… ${Math.min(100, Math.round(held / 6))}%` : cents < 0 ? `${-cents} cents flat: a little higher` : `${cents} cents sharp: relax a little lower`}</p>
+            <p className="match-msg">{matched.current ? 'Matched! Next note coming…' : cents === null ? (on ? 'Sing on "ah" or "loo".' : 'Start the microphone first.') : Math.abs(cents) <= lvl.matchCents ? `In tune, hold it… ${Math.min(100, Math.round((held / lvl.holdMs) * 100))}%` : cents < 0 ? `${-cents} cents flat: a little higher` : `${cents} cents sharp: relax a little lower`}</p>
             <div className="row wrap">
               <button className="btn dark" onClick={() => audio.playNotes([{ midi: target, startMs: 0, durMs: 1100 }])}><Icon name="play" size={14} /> Hear the note</button>
               <button className="btn" onClick={() => { setScore((s) => ({ ...s, tries: s.tries + 1 })); nextTarget(); }}>New note</button>

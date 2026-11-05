@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Accidental, Dot, Formatter, Renderer, Stave, StaveNote, Voice } from 'vexflow';
+import { Accidental, Dot, Formatter, Renderer, Stave, StaveConnector, StaveNote, Voice } from 'vexflow';
 import { midiToVexKey } from '../core/music';
-import type { Clef, NoteStatus, ScoreEvent } from '../core/types';
+import type { BackNote, Clef, NoteStatus, ScoreEvent } from '../core/types';
 
 const COLORS: Record<NoteStatus | 'current', string> = {
   pending: '#2a2a27', correct: '#1e8a4c', partial: '#b7791f', wrong: '#c53030', missed: '#c53030', current: '#1f1f1d',
@@ -25,6 +25,10 @@ interface Props {
   measureWidth?: number;
   height?: number;
   showTime?: boolean;
+  /** play-along notes the app plays: melody notes are drawn in grey */
+  backing?: BackNote[];
+  /** treble + bass staves (hands together) */
+  grand?: boolean;
 }
 
 interface Layout { mx: [number, number][]; ex: number[]; total: number }
@@ -34,7 +38,7 @@ interface Layout { mx: [number, number][]; ex: number[]; total: number }
  * when you reach the last measure on screen, the strip slides so that measure moves to the left
  * and the next ones come into view. A playhead follows the beat in timed mode.
  */
-export function Staff({ events, clef, timeSig, statuses, current = -1, playhead, highContrast, measureWidth = 250, height = 168, showTime = true }: Props) {
+export function Staff({ events, clef, timeSig, statuses, current = -1, playhead, highContrast, measureWidth = 250, height = 168, showTime = true, backing, grand = false }: Props) {
   const view = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLDivElement>(null);
   const svgHost = useRef<HTMLDivElement>(null);
@@ -50,47 +54,110 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
     const host = svgHost.current;
     if (!host) return;
     host.innerHTML = '';
-    const measures: { ev: ScoreEvent; i: number }[][] = [];
-    events.forEach((ev, i) => { const m = Math.floor(ev.beat / bpb + 1e-9); (measures[m] ??= []).push({ ev, i }); });
-    for (let m = 0; m < measures.length; m++) measures[m] ??= [];
+    const lanesN = grand ? 2 : 1;
+    const laneOf = (p: number, hand?: string) => (!grand ? 0 : hand ? (hand === 'RH' ? 0 : 1) : p >= 60 ? 0 : 1);
+    type Item = { beat: number; beats: number; pitches: number[]; idx: number | null; ghost: boolean };
+    const lanes: Item[][] = Array.from({ length: lanesN }, () => []);
+    events.forEach((ev, i) => {
+      if (!ev.pitches.length) { if (!grand) lanes[0].push({ beat: ev.beat, beats: ev.beats, pitches: [], idx: i, ghost: false }); return; }
+      const by = new Map<number, number[]>();
+      ev.pitches.forEach((p, k) => { const l = laneOf(p, ev.hands?.[k] ?? ev.hand); by.set(l, [...(by.get(l) ?? []), p]); });
+      by.forEach((ps, l) => lanes[l].push({ beat: ev.beat, beats: ev.beats, pitches: ps, idx: i, ghost: false }));
+    });
+    for (const n of backing ?? []) if (n.line === 'melody') lanes[laneOf(n.midi, n.hand)].push({ beat: n.beat, beats: n.beats, pitches: [n.midi], idx: null, ghost: true });
+    const lastBeat = Math.max(0, ...events.map((e) => e.beat + e.beats), ...(backing ?? []).map((n) => n.beat + n.beats));
+    const nMeasures = Math.max(1, Math.ceil(lastBeat / bpb - 1e-9));
+    const VALUES = [4, 3, 2, 1.5, 1, 0.75, 0.5, 0.25];
+    const fit = (len: number) => VALUES.find((v) => v <= len + 1e-6) ?? 0.25;
+    // one monophonic sequence of chords and rests per lane and measure
+    const perMeasure: Item[][][] = Array.from({ length: nMeasures }, () => Array.from({ length: lanesN }, () => []));
+    lanes.forEach((items, l) => {
+      const merged: Item[] = [];
+      [...items].sort((x, y) => x.beat - y.beat || Number(x.ghost) - Number(y.ghost)).forEach((it) => {
+        const last = merged[merged.length - 1];
+        if (last && Math.abs(last.beat - it.beat) < 1e-6) {
+          last.pitches = [...new Set([...last.pitches, ...it.pitches])];
+          if (it.idx !== null && last.idx === null) last.idx = it.idx;
+          last.ghost = last.ghost && it.ghost;
+          last.beats = Math.min(last.beats, it.beats);
+        } else merged.push({ ...it });
+      });
+      for (let m = 0; m < nMeasures; m++) {
+        const m0 = m * bpb, m1 = m0 + bpb;
+        const out = perMeasure[m][l];
+        let t = m0;
+        const inM = merged.filter((it) => it.beat >= m0 - 1e-6 && it.beat < m1 - 1e-6);
+        const rest = (from: number, to: number) => { let x = from; while (to - x > 1e-6) { const v = fit(to - x); out.push({ beat: x, beats: v, pitches: [], idx: null, ghost: true }); x += v; } };
+        inM.forEach((it, k) => {
+          if (it.beat > t + 1e-6) rest(t, it.beat);
+          const end = Math.min(m1, inM[k + 1]?.beat ?? m1, it.beat + it.beats);
+          const v = fit(end - it.beat);
+          out.push({ ...it, beats: v });
+          t = it.beat + v;
+          if (end - t > 1e-6 && it.pitches.length) { rest(t, end); t = end; }
+        });
+        if (m1 - t > 1e-6 && (grand || inM.length)) rest(t, m1);
+      }
+    });
     const first = 78;
-    const total = first + measures.length * measureWidth + 12;
+    const total = first + nMeasures * measureWidth + 12;
     const renderer = new Renderer(host, Renderer.Backends.SVG);
     renderer.resize(total, height);
     const ctx = renderer.getContext();
     const mx: [number, number][] = [];
     const ex: number[] = new Array(events.length).fill(0);
-    measures.forEach((items, mi) => {
+    const clefs: Clef[] = grand ? ['treble', 'bass'] : [clef];
+    const ys = grand ? [Math.round(height / 2 - 112), Math.round(height / 2 - 10)] : [Math.round(height / 2 - 62)];
+    perMeasure.forEach((laneItems, mi) => {
       const x = mi === 0 ? 6 : first + mi * measureWidth;
       const w = mi === 0 ? first + measureWidth - 6 : measureWidth;
-      const stave = new Stave(x, Math.round(height / 2 - 62), w);
-      if (mi === 0) { stave.addClef(clef); if (showTime) stave.addTimeSignature(`${timeSig[0]}/${timeSig[1]}`); }
-      if (mi === measures.length - 1) stave.setEndBarType(3);
-      stave.setContext(ctx).draw();
-      mx.push([x, x + w]);
-      if (!items.length) return;
-      const notes = items.map(({ ev, i }) => {
-        const { d, dots } = duration(ev.beats);
-        const rest = ev.pitches.length === 0;
-        const sorted = [...ev.pitches].sort((a, b) => a - b);
-        const keys = rest ? [clef === 'bass' ? 'd/3' : 'b/4'] : sorted.map(midiToVexKey);
-        const n = new StaveNote({ clef, keys, duration: d + (rest ? 'r' : ''), auto_stem: true });
-        if (!rest) sorted.forEach((p, k) => { if (midiToVexKey(p).includes('#')) n.addModifier(new Accidental('#'), k); });
-        if (dots) Dot.buildAndAttach([n], { all: true });
-        const st = statuses?.[i] ?? 'pending';
-        const c = highContrast && st === 'pending' ? '#000' : COLORS[st];
-        n.setStyle({ fillStyle: c, strokeStyle: c });
-        return { n, i };
+      const staves = clefs.map((c, l) => {
+        const st = new Stave(x, ys[l], w);
+        if (mi === 0) { st.addClef(c); if (showTime) st.addTimeSignature(`${timeSig[0]}/${timeSig[1]}`); }
+        if (mi === nMeasures - 1) st.setEndBarType(3);
+        st.setContext(ctx).draw();
+        return st;
       });
-      const voice = new Voice({ num_beats: timeSig[0], beat_value: timeSig[1] }).setMode(Voice.Mode.SOFT);
-      voice.addTickables(notes.map((x) => x.n));
-      new Formatter().joinVoices([voice]).format([voice], w - (mi === 0 ? first + 10 : 30));
-      voice.draw(ctx, stave);
-      notes.forEach(({ n, i }) => { ex[i] = n.getAbsoluteX() + 7; });
+      if (grand && staves.length === 2) {
+        if (mi === 0) new StaveConnector(staves[0], staves[1]).setType('brace').setContext(ctx).draw();
+        new StaveConnector(staves[0], staves[1]).setType('singleLeft').setContext(ctx).draw();
+        if (mi === nMeasures - 1) new StaveConnector(staves[0], staves[1]).setType('boldDoubleRight').setContext(ctx).draw();
+      }
+      mx.push([x, x + w]);
+      const voices: Voice[] = [];
+      const built: { n: StaveNote; idx: number | null }[][] = [];
+      laneItems.forEach((items, l) => {
+        if (!items.length) return;
+        const c = clefs[l];
+        const notes = items.map((it) => {
+          const { d, dots } = duration(it.beats);
+          const rest = it.pitches.length === 0;
+          const sorted = [...it.pitches].sort((a, b2) => a - b2);
+          const keys = rest ? [c === 'bass' ? 'd/3' : 'b/4'] : sorted.map(midiToVexKey);
+          const n = new StaveNote({ clef: c, keys, duration: d + (rest ? 'r' : ''), auto_stem: true });
+          if (!rest) sorted.forEach((p, k) => { if (midiToVexKey(p).includes('#')) n.addModifier(new Accidental('#'), k); });
+          if (dots) Dot.buildAndAttach([n], { all: true });
+          const st = it.idx !== null ? statuses?.[it.idx] ?? 'pending' : 'pending';
+          const col = it.ghost ? (rest ? '#c9c7c0' : '#a9a7a0') : highContrast && st === 'pending' ? '#000' : COLORS[st];
+          n.setStyle({ fillStyle: col, strokeStyle: col });
+          return { n, idx: it.ghost ? null : it.idx };
+        });
+        const voice = new Voice({ num_beats: timeSig[0], beat_value: timeSig[1] }).setMode(Voice.Mode.SOFT);
+        voice.addTickables(notes.map((q) => q.n));
+        voices.push(voice);
+        built.push(notes);
+        (voice as unknown as { _lane: number })._lane = l;
+      });
+      if (!voices.length) return;
+      const f = new Formatter();
+      voices.forEach((v) => f.joinVoices([v]));
+      f.format(voices, w - (mi === 0 ? first + 10 : 30));
+      voices.forEach((v) => v.draw(ctx, staves[(v as unknown as { _lane: number })._lane]));
+      built.flat().forEach(({ n, idx }) => { if (idx !== null && !ex[idx]) ex[idx] = n.getAbsoluteX() + 7; });
     });
     layout.current = { mx, ex, total };
     if (strip.current) strip.current.style.width = `${total}px`;
-  }, [events, clef, timeSig, statuses, highContrast, measureWidth, height, bpb, showTime]);
+  }, [events, clef, timeSig, statuses, highContrast, measureWidth, height, bpb, showTime, backing, grand]);
 
   // page turning
   const ensureVisible = (beat: number) => {

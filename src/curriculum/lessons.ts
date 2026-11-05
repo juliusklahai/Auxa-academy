@@ -3,6 +3,8 @@
 
 import { nameToMidi } from '../core/music';
 import type { Clef, Exercise, Hand, Lesson, ScoreEvent, SkillId } from '../core/types';
+import { MORE_LESSONS, type LessonDef } from './levels';
+import { playAlongs, type PlayAlongSpec } from './playalong';
 
 /** Build events from "C4:1 D4:1 E4:2 R:1 C4+E4+G4:4" (name:beats, R = rest, + = chord). */
 export function seq(spec: string, hand: Hand = 'RH', fingers?: (number | number[])[]): ScoreEvent[] {
@@ -32,7 +34,7 @@ function ex(
 const C4 = nameToMidi('C4');
 const ODE_FINGERS = [3, 3, 4, 5, 5, 4, 3, 2, 1, 1, 2, 3, 3, 2, 2, 3, 3, 4, 5, 5, 4, 3, 2, 1, 1, 2, 3, 2, 1, 1];
 
-export const LESSONS: Lesson[] = [
+const BASE_LESSONS: Lesson[] = [
   {
     id: 'L0-1', level: 0, title: 'Meet the keyboard and middle C', prerequisites: [],
     summary: 'Find the black-key groups, then locate and play middle C with right-hand thumb.',
@@ -259,6 +261,31 @@ export const LESSONS: Lesson[] = [
     ],
   },
 ];
+
+const N = (s: string) => s.split(' ').map(nameToMidi);
+/** Play-along mastery pieces for the first levels: you play only what the lesson taught. */
+const BASE_PLAYALONG: Record<string, PlayAlongSpec> = {
+  'L0-1': { keys: [C4], hand: 'RH', styles: ['echo', 'call', 'echo', 'tempo'], tempo: 80 },
+  'L0-2': { keys: N('C4 D4 E4 F4 G4'), hand: 'RH', styles: ['call', 'melody', 'melody'] },
+  'L0-3': { keys: N('C#4 D#4 F#4 G#4 A#4'), hand: 'RH', styles: ['echo', 'call'] },
+  'L0-4': { keys: [C4], hand: 'RH', styles: ['tempo', 'tempo'], tempo: 72, skills: ['pulse', 'rhythm'] },
+  'L1-1': { keys: N('C4 D4 E4 F4 G4'), hand: 'RH', styles: ['melody', 'call'], hideLabels: true, skills: ['noteReadingTreble'] },
+  'L1-2': { keys: N('C4 D4 E4 F4 G4'), hand: 'RH', styles: ['tempo', 'melody'], skills: ['rhythm'] },
+  'L1-3': { keys: N('C3 D3 E3 F3 G3'), hand: 'LH', styles: ['call', 'melody', 'tempo'], skills: ['noteReadingBass'] },
+  'L1-4': { keys: N('C4 D4 E4 F4 G4'), hand: 'RH', styles: ['melody', 'tempo'] },
+  'L1-5': { keys: [], hand: 'RH', styles: ['chords', 'chords'], voicings: { 1: N('C4 E4 G4'), 4: N('C4 F4 A4'), 5: N('B3 D4 G4'), 6: N('C4 E4 A4'), 2: N('D4 F4 A4') } },
+  'L2-1': { keys: N('C4 D4 E4 F4 G4'), hand: 'RH', styles: ['melody', 'tempo'], skills: ['fingerTechnique'] },
+  'L2-2': { keys: N('C4 D4 E4 F4 G4 A4 B4 C5'), hand: 'RH', styles: ['melody', 'tempo'], skills: ['fingerTechnique'] },
+  'L2-3': { keys: N('C4 E4 G4 C5'), hand: 'RH', styles: ['call', 'tempo'], skills: ['fingerTechnique'] },
+  'L2-4': { keys: N('C3 D3 E3 F3 G3'), hand: 'LH', styles: ['melody', 'call'], skills: ['fingerTechnique'] },
+  'L2-5': { keys: N('C3 D3 E3 F3 G3 A3 B3 C4'), hand: 'LH', styles: ['melody', 'tempo'], skills: ['fingerTechnique'] },
+  'L2-6': { keys: N('C3 E3 G3 F3 A3 B2 D3'), hand: 'LH', styles: ['call', 'tempo'], skills: ['fingerTechnique'] },
+};
+
+const withPlayAlong = (l: Lesson, spec?: PlayAlongSpec): Lesson => (spec ? { ...l, exercises: [...l.exercises, ...playAlongs(l.id, spec)] } : l);
+const pianoBase = BASE_LESSONS.filter((l) => (l.track ?? 'piano') === 'piano').map((l) => withPlayAlong(l, BASE_PLAYALONG[l.id]));
+const more = MORE_LESSONS.map((l: LessonDef) => withPlayAlong(l, l.playAlong));
+export const LESSONS: Lesson[] = [...pianoBase, ...more, ...BASE_LESSONS.filter((l) => l.track === 'voice')];
 
 export const lessonById = (id: string) => LESSONS.find((l) => l.id === id);
 export const PIANO_LESSONS = LESSONS.filter((l) => (l.track ?? 'piano') === 'piano');

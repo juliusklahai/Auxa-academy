@@ -43,6 +43,29 @@ export interface Exercise {
   voice?: boolean;        // sung exercise (microphone, voice mode)
   octaveFree?: boolean;   // accept the right note in any octave (men singing treble-clef melodies)
   centsTolerance?: number;// intonation tolerance for sung notes (default 30)
+  /** Play-along: notes the APP plays around the learner's notes (melody notes you don't play, chords, bass). */
+  backing?: BackNote[];
+  /** show treble and bass staves together (hands together) */
+  grand?: boolean;
+  /** sung notes this many semitones away still count as the target (gentle singing levels) */
+  pitchSlack?: number;
+  /** in wait mode, move on after this many tries on one note (encouraging levels) */
+  autoAdvanceAfter?: number;
+  /** wrong notes are hints only and never restart the attempt */
+  gentle?: boolean;
+  /** sung notes must be within this many cents to count (strict levels) */
+  strictCents?: number;
+}
+
+/** A note the app plays as accompaniment in a play-along exercise. */
+export interface BackNote {
+  midi: number;
+  beat: number;
+  beats: number;
+  hand?: Hand;
+  /** melody notes are drawn on the staff in grey; accompaniment is only heard */
+  line?: 'melody' | 'accomp';
+  vel?: number;
 }
 
 export interface TeachStep {

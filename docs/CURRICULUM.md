@@ -28,3 +28,24 @@ Scaffolding fades: key labels and target highlights are removed in reading exerc
 - **Level 7 and 8** advanced technique, interpretation, counterpoint, score reading, collaborative piano, performance simulation. Completion is never presented as professional certification.
 
 Intensive programs (30/60/90/180 days) and daily plans (10 to 90 minutes) build on the competency profile already tracked.
+
+
+## Levels 3 to 9 (added)
+
+| Level | Group | Lessons |
+|---|---|---|
+| 3 | Elementary | Grand staff; melody over a held bass; parallel and contrary motion; hands together with chords |
+| 4 | Elementary | Eighth notes; dotted rhythms; rests; 3/4 waltz; ties and syncopation |
+| 5 | Intermediate | G major; F major; D major; A minor (natural, harmonic); chromatic scale |
+| 6 | Intermediate | I-IV-V; inversions; minor chords and I-V-vi-IV; broken-chord accompaniment |
+| 7 | Intermediate | Dynamics; legato and staccato; pedal and phrasing |
+| 8 | Advanced | Intervals; ledger lines; sight-reading hands together |
+| 9 | Advanced | Two-octave scales hands together; arpeggios; seventh chords (ii-V-I); octaves and jumps |
+
+## Play-along mastery pieces
+
+Every piano lesson ends with 1 to 4 original play-along pieces (generated from a seed, so always the same): the app plays the melody, chords and bass, and you play only the keys the lesson taught. For the middle C lesson you play only middle C; for C position only C to G; for left-hand lessons only the bass notes; for chord lessons the chords. Styles: echo (answer at the end of each bar), call (strong beats), tempo (in time with the band), melody (every note of the tune that uses your keys), chords. A lesson is mastered when its core exercises and at least one play-along piece pass at 80%.
+
+## Singing levels
+
+Easy (a semitone away counts, any octave, no restarts, moves on after 3 tries), Standard (right note in any octave, restart after 5 misses), Strict (about 25 cents), Pro coach (only notes within 15 cents count). Chosen in the Voice studio or in any sung lesson.

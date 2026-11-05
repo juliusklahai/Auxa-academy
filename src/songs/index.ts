@@ -2,14 +2,18 @@
 // Each has piano right hand + left hand (practice either or both) and play-along instruments.
 import { buildSongXml, type SongSpec } from './build';
 import type { Instrument } from '../audio/engine';
+import { MORE_SONGS } from './more';
+import { COMPOSED } from './compose';
 
 export type Groove = 'none' | 'soft' | 'waltz' | 'gentle6';
-export interface Song { id: string; title: string; composer: string; level: 'Beginner' | 'Easy' | 'Intermediate'; about: string; groove: Groove; spec: SongSpec; colors: Partial<Record<string, Instrument>> }
+export type SongLevel = 'Beginner' | 'Easy' | 'Intermediate' | 'Advanced';
+export interface Song { id: string; title: string; composer: string; level: SongLevel; about: string; groove: Groove; spec: SongSpec; colors: Partial<Record<string, Instrument>>; original?: boolean }
+export const SONG_LEVELS: SongLevel[] = ['Beginner', 'Easy', 'Intermediate', 'Advanced'];
 
 const piano = (rh: string, lh: string) => ({ id: 'P1', name: 'Piano', program: 1, staves: [{ clef: 'G' as const, music: rh }, { clef: 'F' as const, music: lh }] });
 const line = (id: string, name: string, program: number, clef: 'G' | 'F', music: string) => ({ id, name, program, staves: [{ clef, music }] });
 
-export const SONGS: Song[] = [
+const CLASSICS: Song[] = [
   {
     id: 'twinkle', title: 'Twinkle, Twinkle, Little Star', composer: 'Traditional (French, 1761)', level: 'Beginner', groove: 'soft',
     about: 'Right hand in C position, left hand plays one bass note per half bar. Violin sings a gentle counter-melody, cello holds the bass.',
@@ -100,6 +104,9 @@ export const SONGS: Song[] = [
     },
   },
 ];
+
+/** Every built-in song, easiest first. */
+export const SONGS: Song[] = [...CLASSICS, ...MORE_SONGS, ...COMPOSED].sort((a, b) => SONG_LEVELS.indexOf(a.level) - SONG_LEVELS.indexOf(b.level));
 
 const cache = new Map<string, string>();
 export function songXml(id: string): string {

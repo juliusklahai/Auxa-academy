@@ -259,12 +259,30 @@ export class PolyTracker {
   profile: SoundProfile = 'piano';
   analysisDelayMs = 95;
   lastFlux = 0;
+  /** Background noise spectrum (hum, fans, room tone), learned continuously from quiet moments. */
+  noiseSpec: Float32Array | null = null;
+  private quietFrames = 0;
+  /** A second look ~60 ms later: notes must still be there (rejects clicks, thumps and ghosts). */
+  confirmMs = 60;
+  private confirm: { t: number; onsetMs: number; notes: PolyNote[]; pre: Float32Array | null } | null = null;
 
   constructor(public sampleRate: number, public getExpected: () => number[] | null = () => null,
     /** notes the app started around this onset time (performance.now ms) */
     public getMasked: (onsetMs: number) => number[] = () => []) {}
 
-  reset() { this.prevShort = null; this.fluxHist = []; this.pending = null; this.longHist = []; }
+  reset() { this.prevShort = null; this.fluxHist = []; this.pending = null; this.longHist = []; this.confirm = null; }
+
+  /** New energy since before the onset, with the room's background noise removed. */
+  private freshSpectrum(long: Float32Array, pre: Float32Array | null) {
+    const fresh = new Float32Array(long.length);
+    const ns = this.quietFrames > 8 ? this.noiseSpec : null;
+    for (let i = 0; i < long.length; i++) fresh[i] = Math.max(0, long[i] - Math.max(pre ? pre[i] * 1.1 : 0, ns ? ns[i] * 1.6 : 0));
+    return fresh;
+  }
+  private floorOf(long: Float32Array) {
+    const f = Math.max(medianFloor(long, this.sampleRate, this.fftSize), 2e-6);
+    return this.noiseSpec && this.quietFrames > 8 ? Math.max(f, medianFloor(this.noiseSpec, this.sampleRate, this.fftSize) * 1.2) : f;
+  }
 
   process(buf: Float32Array, nowMs: number): PolyEvent | null {
     // short window for onsets (last 2048 samples)
@@ -284,6 +302,24 @@ export class PolyTracker {
     const long = fftMag(buf, this.fftSize);
     this.longHist.push({ t: nowMs, mag: long });
     if (this.longHist.length > 10) this.longHist.shift();
+    // learn the room: while nothing is being played, track the background spectrum (slowly, and
+    // only downward quickly) so steady hum or fan noise is never heard as notes
+    if (!this.pending && !this.confirm && rmsShort < this.noiseGate * 1.2 && nowMs - this.lastOnset > 400) {
+      this.quietFrames++;
+      if (!this.noiseSpec) this.noiseSpec = Float32Array.from(long);
+      else for (let i = 0; i < long.length; i++) { const n = this.noiseSpec[i]; this.noiseSpec[i] = long[i] < n ? n * 0.7 + long[i] * 0.3 : n * 0.97 + long[i] * 0.03; }
+    }
+
+    // second look for notes that were not certain
+    if (this.confirm && nowMs - this.confirm.t >= this.confirmMs) {
+      const c = this.confirm;
+      this.confirm = null;
+      const fresh = this.freshSpectrum(long, c.pre);
+      const floor = this.floorOf(long);
+      const again = estimateNotes(fresh, this.sampleRate, this.fftSize, floor, { expected: this.getExpected(), sensitivity: this.sensitivity * 1.15, profile: this.profile, masked: this.getMasked(c.onsetMs) });
+      const kept = c.notes.filter((n) => n.confidence >= 0.8 || n.expected || again.some((a) => a.midi === n.midi));
+      return kept.length ? { notes: kept, onsetMs: c.onsetMs } : null;
+    }
 
     const isOnset = rmsShort > this.noiseGate && flux > mean * 1.6 + 25 / this.sensitivity && nowMs - this.lastOnset > 70;
     if (isOnset && this.pending && nowMs - this.pending.t >= 30) {
@@ -302,12 +338,14 @@ export class PolyTracker {
     if (this.pending && nowMs - this.pending.t >= this.analysisDelayMs) {
       const { t, pre } = this.pending;
       this.pending = null;
-      const fresh = new Float32Array(long.length);
-      for (let i = 0; i < long.length; i++) fresh[i] = Math.max(0, long[i] - (pre ? pre[i] * 1.1 : 0));
-      const floor = Math.max(medianFloor(long, this.sampleRate, this.fftSize), 2e-6);
-      const notes = estimateNotes(fresh, this.sampleRate, this.fftSize, floor, { expected: this.getExpected(), sensitivity: this.sensitivity, profile: this.profile, masked: this.getMasked(t - (1024 / this.sampleRate) * 1000) });
-      // onset time = start of the attack inside the short window (~ half a short window earlier)
-      return notes.length ? { notes, onsetMs: t - (1024 / this.sampleRate) * 1000 } : null;
+      const fresh = this.freshSpectrum(long, pre);
+      const floor = this.floorOf(long);
+      const onsetMs = t - (1024 / this.sampleRate) * 1000; // start of the attack inside the short window
+      const notes = estimateNotes(fresh, this.sampleRate, this.fftSize, floor, { expected: this.getExpected(), sensitivity: this.sensitivity, profile: this.profile, masked: this.getMasked(onsetMs) });
+      if (!notes.length) return null;
+      // unexpected notes with only moderate evidence get a second look before they are reported
+      if (this.confirmMs > 0 && notes.some((n) => !n.expected && n.confidence < 0.8)) { this.confirm = { t: nowMs, onsetMs, notes, pre }; return null; }
+      return { notes, onsetMs };
     }
     return null;
   }

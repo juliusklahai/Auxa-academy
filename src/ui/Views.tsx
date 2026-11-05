@@ -3,6 +3,7 @@ import { audio } from '../audio/engine';
 import { metronome } from '../audio/metronome';
 import { midiToName } from '../core/music';
 import type { Lesson, SkillId } from '../core/types';
+import { LEVEL_GROUP, LEVEL_NAMES } from '../curriculum/levels';
 import { LESSONS, PIANO_LESSONS, VOICE_LESSONS } from '../curriculum/lessons';
 import { onLearnerNote } from '../input/bus';
 import { mic, type MicFrame, micHelp } from '../input/mic';
@@ -18,7 +19,7 @@ const SKILL_LABEL: Record<SkillId, string> = {
   keyboardGeography: 'Keyboard geography', noteReadingTreble: 'Reading: treble', noteReadingBass: 'Reading: bass',
   pitchAccuracy: 'Pitch accuracy', rhythm: 'Rhythm', pulse: 'Steady pulse', fingerTechnique: 'Finger technique',
 };
-const LEVEL_NAME: Record<number, string> = { 0: 'Foundations', 1: 'First notes and melodies', 2: 'Right and left hand technique' };
+const LEVEL_NAME = LEVEL_NAMES;
 
 /** Lime area sparkline of attempt scores, with a dark marker on the best attempt. */
 function Spark({ values }: { values: number[] }) {
@@ -66,15 +67,22 @@ function LessonCard({ l, onOpen }: { l: Lesson; onOpen: () => void }) {
   );
 }
 
-function PathTimeline({ lessons, openLesson }: { lessons: Lesson[]; openLesson: (l: Lesson, ex?: number) => void }) {
+function PathTimeline({ lessons: all, openLesson }: { lessons: Lesson[]; openLesson: (l: Lesson, ex?: number) => void }) {
   const ref = useRef<HTMLDivElement>(null);
+  const nextAll = all.find((l) => !progress.lessonComplete(l) && progress.lessonUnlocked(l, LESSONS));
+  const groups = [...new Set(all.map((l) => LEVEL_GROUP[l.level] ?? 'More'))];
+  const [group, setGroup] = useState(() => LEVEL_GROUP[nextAll?.level ?? 0] ?? groups[0]);
+  const lessons = all.filter((l) => (LEVEL_GROUP[l.level] ?? 'More') === group);
   const next = lessons.findIndex((l) => !progress.lessonComplete(l) && progress.lessonUnlocked(l, LESSONS));
   useEffect(() => {
     const el = ref.current;
     const col = el?.querySelectorAll<HTMLElement>('.path-col')[next];
     if (el && col && next > 0) el.scrollTo({ left: Math.max(0, col.offsetLeft - 8), behavior: 'smooth' });
-  }, [next]);
+    else el?.scrollTo({ left: 0 });
+  }, [next, group]);
   return (
+    <>
+    <div className="path-groups seg">{groups.map((g) => <button key={g} className={g === group ? 'on' : ''} onClick={() => setGroup(g)}>{g}<small> · Levels {[...new Set(all.filter((l) => LEVEL_GROUP[l.level] === g).map((l) => l.level))].join(', ')}</small></button>)}</div>
     <div className="path" ref={ref}>
       <div className="path-track">
         <div className="path-line" />
@@ -93,8 +101,8 @@ function PathTimeline({ lessons, openLesson }: { lessons: Lesson[]; openLesson: 
                       const ok = p.passes >= e.requiredPasses;
                       return (
                         <button key={e.id} className={`ex-pill ${ok ? 'ok' : ''}`} disabled={!open} onClick={() => openLesson(l, ei)} title={`Practice: ${e.title}`}>
-                          <span className="dotc"><Icon name={ok ? 'check' : e.events.some((x) => x.pitches.length > 1) ? 'chord' : e.mode === 'timed' ? 'metro' : 'note'} size={12} /></span>
-                          <span className="t">{e.title}</span>
+                          <span className="dotc"><Icon name={ok ? 'check' : e.backing ? 'wave' : e.events.some((x) => x.pitches.length > 1) ? 'chord' : e.mode === 'timed' ? 'metro' : 'note'} size={12} /></span>
+                          <span className="t">{e.backing ? e.title.replace("Play along: ", "♪ ") : e.title}</span>
                           <span className="x">{p.passes}/{e.requiredPasses}</span>
                         </button>
                       );
@@ -106,9 +114,9 @@ function PathTimeline({ lessons, openLesson }: { lessons: Lesson[]; openLesson: 
             </div>
           );
         })}
-        <div className="path-col end"><span className="node locked"><Icon name="lock" size={15} /></span><div className="path-body"><div className="when"><b>Level 2 (coming)</b><small>Grand staff and both hands</small></div><p className="muted small">Meanwhile, practice both hands with any score in My Music.</p></div></div>
       </div>
     </div>
+    </>
   );
 }
 
@@ -212,7 +220,7 @@ export function LearnList({ openLesson, openSong }: { openLesson: (l: Lesson, ex
       </section>
       {levels.map((lv) => (
         <section key={lv} className="level">
-          <div className="level-head"><span className="node open"><Icon name="piano" size={14} /></span><b>Piano · Level {lv}</b><span className="muted">{LEVEL_NAME[lv]}</span></div>
+          <div className="level-head"><span className="node open"><Icon name="piano" size={14} /></span><b>Piano · Level {lv}</b><span className="muted">{LEVEL_NAME[lv]}</span><span className="grp-tag">{LEVEL_GROUP[lv]}</span></div>
           <div className="lesson-grid">
             {PIANO_LESSONS.filter((l) => l.level === lv).map((l) => <LessonCard key={l.id} l={l} onOpen={() => openLesson(l)} />)}
           </div>

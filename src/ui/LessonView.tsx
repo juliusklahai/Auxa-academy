@@ -9,6 +9,7 @@ import { setExpected } from '../input/expect';
 import { mic, micHelp } from '../input/mic';
 import { midiIn } from '../input/midi';
 import { KeyboardArea } from './KeyboardArea';
+import { applyVoiceLevel, VOICE_LEVELS } from '../assessment/voiceLevels';
 import { Icon } from './Icon';
 import { Piano, type KeyMark } from './Piano';
 import { bumpProgress, progress, setSettings, useProgressVersion, useSettings } from './settings';
@@ -138,7 +139,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
   const fm = useFocusMode();
   const [tempoPct, setTempoPct] = useState(100);
   const [metroOn, setMetroOn] = useState(base.mode === 'timed');
-  const exercise = useMemo<Exercise>(() => settings.mistakePolicy === 'pause' ? { ...base, maxConsecutiveMistakes: 99 } : base, [base, settings.mistakePolicy]);
+  const exercise = useMemo<Exercise>(() => { const e = applyVoiceLevel(base, settings.voiceLevel); return settings.mistakePolicy === 'pause' ? { ...e, maxConsecutiveMistakes: 99 } : e; }, [base, settings.mistakePolicy, settings.voiceLevel]);
   const bpm = effectiveBpm(exercise.tempo, tempoPct);
   const session = useRef<AssessmentSession>(new AssessmentSession(exercise, bpm));
   const t0 = useRef(0);
@@ -160,7 +161,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
   const timers = useRef<number[]>([]);
   const fid = useRef(0);
   const s = session.current;
-  const latest = useRef<{ handleFeedback: (fb: Feedback | null) => void; finishIfDone: () => void; start: (fresh?: boolean) => void }>(null!);
+  const latest = useRef<{ handleFeedback: (fb: Feedback | null) => void; finishIfDone: () => void; start: (fresh?: boolean) => void; playBacking: (a: number, b: number, at?: number) => void }>(null!);
 
   const pushFeed = (kind: Feedback['kind'], text: string) => {
     if (!text) return;
@@ -168,6 +169,23 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
   };
   const clearTimers = () => { timers.current.forEach((t) => { clearTimeout(t); clearInterval(t); }); timers.current = []; };
   const stopClock = () => { clock.current = null; playhead.current = null; };
+  /** Play-along: the app plays the backing notes in [fromBeat, toBeat) starting atMs from now. */
+  const playBacking = (fromBeat: number, toBeat: number, atMs = 0) => {
+    const bk = exercise.backing;
+    if (!bk?.length) return;
+    const mspb = msPerBeat(bpm);
+    const ctx = audio.ensure();
+    const base = ctx.currentTime + 0.03 + atMs / 1000;
+    for (const n of bk) {
+      if (n.beat < fromBeat - 1e-6 || n.beat >= toBeat - 1e-6) continue;
+      const off = (n.beat - fromBeat) * mspb;
+      audio.scheduleNote(n.midi, base + off / 1000, (n.beats * mspb * 0.94) / 1000, n.vel ?? (n.line === 'melody' ? 0.56 : 0.36), false);
+      if (n.line === 'melody') {
+        timers.current.push(window.setTimeout(() => audio.onAppNote?.(n.midi, true), atMs + off + 30));
+        timers.current.push(window.setTimeout(() => audio.onAppNote?.(n.midi, false), atMs + off + n.beats * mspb * 0.9));
+      }
+    }
+  };
 
   // playhead clock (rAF): beats since exercise start
   useEffect(() => {
@@ -231,7 +249,13 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
       if (cur.state !== 'LISTENING') return;
       const time = n.at - t0.current;
       if (!n.on) { cur.noteOff(n.midi, time); return; }
+      const before = cur.currentIndex();
       const fb = cur.input({ midi: n.midi, time, source: n.source, confidence: n.confidence, velocity: n.velocity });
+      const after = cur.currentIndex();
+      if (cur.exercise.mode === 'wait' && before >= 0 && after !== before) {
+        const evs = cur.exercise.events;
+        latest.current.playBacking(evs[before].beat, after >= 0 ? evs[after].beat : Infinity);
+      }
       if (fb.kind === 'correct' || fb.kind === 'partial' || fb.kind === 'progress') setHeld((h) => new Map(h).set(n.midi, fb.kind === 'partial' ? 'partial' : 'correct'));
       if (fb.kind === 'wrong' || fb.kind === 'restart') setHeld((h) => new Map(h).set(n.midi, 'wrong'));
       latest.current.handleFeedback(fb);
@@ -263,7 +287,9 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
     if (exercise.mode === 'wait') {
       t0.current = performance.now();
       stopClock();
-      pushFeed('progress', `Attempt ${cur.attempt}: play the glowing note${exercise.events[0]?.pitches.length > 1 ? 's together' : ''}. Take your time.`);
+      pushFeed('progress', exercise.backing?.length ? `Attempt ${cur.attempt}: the band plays; you play only the glowing notes. Take your time, it waits for you.` : `Attempt ${cur.attempt}: play the glowing note${exercise.events[0]?.pitches.length > 1 ? 's together' : ''}. Take your time.`);
+      const first = exercise.events.find((e) => e.pitches.length);
+      if (first) playBacking(0, first.beat);
       rerender();
       return;
     }
@@ -282,7 +308,8 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
       audio.click(c.accent, c.sub, lead + countIn * mspb + c.time);
       timers.current.push(window.setTimeout(() => setBeatFlash(Math.round(c.time / mspb) % exercise.timeSig[0]), lead + countIn * mspb + c.time));
     });
-    pushFeed('progress', `Attempt ${cur.attempt}: ${countIn}-beat count-in, then play with the moving line.`);
+    playBacking(0, Infinity, lead + countIn * mspb);
+    pushFeed('progress', `Attempt ${cur.attempt}: ${countIn}-beat count-in, then play with the moving line${exercise.backing?.length ? ' and the band' : ''}.`);
     timers.current.push(window.setTimeout(() => { cur.listen(); rerender(); }, lead + countIn * mspb - Math.min(250, mspb * 0.5)));
     timers.current.push(window.setInterval(() => {
       const nowMs = performance.now() - t0.current;
@@ -306,15 +333,17 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
     if (session.current.state === 'LISTENING' || session.current.state === 'COUNT_IN') session.current = new AssessmentSession(exercise, bpm);
     const mspb = msPerBeat(bpm);
     const end = audio.playNotes(exercise.events.flatMap((e) => e.pitches.map((m) => ({ midi: m, startMs: e.beat * mspb, durMs: e.beats * mspb * 0.92 }))));
+    playBacking(0, Infinity, 50);
+    const bandEnd = Math.max(0, ...(exercise.backing ?? []).map((n) => (n.beat + n.beats) * mspb));
     const startAt = performance.now() + 50;
     clock.current = { t0: startAt, mspb };
     exercise.events.forEach((e, i) => timers.current.push(window.setTimeout(() => setDemoIdx(i), 50 + e.beat * mspb)));
-    timers.current.push(window.setTimeout(() => { setDemoIdx(null); stopClock(); }, end + 400));
+    timers.current.push(window.setTimeout(() => { setDemoIdx(null); stopClock(); }, Math.max(end, bandEnd) + 400));
     pushFeed('progress', 'Demo: watch the hands, the keys and the moving line. Nothing is scored during the demo.');
     rerender();
   };
 
-  latest.current = { handleFeedback, finishIfDone, start };
+  latest.current = { handleFeedback, finishIfDone, start, playBacking };
 
   const statuses: NoteStatus[] = s.results().map((r) => r.status);
   const cursor = s.currentIndex();
@@ -362,7 +391,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
               <span className="legend"><i className="lg correct" />correct <i className="lg partial" />timing <i className="lg wrong" />wrong <i className="lg pending" />to play</span>
             </div>
             {nice && <span key={nice.id} className="nice">{nice.text}</span>}
-            <Staff events={exercise.events} clef={exercise.clef} timeSig={exercise.timeSig} statuses={statuses} current={glowIdx} playhead={playhead} highContrast={settings.highContrast} height={fm.focus ? 240 : 168} measureWidth={fm.focus ? 340 : 250} />
+            <Staff events={exercise.events} clef={exercise.clef} timeSig={exercise.timeSig} statuses={statuses} current={glowIdx} playhead={playhead} highContrast={settings.highContrast} height={exercise.grand ? (fm.focus ? 300 : 260) : fm.focus ? 240 : 168} measureWidth={fm.focus ? 340 : 250} backing={exercise.backing} grand={exercise.grand} />
             {feed[0] && !report && <div key={feed[0].id} className={`latest fb ${feed[0].kind}`}><span className="ic">{icon(feed[0].kind)}</span>{feed[0].text}</div>}
             {report && <div className={`latest fb ${report.passed ? 'correct' : 'wrong'}`}><span className="ic">{report.passed ? '✓' : '✗'}</span>Score {Math.round(report.score)}/100 · {report.grade}{report.passed ? '' : '. 80 needed to pass.'}</div>}
           </div>
@@ -384,6 +413,13 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
         </div>
         <aside className="side">
           <FloatHead title="Teacher" onClose={fm.closePanel} />
+          {exercise.voice && (
+            <div className="card voice-level">
+              <div className="card-head"><b>Singing level</b></div>
+              <div className="seg wide">{VOICE_LEVELS.map((v) => <button key={v.id} className={settings.voiceLevel === v.id ? 'on' : ''} disabled={s.state === 'LISTENING'} onClick={() => setSettings({ voiceLevel: v.id })}>{v.label}</button>)}</div>
+              <p className="muted small">{VOICE_LEVELS.find((v) => v.id === settings.voiceLevel)?.blurb}</p>
+            </div>
+          )}
           {report
             ? <ReportCard r={report} onRetry={() => start(true)} onNext={onNext} mastered={progress.ex(exercise.id).passes >= exercise.requiredPasses} required={exercise.requiredPasses} passes={progress.ex(exercise.id).passes} />
             : (

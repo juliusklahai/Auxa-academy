@@ -39,6 +39,8 @@ export interface AppSettings {
   keyboard: boolean;
   kbScale: number;
   kbKeys: 'auto' | 25 | 37 | 49 | 61 | 88;
+  /** singing level: easy (encouraging) to pro (strict vocal coaching) */
+  voiceLevel: 'easy' | 'standard' | 'strict' | 'pro';
 }
 
 const KEY = 'maestro.settings.v1';
@@ -46,7 +48,7 @@ const DEFAULTS: AppSettings = {
   labels: 'letters', fingers: true, keyHints: false, highContrast: false, a4: 440, volume: 0.8, metronomeVolume: 0.6,
   latencyMs: 60, noiseGate: 0.012, micSensitivity: 0.85, wrongBeep: false, mistakePolicy: 'restart', hands: true, micMode: 'piano', voiceLow: 57, voiceHigh: 74, outputMode: 'headphones', latencyMode: 'smooth', micDeviceId: '', micInstrument: 'piano', autoFocus: true,
   handStyle: '3d', handOpacity: 0.8, handColor: 'white', handStroke: 1, handsShow: 'both',
-  handsListen: true, keyboard: true, kbScale: 1, kbKeys: 'auto',
+  handsListen: true, keyboard: true, kbScale: 1, kbKeys: 'auto', voiceLevel: 'easy',
 };
 
 const kv = browserKV();
