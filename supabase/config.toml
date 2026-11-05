@@ -1,0 +1,7 @@
+# Supabase project config for the Edge Functions. Webhooks are called by Stripe and Monime, not by
+# signed-in users, so they must not require a Supabase JWT (they verify their own signatures).
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.monime-verify]
+verify_jwt = false

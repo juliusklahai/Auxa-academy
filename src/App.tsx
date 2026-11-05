@@ -10,8 +10,11 @@ import { progress } from './ui/settings';
 import { Dashboard, LearnList, PianoStudio, SettingsView } from './ui/Views';
 import { MyMusic } from './ui/MyMusic';
 import { VoiceStudio } from './ui/VoiceStudio';
+import { AccountButton, AdminView, UpgradeSheet } from './ui/Account';
+import { getAccount, initAccount, openUpgrade, useAccount } from './account/store';
+import { allowLesson } from './account/gate';
 
-type Tab = 'home' | 'learn' | 'music' | 'voice' | 'studio' | 'settings';
+type Tab = 'home' | 'learn' | 'music' | 'voice' | 'studio' | 'settings' | 'admin';
 const TABS: { id: Tab; label: string; icon: string; title: string }[] = [
   { id: 'home', label: 'Overview', icon: 'home', title: 'Piano Academy' },
   { id: 'learn', label: 'Lessons', icon: 'path', title: 'Lessons' },
@@ -48,10 +51,16 @@ export default function App() {
   const [exStart, setExStart] = useState<number | undefined>(undefined);
   const [singPart, setSingPart] = useState<'S' | 'A' | 'T' | 'B' | null>(null);
   const [songId, setSongId] = useState<string | null>(null);
-  const open = (l: Lesson, ex?: number) => { setExStart(ex); setLesson(l); setTab(l.track === 'voice' ? 'voice' : 'learn'); };
+  const account = useAccount();
+  useEffect(() => { void initAccount(); }, []);
+  const open = (l: Lesson, ex?: number) => {
+    if (!allowLesson(getAccount().ent, l)) { openUpgrade(`Level ${l.level} is part of Pro`); return; }
+    setExStart(ex); setLesson(l); setTab(l.track === 'voice' ? 'voice' : 'learn');
+  };
   const nextLesson = lesson ? LESSONS.find((l) => l !== lesson && (l.track ?? 'piano') === (lesson.track ?? 'piano') && !progress.lessonComplete(l) && progress.lessonUnlocked(l, LESSONS)) : undefined;
   useEffect(() => { if (!lesson) setExpected(null); }, [lesson, tab]);
-  const title = lesson ? lesson.title : TABS.find((t) => t.id === tab)!.title;
+  const tabs = account.ent.admin ? [...TABS, { id: 'admin' as Tab, label: 'Admin', icon: 'lock', title: 'Admin' }] : TABS;
+  const title = lesson ? lesson.title : tabs.find((t) => t.id === tab)?.title ?? '';
 
   return (
     <div className="backdrop">
@@ -68,7 +77,7 @@ export default function App() {
           </div>
           <svg className="tab-swoop" viewBox="0 0 90 64" preserveAspectRatio="none" aria-hidden><path d="M0 0 C 46 0, 40 64, 90 64 L 0 64 Z" /></svg>
           <nav className="pills" aria-label="Main">
-            {TABS.map((t) => (
+            {tabs.map((t) => (
               <button key={t.id} className={`pill ${tab === t.id && !lesson ? 'on' : ''} ${tab === t.id && lesson ? 'on' : ''}`} aria-current={tab === t.id}
                 onClick={() => { setTab(t.id); setLesson(null); }}>
                 <Icon name={t.icon} size={16} /> <span className="pill-label">{t.label}</span>
@@ -76,6 +85,7 @@ export default function App() {
             ))}
             <span className="pill-gap" />
             <InputPills openSetup={() => { setTab('settings'); setLesson(null); }} />
+            <AccountButton onOpen={() => { setTab('settings'); setLesson(null); }} />
           </nav>
         </header>
         <main className="panel">
@@ -88,8 +98,10 @@ export default function App() {
                 {tab === 'voice' && <VoiceStudio openLesson={open} singChoir={(p) => { setSingPart(p); setTab('music'); }} />}
                 {tab === 'studio' && <PianoStudio />}
                 {tab === 'settings' && <SettingsView />}
+                {tab === 'admin' && <AdminView />}
               </>}
         </main>
+        <UpgradeSheet />
       </div>
     </div>
   );

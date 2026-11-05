@@ -22,6 +22,10 @@ export const dayKey = (t: number) => new Date(t).toISOString().slice(0, 10);
 
 export class ProgressStore {
   data: ProgressData;
+  /** admin accounts: every lesson is open for testing */
+  unlockAll = false;
+  /** called after each save (account sync) */
+  onSave: (() => void) | null = null;
   constructor(private kv: KV) {
     this.data = this.load();
   }
@@ -34,7 +38,7 @@ export class ProgressStore {
     return { version: 1, exercises: {}, practiceLog: {} };
   }
 
-  save() { this.kv.setItem(KEY, JSON.stringify(this.data)); }
+  save() { this.kv.setItem(KEY, JSON.stringify(this.data)); this.onSave?.(); }
 
   ex(id: string): ExerciseProgress {
     return this.data.exercises[id] ?? { best: 0, passes: 0, attempts: [], box: 0 };
@@ -77,6 +81,7 @@ export class ProgressStore {
 
   /** A required lesson unlocks only when every prerequisite lesson is mastered (>= 80% and required passes). */
   lessonUnlocked(lesson: Lesson, all: Lesson[]): boolean {
+    if (this.unlockAll) return true;
     return lesson.prerequisites.every((pid) => {
       const pre = all.find((l) => l.id === pid);
       return pre ? this.lessonComplete(pre) : false;

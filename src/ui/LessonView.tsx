@@ -10,6 +10,8 @@ import { mic, micHelp } from '../input/mic';
 import { midiIn } from '../input/midi';
 import { KeyboardArea } from './KeyboardArea';
 import { applyVoiceLevel, VOICE_LEVELS } from '../assessment/voiceLevels';
+import { allowVoiceLevel } from '../account/gate';
+import { getAccount, openUpgrade } from '../account/store';
 import { Icon } from './Icon';
 import { Piano, type KeyMark } from './Piano';
 import { bumpProgress, progress, setSettings, useProgressVersion, useSettings } from './settings';
@@ -139,7 +141,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
   const fm = useFocusMode();
   const [tempoPct, setTempoPct] = useState(100);
   const [metroOn, setMetroOn] = useState(base.mode === 'timed');
-  const exercise = useMemo<Exercise>(() => { const e = applyVoiceLevel(base, settings.voiceLevel); return settings.mistakePolicy === 'pause' ? { ...e, maxConsecutiveMistakes: 99 } : e; }, [base, settings.mistakePolicy, settings.voiceLevel]);
+  const exercise = useMemo<Exercise>(() => { const e = applyVoiceLevel(base, allowVoiceLevel(getAccount().ent, settings.voiceLevel) ? settings.voiceLevel : 'easy'); return settings.mistakePolicy === 'pause' ? { ...e, maxConsecutiveMistakes: 99 } : e; }, [base, settings.mistakePolicy, settings.voiceLevel]);
   const bpm = effectiveBpm(exercise.tempo, tempoPct);
   const session = useRef<AssessmentSession>(new AssessmentSession(exercise, bpm));
   const t0 = useRef(0);
@@ -416,7 +418,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
           {exercise.voice && (
             <div className="card voice-level">
               <div className="card-head"><b>Singing level</b></div>
-              <div className="seg wide">{VOICE_LEVELS.map((v) => <button key={v.id} className={settings.voiceLevel === v.id ? 'on' : ''} disabled={s.state === 'LISTENING'} onClick={() => setSettings({ voiceLevel: v.id })}>{v.label}</button>)}</div>
+              <div className="seg wide">{VOICE_LEVELS.map((v) => <button key={v.id} className={settings.voiceLevel === v.id ? 'on' : ''} disabled={s.state === 'LISTENING'} onClick={() => { if (!allowVoiceLevel(getAccount().ent, v.id)) { openUpgrade(`${v.label} singing is part of Pro`); return; } setSettings({ voiceLevel: v.id }); }}>{v.label}{!allowVoiceLevel(getAccount().ent, v.id) ? ' · Pro' : ''}</button>)}</div>
               <p className="muted small">{VOICE_LEVELS.find((v) => v.id === settings.voiceLevel)?.blurb}</p>
             </div>
           )}

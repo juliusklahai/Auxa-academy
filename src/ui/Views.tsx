@@ -4,6 +4,9 @@ import { metronome } from '../audio/metronome';
 import { midiToName } from '../core/music';
 import type { Lesson, SkillId } from '../core/types';
 import { LEVEL_GROUP, LEVEL_NAMES } from '../curriculum/levels';
+import { AccountCard } from './Account';
+import { allowLesson } from '../account/gate';
+import { getAccount, useAccount } from '../account/store';
 import { LESSONS, PIANO_LESSONS, VOICE_LESSONS } from '../curriculum/lessons';
 import { onLearnerNote } from '../input/bus';
 import { mic, type MicFrame, micHelp } from '../input/mic';
@@ -49,19 +52,22 @@ function Spark({ values }: { values: number[] }) {
 }
 
 function LessonCard({ l, onOpen }: { l: Lesson; onOpen: () => void }) {
+  useAccount();
+  const pro = !allowLesson(getAccount().ent, l);
   const unlocked = progress.lessonUnlocked(l, LESSONS);
   const done = progress.lessonComplete(l);
   const scores = l.exercises.flatMap((e) => progress.ex(e.id).attempts).sort((a, b) => a.at - b.at).map((a) => a.score).slice(-12);
   const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
   const delta = scores.length >= 2 ? Math.round(scores[scores.length - 1] - scores[0]) : null;
   return (
-    <button className={`lcard ${done ? 'done' : ''} ${unlocked ? '' : 'locked'}`} disabled={!unlocked} onClick={onOpen}>
+    <button className={`lcard ${done ? 'done' : ''} ${unlocked ? '' : 'locked'}`} disabled={!unlocked && !pro} onClick={onOpen}>
       <div className="lcard-head"><b>{l.title}</b><span className="circle sm">{done ? <Icon name="check" size={14} /> : unlocked ? <Icon name="play" size={12} /> : <Icon name="lock" size={13} />}</span></div>
       {unlocked ? <Spark values={scores} /> : <p className="muted small">{l.summary}</p>}
       <div className="lcard-foot">
         <span>Average: <b>{avg ?? '-'}</b><small>/100</small></span>
+        {pro && <span className="pro-tag inline">Pro</span>}
         {delta !== null && <span className={`delta ${delta >= 0 ? 'up' : 'down'}`}>{delta >= 0 ? '+' : ''}{delta}</span>}
-        {!unlocked && <span className="muted small">Locked</span>}
+        {!unlocked && !pro && <span className="muted small">Locked</span>}
       </div>
     </button>
   );
@@ -375,6 +381,7 @@ export function SettingsView() {
           <Metric label="Strictness" value={Math.round(st.micSensitivity * 100)} unit="%" />
         </div>
       </section>
+      <AccountCard />
       <div className="grid2">
         <section className="card">
           <div className="card-head"><b>MIDI keyboard</b></div>

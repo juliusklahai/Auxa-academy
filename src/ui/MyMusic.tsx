@@ -21,6 +21,8 @@ import { displayXml } from '../musicxml/display';
 import { makeBand, BAND_KEYS, type BandParts } from '../musicxml/band';
 import { transposedKey } from './keyname';
 import { KeyboardArea } from './KeyboardArea';
+import { allowFeature, allowSong } from '../account/gate';
+import { getAccount, openUpgrade, useAccount } from '../account/store';
 import { Icon } from './Icon';
 import { icon, Metric, ReportCard } from './LessonView';
 import type { KeyMark } from './Piano';
@@ -166,9 +168,19 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
     } catch (e) { setErr((e as Error).message); return null; }
   };
 
+  const openSong = (id: string) => {
+    const sg = SONGS.find((x) => x.id === id);
+    if (sg && !allowSong(getAccount().ent, sg)) { openUpgrade(`"${sg.title}" is in the Pro library`); return; }
+    load(songXml(id), false);
+  };
+  const pickFile = () => {
+    if (!allowFeature(getAccount().ent, 'import')) { openUpgrade('Open your own MusicXML scores with Pro'); return; }
+    fileIn.current?.click();
+  };
+
   useEffect(() => {
     if (!songId) return;
-    load(songXml(songId), false);
+    openSong(songId);
     onSongHandled?.();
   }, [songId]); // eslint-disable-line
 
@@ -439,13 +451,13 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
           <h2>Open your sheet music</h2>
           <p className="muted">MusicXML from MuseScore, Sibelius, Finale, Dorico, Noteflight and others: <b>.musicxml</b>, <b>.xml</b> or compressed <b>.mxl</b>. Drop a file here or choose one.</p>
           <div className="row wrap" style={{ justifyContent: 'center' }}>
-            <button className="btn dark" onClick={() => fileIn.current?.click()}><Icon name="plus" size={15} /> Open MusicXML</button>
+            <button className="btn dark" onClick={() => pickFile()}><Icon name="plus" size={15} /> Open MusicXML</button>
             <button className="btn" onClick={() => load(demoChoraleXml(), false)}>Try the SATB demo chorale</button>
           </div>
           {err && <p className="small tip">{err}</p>}
           <input ref={fileIn} type="file" accept=".musicxml,.xml,.mxl,application/vnd.recordare.musicxml+xml,application/vnd.recordare.musicxml" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ''; }} />
         </div>
-        <SongShelf onOpen={(id) => load(songXml(id), false)} />
+        <SongShelf onOpen={openSong} />
         {lib.length > 0 && (
           <div className="card">
             <div className="card-head"><b>Your library</b><span className="muted small">Saved on this device</span></div>
@@ -475,9 +487,9 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
         </div>
       </section>
       <div className="chip-row">
-        <button className="chip" onClick={() => fileIn.current?.click()}><Icon name="plus" size={13} /> Open another</button>
+        <button className="chip" onClick={() => pickFile()}><Icon name="plus" size={13} /> Open another</button>
         <button className="chip" onClick={() => load(demoChoraleXml(), false)}>Demo chorale</button>
-        <select className="chip chip-select" value="" onChange={(e) => { if (e.target.value) load(songXml(e.target.value), false); }} aria-label="Open a song">
+        <select className="chip chip-select" value="" onChange={(e) => { if (e.target.value) openSong(e.target.value); }} aria-label="Open a song">
           <option value="">Songs…</option>{SONG_LEVELS.map((l) => <optgroup key={l} label={l}>{SONGS.filter((sg) => sg.level === l).map((sg) => <option key={sg.id} value={sg.id}>{sg.title}</option>)}</optgroup>)}
         </select>
         {lib.slice(0, 4).map((it) => <button key={it.id} className="chip" onClick={() => load(it.xml, false)}><Icon name="note" size={12} /> {it.title}</button>)}
@@ -643,6 +655,7 @@ const INST_ICON: Partial<Record<Instrument, string>> = { violin: 'Violin', viola
 export function SongShelf({ onOpen }: { onOpen: (id: string) => void }) {
   const [lvl, setLvl] = useState<SongLevel | 'All'>('All');
   const [kind, setKind] = useState<'all' | 'classic' | 'original'>('all');
+  const { ent } = useAccount();
   const list = SONGS.filter((sg) => (lvl === 'All' || sg.level === lvl) && (kind === 'all' || (kind === 'original') === !!sg.original));
   return (
     <div className="card">
@@ -657,6 +670,7 @@ export function SongShelf({ onOpen }: { onOpen: (id: string) => void }) {
           <div className="song-grid">
             {list.filter((x) => x.level === l).map((sg) => (
               <button key={sg.id} className="song-card" onClick={() => onOpen(sg.id)}>
+                {!allowSong(ent, sg) && <span className="pro-tag">Pro</span>}
                 <span className={`lvl ${sg.level.toLowerCase()}`}>{sg.level}{sg.original ? ' · Original' : ''}</span>
                 <b>{sg.title}</b>
                 <small className="muted">{sg.composer}</small>
