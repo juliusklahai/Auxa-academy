@@ -3,7 +3,7 @@
 import Stripe from 'npm:stripe@17';
 import { admin } from '../_shared/util.ts';
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2024-06-20' });
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2025-02-24.acacia' });
 const crypto = Stripe.createSubtleCryptoProvider();
 const PLUS_PRICE = Deno.env.get('STRIPE_PRICE_PLUS');
 

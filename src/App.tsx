@@ -11,6 +11,8 @@ import { Dashboard, LearnList, PianoStudio, SettingsView } from './ui/Views';
 import { MyMusic } from './ui/MyMusic';
 import { VoiceStudio } from './ui/VoiceStudio';
 import { AccountButton, AdminView, UpgradeSheet } from './ui/Account';
+import { isGuest, Landing, Splash } from './ui/Landing';
+import { ACCOUNTS_ENABLED } from './account/config';
 import { getAccount, initAccount, openUpgrade, useAccount } from './account/store';
 import { allowLesson, lessonTier, TIER_NAME } from './account/gate';
 
@@ -52,6 +54,7 @@ export default function App() {
   const [singPart, setSingPart] = useState<'S' | 'A' | 'T' | 'B' | null>(null);
   const [songId, setSongId] = useState<string | null>(null);
   const account = useAccount();
+  const [, bump] = useState(0);
   useEffect(() => { void initAccount(); }, []);
   const open = (l: Lesson, ex?: number) => {
     if (!allowLesson(getAccount().ent, l)) { openUpgrade(`Level ${l.level} is part of ${TIER_NAME[lessonTier(l)]}`); return; }
@@ -61,6 +64,11 @@ export default function App() {
   useEffect(() => { if (!lesson) setExpected(null); }, [lesson, tab]);
   const tabs = account.ent.admin ? [...TABS, { id: 'admin' as Tab, label: 'Admin', icon: 'lock', title: 'Admin' }] : TABS;
   const title = lesson ? lesson.title : tabs.find((t) => t.id === tab)?.title ?? '';
+
+  if (ACCOUNTS_ENABLED && !account.user && !isGuest()) {
+    if (!account.ready) return <Splash />;
+    return <Landing onStart={() => bump((x) => x + 1)} />;
+  }
 
   return (
     <div className="backdrop">

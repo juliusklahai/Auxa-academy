@@ -24,20 +24,7 @@ Without the `VITE_SUPABASE_*` variables the app runs exactly as before: no sign-
 
 ## 2. Database and edge functions
 
-Easiest: GitHub deploys them for you. In the repo go to **Settings → Secrets and variables → Actions** and add two secrets:
-
-- `SUPABASE_ACCESS_TOKEN`: supabase.com → Account → Access Tokens → Generate
-- `SUPABASE_DB_PASSWORD`: the database password you chose when creating the project
-
-Then run **Actions → Deploy Supabase → Run workflow**. It creates the tables and deploys all five functions. (If you do this, skip the SQL Editor step above.)
-
-Or by hand with the Supabase CLI:
-
-```
-supabase login
-supabase link --project-ref <your-ref>
-supabase functions deploy stripe-checkout stripe-portal stripe-webhook monime-checkout monime-verify
-```
+Everything is ready to paste in `supabase/dashboard/`. Follow `supabase/dashboard/README.md`: one SQL file, then five functions, all through the Supabase dashboard with no command line.
 
 ## 3. Secrets (never paste these in chat or commit them)
 

@@ -92,7 +92,8 @@ export async function signInWithGoogle() {
   const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
   if (error) throw error;
 }
-export async function signOut() { await (await supabase()).auth.signOut(); }
+export async function signOut() {
+  try { localStorage.removeItem('maestro.guest.v1'); } catch { /* ignore */ } await (await supabase()).auth.signOut(); }
 
 async function callFn(name: string, body: Record<string, unknown>) {
   const sb = await supabase();

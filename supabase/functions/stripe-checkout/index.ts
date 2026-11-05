@@ -3,7 +3,7 @@
 import Stripe from 'npm:stripe@17';
 import { admin, APP_URL, caller, cors, json } from '../_shared/util.ts';
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2024-06-20' });
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2025-02-24.acacia' });
 const PRICES: Record<string, string | undefined> = { pro: Deno.env.get('STRIPE_PRICE_PRO'), plus: Deno.env.get('STRIPE_PRICE_PLUS') };
 
 Deno.serve(async (req) => {

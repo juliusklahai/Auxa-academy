@@ -10,7 +10,7 @@ import { Icon } from './Icon';
 
 const fmtDate = (s: string | null) => (s ? new Date(s).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
 
-function SignInForm({ compact }: { compact?: boolean }) {
+export function SignInForm({ compact }: { compact?: boolean }) {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState('');
