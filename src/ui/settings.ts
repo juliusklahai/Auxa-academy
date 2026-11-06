@@ -46,13 +46,20 @@ export interface AppSettings {
 const KEY = 'maestro.settings.v1';
 const DEFAULTS: AppSettings = {
   labels: 'letters', fingers: true, keyHints: false, highContrast: false, a4: 440, volume: 0.8, metronomeVolume: 0.6,
-  latencyMs: 60, noiseGate: 0.012, micSensitivity: 0.85, wrongBeep: false, mistakePolicy: 'restart', hands: true, micMode: 'piano', voiceLow: 57, voiceHigh: 74, outputMode: 'headphones', latencyMode: 'smooth', micDeviceId: '', micInstrument: 'piano', autoFocus: true,
+  latencyMs: 60, noiseGate: 0.002, micSensitivity: 0.85, wrongBeep: false, mistakePolicy: 'restart', hands: true, micMode: 'piano', voiceLow: 57, voiceHigh: 74, outputMode: 'headphones', latencyMode: 'smooth', micDeviceId: '', micInstrument: 'piano', autoFocus: true,
   handStyle: '3d', handOpacity: 0.8, handColor: 'white', handStroke: 1, handsShow: 'both',
   handsListen: true, keyboard: true, kbScale: 1, kbKeys: 'auto', voiceLevel: 'easy',
 };
 
 const kv = browserKV();
-let state: AppSettings = (() => { try { return { ...DEFAULTS, ...JSON.parse(kv.getItem(KEY) ?? '{}') }; } catch { return DEFAULTS; } })();
+let state: AppSettings = (() => {
+  try {
+    const s = { ...DEFAULTS, ...JSON.parse(kv.getItem(KEY) ?? '{}') } as AppSettings;
+    // older versions used a high fixed gate that ignored soft playing; the listener now adapts to the room
+    if (s.noiseGate > 0.005) s.noiseGate = DEFAULTS.noiseGate;
+    return s;
+  } catch { return DEFAULTS; }
+})();
 const subs = new Set<() => void>();
 
 function apply(s: AppSettings) {

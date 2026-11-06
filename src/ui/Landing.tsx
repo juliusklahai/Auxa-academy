@@ -23,16 +23,16 @@ const FEATURES: { icon: 'mic' | 'hand' | 'wave' | 'note' | 'midi' | 'chord'; tit
 const price = (id: string) => PLANS.find((p) => p.id === id)?.price ?? '';
 
 export function Landing({ onStart }: { onStart: () => void }) {
-  const [signIn, setSignIn] = useState(false);
+  const [signIn, setSignIn] = useState<false | 'signin' | 'signup'>(false);
   const pianoLessons = LESSONS.filter((l) => (l.track ?? 'piano') === 'piano').length;
   const start = () => { setGuest(true); onStart(); };
-  const showSignIn = () => { setSignIn(true); setTimeout(() => document.getElementById('signin')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 30); };
+  const showSignIn = (m: 'signin' | 'signup' = 'signin') => { setSignIn(m); setTimeout(() => document.getElementById('signin')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 30); };
 
   return (
     <div className="landing">
       <nav className="land-nav">
         <span className="land-brand"><span className="circle brand" aria-hidden><i /><i /><i /></span> Maestro Academy</span>
-        <button className="btn ghost sm" onClick={showSignIn}>Sign in</button>
+        <button className="btn ghost sm" onClick={() => showSignIn()}>Sign in</button>
       </nav>
 
       <section className="land-hero">
@@ -42,7 +42,7 @@ export function Landing({ onStart }: { onStart: () => void }) {
           <p>Short lessons from your very first note to sight-reading and choir parts. Maestro hears what you play and sing, and tells you exactly what to fix.</p>
           <div className="land-cta">
             <button className="btn lime big" onClick={start}>Start free</button>
-            <button className="btn dark big" onClick={showSignIn}>Sign in</button>
+            <button className="btn dark big" onClick={() => showSignIn('signup')}>Create account</button>
           </div>
           <small className="muted">No card needed. Levels 0 to 2 are free for good.</small>
         </div>
@@ -89,14 +89,14 @@ export function Landing({ onStart }: { onStart: () => void }) {
       </section>
 
       <section className="land-signin" id="signin">
-        <h2>{signIn ? 'Sign in or create your account' : 'Ready when you are'}</h2>
-        {signIn ? <SignInForm /> : (
+        <h2>{signIn ? 'Welcome to Maestro' : 'Ready when you are'}</h2>
+        {signIn ? <SignInForm key={signIn} start={signIn} /> : (
           <div className="land-cta center">
             <button className="btn lime big" onClick={start}>Start free</button>
-            <button className="btn dark big" onClick={showSignIn}>Sign in</button>
+            <button className="btn dark big" onClick={() => showSignIn('signup')}>Create account</button>
           </div>
         )}
-        <small className="muted">One link to your email, no password to remember.</small>
+        <small className="muted">Sign in with Google, or with your email and a password.</small>
       </section>
 
       <footer className="land-foot">© {new Date().getFullYear()} Maestro Academy</footer>

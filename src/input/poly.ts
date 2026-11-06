@@ -234,6 +234,25 @@ export function nnlsTemplates(mag: Float32Array, binHz: number, notes: number[])
   return g;
 }
 
+/** Energy of a note's partials that are not shared with the other notes given (for re-strike checks). */
+export function ownPartialEnergy(mag: Float32Array, binHz: number, midi: number, others: number[]): number {
+  const f0 = midiToFreq(midi);
+  const otherF: number[] = [];
+  // a note an octave/twelfth... ABOVE shares partials that are this note's own overtones: keep those
+  others.filter((o) => o !== midi && !(o > midi && [12, 19, 24, 28, 31, 36].includes(o - midi))).forEach((o) => { const g = midiToFreq(o); for (let h = 1; h <= 10; h++) otherF.push(partialFreq(g, h)); });
+  let e = 0, used = 0;
+  for (let h = 1; h <= 6; h++) {
+    const f = partialFreq(f0, h);
+    if (f > MAX_FREQ) break;
+    if (h > 1 && otherF.some((g) => Math.abs(Math.log2(g / f)) < 0.35 / 12)) continue;
+    const lo = Math.max(1, Math.floor((f * Math.pow(2, -0.3 / 12)) / binHz)), hi = Math.min(mag.length - 1, Math.ceil((f * Math.pow(2, 0.3 / 12)) / binHz));
+    let m = 0;
+    for (let i = lo; i <= hi; i++) if (mag[i] > m) m = mag[i];
+    e += m * m; used++;
+  }
+  return used ? e : 0;
+}
+
 export function medianFloor(mag: Float32Array, sampleRate: number, fftSize: number): number {
   const binHz = sampleRate / fftSize;
   const a = Array.from(mag.subarray(Math.floor(60 / binHz), Math.floor(4000 / binHz))).sort((x, y) => x - y);
@@ -254,8 +273,12 @@ export class PolyTracker {
   private lastOnset = -1e9;
   private longHist: { t: number; mag: Float32Array }[] = [];
   private pending: { t: number; pre: Float32Array | null } | null = null;
-  noiseGate = 0.01;
+  /** absolute minimum level (very low on purpose: soft playing must still be heard) */
+  noiseGate = 0.0004;
   sensitivity = 1;
+  /** room level, learned continuously (onsets must rise clearly above it, whatever the volume) */
+  private noiseRms = 0;
+  private shortFloor = 0;
   profile: SoundProfile = 'piano';
   analysisDelayMs = 95;
   lastFlux = 0;
@@ -284,6 +307,59 @@ export class PolyTracker {
     return this.noiseSpec && this.quietFrames > 8 ? Math.max(f, medianFloor(this.noiseSpec, this.sampleRate, this.fftSize) * 1.2) : f;
   }
 
+  /**
+   * Notes struck at this onset. Two views are combined:
+   *  - "fresh" energy (now minus before): finds new notes even while other notes keep ringing;
+   *  - the full spectrum: finds every sounding note, and a note counts as struck again when its own
+   *    partials got clearly louder than just before. This is what catches the same key played twice,
+   *    which the fresh view alone misreads (the ringing fundamental cancels, only overtones remain).
+   */
+  private analyse(long: Float32Array, pre: Float32Array | null, onsetMs: number, sens: number): PolyNote[] {
+    const binHz = this.sampleRate / this.fftSize;
+    const floor = this.floorOf(long);
+    const opts = { expected: this.getExpected(), sensitivity: sens, profile: this.profile, masked: this.getMasked(onsetMs) };
+    const freshNotes = estimateNotes(this.freshSpectrum(long, pre), this.sampleRate, this.fftSize, floor, opts);
+    if (!pre) return freshNotes;
+    const ns = this.quietFrames > 8 ? this.noiseSpec : null;
+    const clean = ns ? long.map((v, i) => Math.max(0, v - ns[i] * 1.6)) : long;
+    const now = estimateNotes(clean, this.sampleRate, this.fftSize, floor, { ...opts, maxNotes: 8 });
+    const all = now.map((n) => n.midi);
+    const out = new Map<number, PolyNote>();
+    for (const n of now) {
+      const before = ownPartialEnergy(pre, binHz, n.midi, all);
+      const after = ownPartialEnergy(long, binHz, n.midi, all);
+      if (after > before * 1.4) out.set(n.midi, n); // ~ +1.5 dB on its own partials: struck (again)
+    }
+    for (const f of freshNotes) {
+      if (out.has(f.midi)) { out.get(f.midi)!.confidence = Math.max(out.get(f.midi)!.confidence, f.confidence); continue; }
+      const inNow = now.some((n) => n.midi === f.midi);
+      // a "fresh" note that is only an overtone of a note struck again is the re-strike's brightness
+      const overtone = [...out.keys(), ...all].some((m) => [12, 19, 24, 28, 31, 34, 36].includes(f.midi - m));
+      if (inNow || !overtone) out.set(f.midi, f);
+    }
+    // Re-strike signature: the onset brought only brighter overtones of a note that is sounding, even
+    // though its fundamental did not grow (it can partly cancel against its own ringing tail).
+    const OVER = [12, 19, 24, 28, 31, 34, 36];
+    if (![...out.values()].some((n) => n.confidence >= 0.85) && freshNotes.length) {
+      const dom = [...now].filter((n) => n.confidence >= 0.9).sort((a, b) => b.salience - a.salience)
+        .find((d) => freshNotes.every((f) => OVER.includes(f.midi - d.midi)));
+      if (dom) { out.clear(); out.set(dom.midi, { ...dom, confidence: Math.max(0.86, Math.min(dom.confidence, 0.95)) }); }
+    }
+    // A note an octave/fifth above a sounding lower note can be that lower note struck again (its
+    // fundamental partly cancels against the ringing string). The lesson's expectation decides; without
+    // one it is reported as uncertain, never as a confident wrong note.
+    const exp = new Set(opts.expected ?? []);
+    for (const m of [...out.keys()]) {
+      if (exp.has(m)) continue;
+      const low = now.find((L) => L.midi < m && L.confidence >= 0.85 && [12, 19, 24, 28, 31].includes(m - L.midi))?.midi;
+      if (low === undefined) continue;
+      const n = out.get(m)!;
+      if (exp.has(low)) { out.delete(m); if (!out.has(low)) out.set(low, { ...n, midi: low, expected: true }); }
+      else n.confidence = Math.min(n.confidence, 0.7);
+    }
+    return [...out.values()].sort((a, b) => a.midi - b.midi);
+  }
+
   process(buf: Float32Array, nowMs: number): PolyEvent | null {
     // short window for onsets (last 2048 samples)
     const short = buf.subarray(buf.length - 2048);
@@ -291,8 +367,16 @@ export class PolyTracker {
     for (let i = 0; i < short.length; i++) e += short[i] * short[i];
     const rmsShort = Math.sqrt(e / short.length);
     const sm = fftMag(short, 2048);
+    // Level-independent spectral flux: log ratio against an adaptive noise floor, counted only on bins
+    // that stand clearly above the floor. A soft note far from the phone counts the same as a loud one.
+    const med = Float32Array.from(sm.subarray(3, 400)).sort()[198] || 1e-9;
+    // levels fall quickly, and only rise again in quiet moments (never while someone is playing)
+    const quiet = nowMs - this.lastOnset > 1200;
+    this.shortFloor = !this.shortFloor ? med : med < this.shortFloor ? this.shortFloor * 0.7 + med * 0.3 : quiet ? this.shortFloor * 0.99 + med * 0.01 : this.shortFloor;
+    this.noiseRms = !this.noiseRms ? rmsShort : rmsShort < this.noiseRms ? this.noiseRms * 0.7 + rmsShort * 0.3 : quiet ? this.noiseRms * 0.99 + rmsShort * 0.01 : this.noiseRms;
+    const eps = this.shortFloor * 3 + 1e-9;
     let flux = 0;
-    if (this.prevShort) for (let i = 2; i < 700; i++) flux += Math.max(0, Math.log1p(sm[i] * 2000) - Math.log1p(this.prevShort[i] * 2000));
+    if (this.prevShort) for (let i = 2; i < 400; i++) if (sm[i] > eps) flux += Math.max(0, Math.log((sm[i] + eps) / (this.prevShort[i] + eps)));
     this.prevShort = sm;
     this.lastFlux = flux;
     const mean = this.fluxHist.length ? this.fluxHist.reduce((a, b) => a + b, 0) / this.fluxHist.length : 0;
@@ -304,7 +388,7 @@ export class PolyTracker {
     if (this.longHist.length > 10) this.longHist.shift();
     // learn the room: while nothing is being played, track the background spectrum (slowly, and
     // only downward quickly) so steady hum or fan noise is never heard as notes
-    if (!this.pending && !this.confirm && rmsShort < this.noiseGate * 1.2 && nowMs - this.lastOnset > 400) {
+    if (!this.pending && !this.confirm && rmsShort < Math.max(this.noiseGate, this.noiseRms * 1.5) && nowMs - this.lastOnset > 400) {
       this.quietFrames++;
       if (!this.noiseSpec) this.noiseSpec = Float32Array.from(long);
       else for (let i = 0; i < long.length; i++) { const n = this.noiseSpec[i]; this.noiseSpec[i] = long[i] < n ? n * 0.7 + long[i] * 0.3 : n * 0.97 + long[i] * 0.03; }
@@ -314,14 +398,12 @@ export class PolyTracker {
     if (this.confirm && nowMs - this.confirm.t >= this.confirmMs) {
       const c = this.confirm;
       this.confirm = null;
-      const fresh = this.freshSpectrum(long, c.pre);
-      const floor = this.floorOf(long);
-      const again = estimateNotes(fresh, this.sampleRate, this.fftSize, floor, { expected: this.getExpected(), sensitivity: this.sensitivity * 1.15, profile: this.profile, masked: this.getMasked(c.onsetMs) });
+      const again = this.analyse(long, c.pre, c.onsetMs, this.sensitivity * 1.15);
       const kept = c.notes.filter((n) => n.confidence >= 0.8 || n.expected || again.some((a) => a.midi === n.midi));
       return kept.length ? { notes: kept, onsetMs: c.onsetMs } : null;
     }
 
-    const isOnset = rmsShort > this.noiseGate && flux > mean * 1.6 + 25 / this.sensitivity && nowMs - this.lastOnset > 70;
+    const isOnset = rmsShort > Math.max(this.noiseGate, this.noiseRms * 1.8) && flux > mean * 1.8 + 7 / this.sensitivity && nowMs - this.lastOnset > 70;
     if (isOnset && this.pending && nowMs - this.pending.t >= 30) {
       // a newer attack (e.g. the real note after a key-release click): analyse from here, keep the
       // spectrum from before the first onset so both are measured as new energy
@@ -338,10 +420,8 @@ export class PolyTracker {
     if (this.pending && nowMs - this.pending.t >= this.analysisDelayMs) {
       const { t, pre } = this.pending;
       this.pending = null;
-      const fresh = this.freshSpectrum(long, pre);
-      const floor = this.floorOf(long);
       const onsetMs = t - (1024 / this.sampleRate) * 1000; // start of the attack inside the short window
-      const notes = estimateNotes(fresh, this.sampleRate, this.fftSize, floor, { expected: this.getExpected(), sensitivity: this.sensitivity, profile: this.profile, masked: this.getMasked(onsetMs) });
+      const notes = this.analyse(long, pre, onsetMs, this.sensitivity);
       if (!notes.length) return null;
       // unexpected notes with only moderate evidence get a second look before they are reported
       if (this.confirmMs > 0 && notes.some((n) => !n.expected && n.confidence < 0.8)) { this.confirm = { t: nowMs, onsetMs, notes, pre }; return null; }

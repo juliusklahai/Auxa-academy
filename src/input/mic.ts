@@ -26,7 +26,7 @@ export class MicListener {
   private poly: PolyTracker | null = null;
   private timer = 0;
   tracker = new OnsetTracker();
-  settings: MicSettings = { noiseGate: 0.012, minConfidence: 0.85, latencyMs: 60, mode: 'piano' };
+  settings: MicSettings = { noiseGate: 0.002, minConfidence: 0.85, latencyMs: 60, mode: 'piano' };
   onFrame: ((f: MicFrame) => void) | null = null;
   /** additional frame subscribers (pitch roll, voice studio) */
   frameListeners = new Set<(f: MicFrame) => void>();
@@ -47,7 +47,10 @@ export class MicListener {
     if (this.stream) return;
     const ctx = audio.ensure();
     this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false, ...(this.deviceId ? { deviceId: { exact: this.deviceId } } : {}) },
+      // all browser voice processing off: echo cancellation and noise suppression treat a held musical note
+      // as noise and fade it out (and on phones switch the mic to a call mode). The app's own sounds are
+      // removed by the echo gate instead.
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, ...(this.deviceId ? { deviceId: { exact: this.deviceId } } : {}) },
     });
     const src = ctx.createMediaStreamSource(this.stream);
     this.analyser = ctx.createAnalyser();
@@ -101,7 +104,8 @@ export class MicListener {
     }
     // Piano: polyphonic, chords and several notes at once
     if (!this.poly) return;
-    this.poly.noiseGate = this.settings.noiseGate;
+    // the piano listener adapts to the room by itself; this is only an absolute floor (soft playing counts)
+    this.poly.noiseGate = Math.min(0.0015, Math.max(0.0003, this.settings.noiseGate * 0.3));
     this.poly.sensitivity = this.sensitivity;
     this.poly.profile = this.profile;
     const ev = this.poly.process(this.buf, now);
@@ -125,7 +129,7 @@ export class MicListener {
     this.onFrame = prev;
     samples.sort((a, b) => a - b);
     const p90 = samples[Math.floor(samples.length * 0.9)] ?? 0.005;
-    this.settings.noiseGate = Math.max(0.006, p90 * 2.5);
+    this.settings.noiseGate = Math.max(0.0015, p90 * 2);
     return this.settings.noiseGate;
   }
 }

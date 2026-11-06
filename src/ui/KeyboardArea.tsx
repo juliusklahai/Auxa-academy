@@ -42,9 +42,13 @@ export function KeyboardArea({ lo, hi, marks, labels, showKeyHints, scrollTo, ba
   useLayoutEffect(() => {
     const el = card.current;
     if (!el || drag.current || s.kbScale !== 1) return;
-    const limit = vh * (el.closest('.practice-root.focus') ? 0.42 : 0.62);
+    const inFocus = !!el.closest('.practice-root.focus');
+    // a phone held sideways is short: the keys get under half of it, the music gets the rest
+    const short = inFocus && vh < 520;
+    const limit = vh * (short ? 0.44 : inFocus ? 0.42 : 0.62);
+    const min = short ? 0.36 : 0.55;
     const h = el.offsetHeight;
-    if (h > limit + 4 && scale > 0.56) setScale(Math.max(0.55, scale * (limit / h)));
+    if (h > limit + 4 && scale > min + 0.01) setScale(Math.max(min, scale * (limit / h)));
   });
 
   if (!s.keyboard) {

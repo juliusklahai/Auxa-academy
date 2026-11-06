@@ -29,7 +29,7 @@ import type { KeyMark } from './Piano';
 import { PitchRoll } from './PitchRoll';
 import { ScoreView, noteKey, type ScoreViewHandle } from './ScoreView';
 import { useFocusMode } from './focus';
-import { FocusBar, FloatHead } from './FocusBar';
+import { DockFab, FocusBar, FloatHead, RotateHint } from './FocusBar';
 import { progress, bumpProgress, setSettings, useSettings } from './settings';
 
 interface Mix { mute: boolean; solo: boolean; vol: number; inst: Instrument }
@@ -474,8 +474,12 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
   }
 
   return (
-    <div className={`page practice-root ${fm.focus ? 'focus' : ''} ${fm.panel ? 'show-' + fm.panel : ''}`}>
+    <div className={`page practice-root ${fm.focus ? 'focus' : ''} ${fm.panel ? 'show-' + fm.panel : ''} ${fm.dockOpen ? 'dock-open' : ''}`}>
       {fm.focus && <FocusBar title={score.title} panel={fm.panel} onPanel={fm.togglePanel} onExit={fm.exit} infoLabel="Teacher" settingsLabel="Parts & mixer" />}
+      {fm.focus && fm.rotateHint && <RotateHint onDismiss={fm.dismissRotate} />}
+      {fm.focus && <DockFab open={fm.dockOpen} onToggle={fm.toggleDock} primary={
+        <button className={`fab lime ${run !== 'idle' ? 'live' : ''}`} onClick={run !== 'idle' ? stop : () => void practice()} disabled={!targets.size} aria-label={run !== 'idle' ? 'Stop' : 'Practice'}><Icon name={run !== 'idle' ? 'pause' : 'play'} size={22} /></button>
+      } />}
       <section className="head-row">
         <div className="id-card"><span className="avatar"><Icon name="doc" size={22} /></span><div><small>{score.composer || 'Imported score'}</small><b>{score.title}</b></div></div>
         <div className="metrics">
@@ -505,7 +509,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
               <span className="legend"><i className="lg correct" />correct <i className="lg partial" />timing/tuning <i className="lg wrong" />wrong</span>
               <div className="zoom"><button onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(2)))} aria-label="Zoom out">−</button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom((z) => Math.min(1.6, +(z + 0.1).toFixed(2)))} aria-label="Zoom in">+</button></div>
             </div>
-            <ScoreView ref={view} xml={shownXml} zoom={zoom} transpose={tr} onError={setErr} />
+            <ScoreView ref={view} xml={shownXml} zoom={zoom} transpose={tr} horizontal={fm.focus} onError={setErr} />
             {feed[0] && !report && <div key={feed[0].id} className={`latest fb ${feed[0].kind}`}><span className="ic">{icon(feed[0].kind)}</span>{feed[0].text}</div>}
           </div>
           {sing ? (
@@ -645,7 +649,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
         </div>
         <span className="dock-fill" />
         <span className="dock-status"><Icon name={sing || input === 'Microphone' ? 'mic' : input === 'MIDI' ? 'midi' : 'keys'} size={15} /> Input: {input}</span>
-        <button className={`dock-btn ${fm.focus ? 'on' : ''}`} onClick={fm.toggle} aria-label={fm.focus ? 'Leave full screen (Esc)' : 'Full screen practice'} title={fm.focus ? 'Leave full screen (Esc)' : 'Full screen practice'}><Icon name={fm.focus ? 'close' : 'expand'} size={16} /></button>
+        <button className={`dock-btn dock-fs ${fm.focus ? "on" : ""}`} onClick={fm.toggle} aria-label={fm.focus ? 'Leave full screen (Esc)' : 'Full screen practice'} title={fm.focus ? 'Leave full screen (Esc)' : 'Full screen practice'}><Icon name={fm.focus ? 'close' : 'expand'} size={16} /></button>
       </div>
     </div>
   );

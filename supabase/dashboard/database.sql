@@ -39,8 +39,9 @@ insert into public.admin_emails (email) values ('meesheiksm@gmail.com') on confl
 create or replace function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.profiles (id, email, role)
+  insert into public.profiles (id, email, display_name, role)
   values (new.id, lower(new.email),
+          nullif(trim(coalesce(new.raw_user_meta_data->>'display_name', new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', '')), ''),
           case when exists (select 1 from public.admin_emails a where a.email = lower(new.email)) then 'admin' else 'user' end)
   on conflict (id) do nothing;
   return new;

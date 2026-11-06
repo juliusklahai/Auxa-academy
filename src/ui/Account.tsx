@@ -1,34 +1,115 @@
 // Account UI: sign in, plan status, upgrade (Stripe subscriptions or Monime passes), and the admin page.
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { ACCOUNTS_ENABLED, MONIME_ENABLED, PLANS, type PlanOption } from '../account/config';
 import { TIER_NAME } from '../account/gate';
 import {
-  adminGrant, adminPayments, adminSearch, adminSetRole, closeUpgrade, openBillingPortal, openUpgrade, refreshProfile, signInWithEmail,
-  signInWithGoogle, signOut, startCheckout, useAccount, useUpgrade, type Profile,
+  adminGrant, adminPayments, adminSearch, adminSetRole, authMessage, closeUpgrade, endRecovery, openBillingPortal, openUpgrade, refreshProfile,
+  sendPasswordReset, signInWithEmail, signInWithGoogle, signInWithPassword, signOut, signUp, startCheckout, updatePassword, useAccount, useUpgrade, type Profile,
 } from '../account/store';
 import { Icon } from './Icon';
 
 const fmtDate = (s: string | null) => (s ? new Date(s).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
 
-export function SignInForm({ compact }: { compact?: boolean }) {
+type AuthMode = 'signin' | 'signup' | 'forgot' | 'link';
+
+/** Full sign-in: email + password, create account, forgotten password, Google, or a one-time email link. */
+export function SignInForm({ compact, start = 'signin' }: { compact?: boolean; start?: AuthMode }) {
+  const [mode, setMode] = useState<AuthMode>(start);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
+  const [pw, setPw] = useState('');
+  const [show, setShow] = useState(false);
+  const [err, setErr] = useState('');
+  const [done, setDone] = useState('');
+  const [busy, setBusy] = useState(false);
+  const go = (m: AuthMode) => { setMode(m); setErr(''); setDone(''); };
+  const run = async (f: () => Promise<string | void>) => {
+    setBusy(true); setErr('');
+    try { const msg = await f(); if (msg) setDone(msg); } catch (x) { setErr(authMessage(x)); } finally { setBusy(false); }
+  };
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const em = email.trim();
+    if (mode === 'signin') void run(() => signInWithPassword(em, pw));
+    if (mode === 'signup') {
+      if (pw.length < 8) { setErr('Please use at least 8 characters for your password.'); return; }
+      void run(async () => (await signUp(em, pw, name.trim())) ? undefined : `Almost done: we sent a confirmation link to ${em}. Open it to activate your account.`);
+    }
+    if (mode === 'forgot') void run(async () => { await sendPasswordReset(em); return `If ${em} has an account, a link to set a new password is on its way.`; });
+    if (mode === 'link') void run(async () => { await signInWithEmail(em); return `Check ${em} for your sign-in link.`; });
+  };
+  const title = { signin: 'Sign in', signup: 'Create your account', forgot: 'Reset your password', link: 'Sign in with an email link' }[mode];
+  if (done) return (
+    <div className="auth done">
+      <span className="auth-ok"><Icon name="check" size={18} /></span>
+      <p>{done}</p>
+      <button className="btn ghost sm" onClick={() => go('signin')}>Back to sign in</button>
+    </div>
+  );
+  return (
+    <form className="auth" onSubmit={submit}>
+      {!compact && <b className="auth-title">{title}</b>}
+      {(mode === 'signin' || mode === 'signup') && (
+        <>
+          <button type="button" className="btn auth-google" onClick={() => signInWithGoogle().catch((x) => setErr(authMessage(x)))}>
+            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.1 5.3-4.6 7l7.1 5.5c4.2-3.9 7.2-9.6 7.2-17z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.1-5.5c-2 1.4-4.6 2.2-8.8 2.2-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
+            Continue with Google
+          </button>
+          <div className="auth-or"><span>or with email</span></div>
+        </>
+      )}
+      {mode === 'signup' && <label>Your name<input autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ama Kamara" /></label>}
+      <label>Email<input type="email" required autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" /></label>
+      {(mode === 'signin' || mode === 'signup') && (
+        <label>
+          <span className="auth-pw-head">Password{mode === 'signin' && <button type="button" className="link" onClick={() => go('forgot')}>Forgot password?</button>}</span>
+          <span className="auth-pw">
+            <input type={show ? 'text' : 'password'} required minLength={mode === 'signup' ? 8 : 1} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={pw} onChange={(e) => setPw(e.target.value)} placeholder={mode === 'signup' ? 'At least 8 characters' : ''} />
+            <button type="button" className="link" onClick={() => setShow(!show)}>{show ? 'Hide' : 'Show'}</button>
+          </span>
+          {mode === 'signup' && pw && <span className={`auth-strength s${strength(pw)}`}><i /><i /><i /><em>{['Too short', 'Weak', 'Good', 'Strong'][strength(pw)]}</em></span>}
+        </label>
+      )}
+      {err && <p className="err small">{err}</p>}
+      <button className="btn dark auth-main" disabled={busy}>
+        {busy ? 'Please wait…' : { signin: 'Sign in', signup: 'Create account', forgot: 'Send reset link', link: 'Email me a link' }[mode]}
+      </button>
+      <div className="auth-foot">
+        {mode === 'signin' && <><span>New here? <button type="button" className="link" onClick={() => go('signup')}>Create an account</button></span><button type="button" className="link muted" onClick={() => go('link')}>Email me a sign-in link instead</button></>}
+        {mode === 'signup' && <span>Already have an account? <button type="button" className="link" onClick={() => go('signin')}>Sign in</button></span>}
+        {(mode === 'forgot' || mode === 'link') && <button type="button" className="link" onClick={() => go('signin')}>Back to sign in</button>}
+      </div>
+    </form>
+  );
+}
+function strength(pw: string) {
+  if (pw.length < 8) return 0;
+  const kinds = [/[a-z]/, /[A-Z]/, /\d/, /[^\w]/].filter((r) => r.test(pw)).length;
+  return pw.length >= 12 && kinds >= 3 ? 3 : kinds >= 2 ? 2 : 1;
+}
+
+/** After opening a password-reset email: choose a new password. */
+export function ResetPasswordSheet() {
+  const a = useAccount();
+  const [pw, setPw] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
-  if (sent) return <p className="small">Check <b>{email}</b> for a sign-in link. You can close this tab after you click it.</p>;
+  if (!a.recovery) return null;
   return (
-    <form className="acct-signin" onSubmit={async (e) => {
-      e.preventDefault(); setBusy(true); setErr('');
-      try { await signInWithEmail(email.trim()); setSent(true); } catch (x) { setErr((x as Error).message); } finally { setBusy(false); }
-    }}>
-      {!compact && <p className="muted small">Sign in to save your progress on every device and to unlock Pro.</p>}
-      <div className="acct-row">
-        <input type="email" required placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
-        <button className="btn dark" disabled={busy}>{busy ? 'Sending…' : 'Email me a link'}</button>
-      </div>
-      <button type="button" className="btn ghost" onClick={() => signInWithGoogle().catch((x) => setErr((x as Error).message))}>Continue with Google</button>
-      {err && <p className="err small">{err}</p>}
-    </form>
+    <div className="sheet-back">
+      <form className="sheet auth" onSubmit={async (e) => {
+        e.preventDefault();
+        if (pw.length < 8) { setErr('Please use at least 8 characters.'); return; }
+        setBusy(true); setErr('');
+        try { await updatePassword(pw); } catch (x) { setErr(authMessage(x)); } finally { setBusy(false); }
+      }}>
+        <b className="auth-title">Choose a new password</b>
+        <label>New password<input type="password" autoComplete="new-password" required minLength={8} value={pw} onChange={(e) => setPw(e.target.value)} autoFocus /></label>
+        {err && <p className="err small">{err}</p>}
+        <button className="btn dark auth-main" disabled={busy}>{busy ? 'Saving…' : 'Save password'}</button>
+        <button type="button" className="link muted" onClick={endRecovery}>Not now</button>
+      </form>
+    </div>
   );
 }
 

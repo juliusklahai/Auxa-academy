@@ -18,7 +18,7 @@ import { bumpProgress, progress, setSettings, useProgressVersion, useSettings } 
 import { Staff } from './Staff';
 import { PitchRoll } from './PitchRoll';
 import { useFocusMode } from './focus';
-import { FocusBar, FloatHead } from './FocusBar';
+import { DockFab, FocusBar, FloatHead, RotateHint } from './FocusBar';
 
 function rangeFor(pitches: number[]): [number, number] {
   if (!pitches.length) return [48, 84];
@@ -369,8 +369,12 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
   const best = progress.ex(exercise.id).best;
 
   return (
-    <div className={`practice-root ${fm.focus ? 'focus' : ''} ${fm.panel ? 'show-' + fm.panel : ''}`}>
+    <div className={`practice-root ${fm.focus ? 'focus' : ''} ${fm.panel ? 'show-' + fm.panel : ''} ${fm.dockOpen ? 'dock-open' : ''}`}>
       {fm.focus && <FocusBar title={exercise.title} panel={fm.panel} onPanel={fm.togglePanel} onExit={fm.exit} infoLabel="Teacher" />}
+      {fm.focus && fm.rotateHint && <RotateHint onDismiss={fm.dismissRotate} />}
+      {fm.focus && <DockFab open={fm.dockOpen} onToggle={fm.toggleDock} primary={
+        <button className={`fab lime ${listening ? 'live' : ''}`} onClick={() => start(true)} aria-label={listening ? 'Restart' : 'Start'}><Icon name={listening || s.state === 'COMPLETED' || s.state === 'RESTART' ? 'restart' : 'play'} size={22} /></button>
+      } />}
       <section className="head-row">
         <div className="id-card">
           <span className="avatar"><Icon name={exercise.events.some((e) => e.pitches.length > 1) ? 'chord' : 'note'} size={22} /></span>
@@ -457,7 +461,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
         <span className="dock-label">Hands {settings.hands ? 'on' : 'off'}</span></>}
         <span className="dock-fill" />
         <span className="dock-status" title="Where your playing is coming from"><Icon name={input === 'MIDI' ? 'midi' : input === 'Microphone' || input === 'Voice' ? 'mic' : 'keys'} size={15} /> Input: {input}</span>
-        <button className={`dock-btn ${fm.focus ? 'on' : ''}`} onClick={fm.toggle} aria-label={fm.focus ? 'Leave full screen (Esc)' : 'Full screen practice'} title={fm.focus ? 'Leave full screen (Esc)' : 'Full screen practice'}><Icon name={fm.focus ? 'close' : 'expand'} size={16} /></button>
+        <button className={`dock-btn dock-fs ${fm.focus ? "on" : ""}`} onClick={fm.toggle} aria-label={fm.focus ? 'Leave full screen (Esc)' : 'Full screen practice'} title={fm.focus ? 'Leave full screen (Esc)' : 'Full screen practice'}><Icon name={fm.focus ? 'close' : 'expand'} size={16} /></button>
       </div>
     </div>
   );

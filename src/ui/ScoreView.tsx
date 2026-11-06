@@ -13,11 +13,13 @@ export interface ScoreViewHandle {
   color: (colors: Map<string, string>) => void;
 }
 
-interface Props { xml: string; zoom?: number; transpose?: number; onError?: (msg: string) => void; onReady?: () => void }
+interface Props { xml: string; zoom?: number; transpose?: number; /** one continuous line that scrolls sideways (practice view) */ horizontal?: boolean; onError?: (msg: string) => void; onReady?: () => void }
 
 export const noteKey = (srcQ: number, midi: number) => `${srcQ.toFixed(3)}|${midi}`;
 
-export const ScoreView = forwardRef<ScoreViewHandle, Props>(function ScoreView({ xml, zoom = 1, transpose = 0, onError, onReady }, ref) {
+export const ScoreView = forwardRef<ScoreViewHandle, Props>(function ScoreView({ xml, zoom = 1, transpose = 0, horizontal = false, onError, onReady }, ref) {
+  const horiz = useRef(horizontal);
+  horiz.current = horizontal;
   const host = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const osmd = useRef<OSMDType | null>(null);
@@ -60,6 +62,12 @@ export const ScoreView = forwardRef<ScoreViewHandle, Props>(function ScoreView({
   const trRef = useRef(0);
   const render = () => {
     if (!osmd.current) return;
+    try {
+      osmd.current.setOptions({ renderSingleHorizontalStaffline: horiz.current });
+      // one-line view: start the music at the top (no page margin above it)
+      const rules = (osmd.current as unknown as { EngravingRules: { PageTopMargin: number } }).EngravingRules;
+      rules.PageTopMargin = horiz.current ? 0.5 : 5;
+    } catch { /* older engine */ }
     osmd.current.Zoom = zoom;
     try {
       const sheet = osmd.current.Sheet as unknown as { Transpose: number };
@@ -98,7 +106,13 @@ export const ScoreView = forwardRef<ScoreViewHandle, Props>(function ScoreView({
     return () => { dead = true; };
   }, [xml]); // eslint-disable-line
 
-  useEffect(() => { if (osmd.current) render(); }, [zoom, transpose]); // eslint-disable-line
+  useEffect(() => {
+    if (!osmd.current) return;
+    const at = curIdx.current;
+    render();
+    // keep the cursor where it was after switching between page and one-line view
+    if (at > 0) { const c = osmd.current.cursor; c.show(); for (let i = 0; i < at; i++) c.next(); curIdx.current = at; follow(); }
+  }, [zoom, transpose, horizontal]); // eslint-disable-line
 
   useEffect(() => {
     const el = scroller.current;
@@ -124,15 +138,9 @@ export const ScoreView = forwardRef<ScoreViewHandle, Props>(function ScoreView({
       if (c.hidden) c.show();
       if (i < curIdx.current) { c.reset(); curIdx.current = 0; }
       while (curIdx.current < i) { c.next(); curIdx.current++; }
-      // page turn: scroll the next system into view as the current one finishes
-      const ce = c.cursorElement as HTMLElement | undefined;
-      const sc = scroller.current;
-      if (ce && sc) {
-        const top = ce.offsetTop, h = ce.offsetHeight;
-        if (top + h > sc.scrollTop + sc.clientHeight - 20 || top < sc.scrollTop) sc.scrollTo({ top: Math.max(0, top - 24), behavior: 'smooth' });
-      }
+      follow();
     },
-    hideCursor() { osmd.current?.cursor.hide(); if (scroller.current) scroller.current.scrollTo({ top: 0, behavior: 'smooth' }); },
+    hideCursor() { osmd.current?.cursor.hide(); if (scroller.current) scroller.current.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); },
     color(colors) {
       for (const k of colored.current) if (!colors.has(k)) paint(noteEls.current.get(k), null);
       colored.current = new Set(colors.keys());
@@ -140,8 +148,24 @@ export const ScoreView = forwardRef<ScoreViewHandle, Props>(function ScoreView({
     },
   }));
 
+  /** keep the cursor in view: sideways in one-line view (cursor a third from the left), else page turns */
+  function follow() {
+    const ce = osmd.current?.cursor.cursorElement as HTMLElement | undefined;
+    const sc = scroller.current;
+    if (!ce || !sc) return;
+    if (horiz.current) {
+      const x = ce.offsetLeft;
+      const y = ce.offsetTop;
+      const top = y < sc.scrollTop || y > sc.scrollTop + sc.clientHeight * 0.5 ? Math.max(0, y - 8) : sc.scrollTop;
+      if (x < sc.scrollLeft + sc.clientWidth * 0.15 || x > sc.scrollLeft + sc.clientWidth * 0.6 || top !== sc.scrollTop) sc.scrollTo({ left: Math.max(0, x - sc.clientWidth * 0.3), top, behavior: 'smooth' });
+      return;
+    }
+    const top = ce.offsetTop, h = ce.offsetHeight;
+    if (top + h > sc.scrollTop + sc.clientHeight - 20 || top < sc.scrollTop) sc.scrollTo({ top: Math.max(0, top - 24), behavior: 'smooth' });
+  }
+
   return (
-    <div className="score-scroll" ref={scroller}>
+    <div className={`score-scroll ${horizontal ? 'horizontal' : ''}`} ref={scroller}>
       {loading && <div className="score-loading">Drawing the score…</div>}
       <div ref={host} className="osmd-host" />
     </div>

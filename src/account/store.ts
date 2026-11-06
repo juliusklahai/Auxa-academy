@@ -9,10 +9,10 @@ import { mergeProgress } from './merge';
 import type { ProgressData } from '../progress/store';
 
 export interface Profile { id: string; email: string; display_name: string | null; role: 'user' | 'admin' | 'teacher'; pro_until: string | null; plus_until: string | null; pro_source: string | null; stripe_status: string | null; progress: ProgressData | Record<string, never>; progress_updated_at: string | null }
-export interface AccountState { ready: boolean; user: User | null; profile: Profile | null; ent: Entitlement; syncing: boolean; error: string }
+export interface AccountState { ready: boolean; user: User | null; profile: Profile | null; ent: Entitlement; syncing: boolean; error: string; /** arrived from a password-reset email */ recovery: boolean }
 
 const CACHE = 'maestro.account.v1';
-let state: AccountState = { ready: !ACCOUNTS_ENABLED, user: null, profile: null, ent: LOCAL_ENTITLEMENT, syncing: false, error: '' };
+let state: AccountState = { ready: !ACCOUNTS_ENABLED, user: null, profile: null, ent: LOCAL_ENTITLEMENT, syncing: false, error: '', recovery: false };
 const subs = new Set<() => void>();
 const set = (p: Partial<AccountState>) => { state = { ...state, ...p }; progress.unlockAll = state.ent.admin; subs.forEach((f) => f()); };
 export const getAccount = () => state;
@@ -74,7 +74,10 @@ export async function initAccount() {
   const sb = await supabase();
   const { data } = await sb.auth.getSession();
   await loadProfile(data.session?.user ?? null).catch((e) => set({ ready: true, error: String(e?.message ?? e) }));
-  sb.auth.onAuthStateChange((_e, session) => { if ((session?.user?.id ?? null) !== (state.user?.id ?? null)) void loadProfile(session?.user ?? null); });
+  sb.auth.onAuthStateChange((e, session) => {
+    if (e === 'PASSWORD_RECOVERY') set({ recovery: true });
+    if ((session?.user?.id ?? null) !== (state.user?.id ?? null)) void loadProfile(session?.user ?? null);
+  });
   // back from a payment page
   const q = new URLSearchParams(location.search);
   if (q.get('pro') === 'monime') { const id = localStorage.getItem('maestro.monime.pending'); if (id) await verifyMonime(id).catch(() => undefined); }
@@ -87,6 +90,40 @@ export async function signInWithEmail(email: string) {
   const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
   if (error) throw error;
 }
+const here = () => location.origin + location.pathname;
+/** Supabase's messages, in plain words */
+export function authMessage(e: unknown): string {
+  const m = String((e as Error)?.message ?? e);
+  if (/invalid login credentials/i.test(m)) return 'Wrong email or password.';
+  if (/email not confirmed/i.test(m)) return 'Please confirm your email first: open the link we sent you.';
+  if (/already registered|already been registered/i.test(m)) return 'This email already has an account. Sign in instead.';
+  if (/password should be at least|weak password/i.test(m)) return 'Please use a longer password (at least 8 characters, with letters and numbers).';
+  if (/rate limit|too many/i.test(m)) return 'Too many tries. Please wait a minute and try again.';
+  if (/provider is not enabled/i.test(m)) return 'This sign-in option is not switched on yet.';
+  if (/failed to fetch|network/i.test(m)) return 'No connection. Check your internet and try again.';
+  return m;
+}
+export async function signInWithPassword(email: string, password: string) {
+  const { error } = await (await supabase()).auth.signInWithPassword({ email, password });
+  if (error) throw new Error(authMessage(error));
+}
+/** Returns true when the account is ready now, false when the email must be confirmed first. */
+export async function signUp(email: string, password: string, name: string) {
+  const { data, error } = await (await supabase()).auth.signUp({ email, password, options: { emailRedirectTo: here(), data: { display_name: name } } });
+  if (error) throw new Error(authMessage(error));
+  if (data.user && !data.user.identities?.length) throw new Error(authMessage('already registered'));
+  return !!data.session;
+}
+export async function sendPasswordReset(email: string) {
+  const { error } = await (await supabase()).auth.resetPasswordForEmail(email, { redirectTo: here() });
+  if (error) throw new Error(authMessage(error));
+}
+export async function updatePassword(password: string) {
+  const { error } = await (await supabase()).auth.updateUser({ password });
+  if (error) throw new Error(authMessage(error));
+  set({ recovery: false });
+}
+export const endRecovery = () => set({ recovery: false });
 export async function signInWithGoogle() {
   const sb = await supabase();
   const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });

@@ -10,8 +10,9 @@ import { progress } from './ui/settings';
 import { Dashboard, LearnList, PianoStudio, SettingsView } from './ui/Views';
 import { MyMusic } from './ui/MyMusic';
 import { VoiceStudio } from './ui/VoiceStudio';
-import { AccountButton, AdminView, UpgradeSheet } from './ui/Account';
+import { AccountButton, AdminView, ResetPasswordSheet, UpgradeSheet } from './ui/Account';
 import { isGuest, Landing, Splash } from './ui/Landing';
+import { goHome, onGoHome } from './ui/nav';
 import { ACCOUNTS_ENABLED } from './account/config';
 import { getAccount, initAccount, openUpgrade, useAccount } from './account/store';
 import { allowLesson, lessonTier, TIER_NAME } from './account/gate';
@@ -55,6 +56,7 @@ export default function App() {
   const [songId, setSongId] = useState<string | null>(null);
   const account = useAccount();
   const [, bump] = useState(0);
+  useEffect(() => onGoHome(() => { setLesson(null); setSongId(null); setTab('home'); window.scrollTo({ top: 0 }); }), []);
   useEffect(() => { void initAccount(); }, []);
   const open = (l: Lesson, ex?: number) => {
     if (!allowLesson(getAccount().ent, l)) { openUpgrade(`Level ${l.level} is part of ${TIER_NAME[lessonTier(l)]}`); return; }
@@ -75,9 +77,8 @@ export default function App() {
       <div className="device">
         <header className="topbar">
           <div className="title-tab">
-            {lesson
-              ? <button className="circle" onClick={() => setLesson(null)} aria-label="Close lesson"><Icon name="close" size={16} /></button>
-              : <span className="circle brand" aria-hidden><i /><i /><i /></span>}
+            <button className="circle brand" onClick={goHome} aria-label="Home" title="Home"><i /><i /><i /></button>
+            {lesson && <button className="circle" onClick={() => setLesson(null)} aria-label="Close lesson" title="Back to the lesson list"><Icon name="close" size={16} /></button>}
             <div className="title-text">
               {lesson && <small>Level {lesson.level} · {lesson.id}</small>}
               <h1>{title}</h1>
@@ -109,7 +110,7 @@ export default function App() {
                 {tab === 'admin' && <AdminView />}
               </>}
         </main>
-        <UpgradeSheet />
+        <UpgradeSheet /><ResetPasswordSheet />
       </div>
     </div>
   );
