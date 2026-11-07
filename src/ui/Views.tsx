@@ -16,6 +16,8 @@ import { Icon } from './Icon';
 import { Metric } from './LessonView';
 import { SongShelf } from './MyMusic';
 import { Piano, type KeyMark } from './Piano';
+import { DockFab, FloatHead, FocusBar, RotateHint } from './FocusBar';
+import { isPhone, useFocusMode } from './focus';
 import { bumpProgress, progress, setSettings, useProgressVersion, useSettings } from './settings';
 
 const SKILL_LABEL: Record<SkillId, string> = {
@@ -251,6 +253,11 @@ export function PianoStudio() {
   const [running, setRunning] = useState(false);
   const [flash, setFlash] = useState(-1);
   const [size, setSize] = useState<'88' | '61' | '25'>('61');
+  // full screen (phones: straight away, sideways): just the keys, as big as the screen allows
+  const fm = useFocusMode();
+  useEffect(() => { if (isPhone()) fm.enter(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const [vh, setVh] = useState(window.innerHeight);
+  useEffect(() => { const on = () => setVh(window.innerHeight); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on); }, []);
   const chordBuf = useRef<{ t: number; notes: number[] }>({ t: 0, notes: [] });
   useEffect(() => onLearnerNote((n) => {
     setMarks((m) => { const x = new Map(m); if (n.on) x.set(n.midi, 'played'); else x.delete(n.midi); return x; });
@@ -271,8 +278,23 @@ export function PianoStudio() {
   };
   const setB = (v: number) => { const c = Math.max(20, Math.min(300, v)); setBpm(c); metronome.setBpm(c); };
   const [lo, hi] = size === '88' ? [21, 108] : size === '61' ? [36, 96] : [48, 72];
+  const options = (
+    <>
+      {(['25', '61', '88'] as const).map((k) => <button key={k} className={`chip ${size === k ? 'on' : ''}`} onClick={() => setSize(k)}>{k} keys</button>)}
+      <span className="chip-sep" />
+      {(['letters', 'solfege', 'none'] as const).map((k) => <button key={k} className={`chip ${settings.labels === k ? 'on' : ''}`} onClick={() => setSettings({ labels: k })}>{k === 'none' ? 'No labels' : k === 'solfege' ? 'Solfège' : 'Letters'}</button>)}
+      <button className={`chip ${settings.keyHints ? 'on' : ''}`} onClick={() => setSettings({ keyHints: !settings.keyHints })}>Computer keys</button>
+    </>
+  );
+  const pianoH = fm.focus ? Math.max(130, Math.min(360, vh - (vh < 520 ? 110 : 200))) : size === '88' ? 190 : 230;
   return (
-    <div className="page">
+    <div className={`page practice-root studio ${fm.focus ? 'focus' : ''} ${fm.panel ? 'show-' + fm.panel : ''} ${fm.dockOpen ? 'dock-open' : ''}`}>
+      {fm.focus && <FocusBar title="Piano Studio" panel={fm.panel} onPanel={fm.togglePanel} onExit={fm.exit} infoLabel="Keyboard" />}
+      {fm.focus && fm.rotateHint && <RotateHint onDismiss={fm.dismissRotate} />}
+      {fm.focus && <DockFab open={fm.dockOpen} onToggle={fm.toggleDock} primary={
+        <button className={`fab lime ${running ? 'live' : ''}`} onClick={toggle} aria-label="Metronome start or stop"><Icon name={running ? 'pause' : 'metro'} size={22} /></button>
+      } />}
+      {fm.focus && <div className="side"><div className="card panel-info"><FloatHead title="Keyboard" onClose={fm.closePanel} /><div className="chip-row">{options}</div></div></div>}
       <section className="head-row">
         <div className="id-card"><span className="avatar"><Icon name="piano" size={22} /></span><div><small>Free play · not scored</small><b>Piano Studio</b></div></div>
         <div className="metrics">
@@ -282,19 +304,16 @@ export function PianoStudio() {
           <Metric label="Keys" value={size} />
         </div>
       </section>
-      <div className="chip-row">
-        {(['25', '61', '88'] as const).map((k) => <button key={k} className={`chip ${size === k ? 'on' : ''}`} onClick={() => setSize(k)}>{k} keys</button>)}
-        <span className="chip-sep" />
-        {(['letters', 'solfege', 'none'] as const).map((k) => <button key={k} className={`chip ${settings.labels === k ? 'on' : ''}`} onClick={() => setSettings({ labels: k })}>{k === 'none' ? 'No labels' : k === 'solfege' ? 'Solfège' : 'Letters'}</button>)}
-        <button className={`chip ${settings.keyHints ? 'on' : ''}`} onClick={() => setSettings({ keyHints: !settings.keyHints })}>Computer keys</button>
-      </div>
+      <div className="chip-row">{options}</div>
+      {fm.focus && <div className="studio-now"><small>You played</small><b>{last}</b><span className="beats" aria-hidden>{running && Array.from({ length: beats }, (_, i) => <span key={i} className={flash === i ? (i === 0 ? 'on accent' : 'on') : ''} />)}</span></div>}
       <section className="card keys-card tall">
-        <Piano lo={lo} hi={hi} marks={marks} labels={settings.labels} showKeyHints={settings.keyHints} height={size === '88' ? 190 : 230} scrollTo={60} minKeyWidth={size === '88' ? 26 : 34} />
-        <p className="muted small">Computer keyboard: A S D F G H J K L are white keys, W E T Y U O P black keys, Z and X shift the octave. Chords played on MIDI or an acoustic piano show above.</p>
+        <Piano lo={lo} hi={hi} marks={marks} labels={settings.labels} showKeyHints={settings.keyHints} height={pianoH} scrollTo={60} minKeyWidth={size === '88' ? 26 : 34} />
+        <p className="muted small studio-help">Computer keyboard: A S D F G H J K L are white keys, W E T Y U O P black keys, Z and X shift the octave. Chords played on MIDI or an acoustic piano show above.</p>
       </section>
       <div className="dock">
         <button className={`dock-btn lime ${running ? 'live' : ''}`} onClick={toggle} aria-label="Metronome start or stop"><Icon name={running ? 'pause' : 'metro'} size={18} /></button>
         <span className="dock-label">Metronome</span>
+        <button className={`dock-btn dock-fs ${fm.focus ? 'on' : ''}`} onClick={fm.toggle} aria-label="Full screen" title="Full screen"><Icon name="expand" size={17} /></button>
         <span className="dock-sep" />
         <button className="dock-btn" onClick={() => setB(bpm - 5)} aria-label="Slower">−</button>
         <input className="dock-num" type="number" min={20} max={300} value={bpm} onChange={(e) => setB(+e.target.value)} aria-label="BPM" />

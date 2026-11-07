@@ -735,3 +735,31 @@ button.circle.brand:hover { transform: scale(1.05); }
 .install-banner .icon-btn { color: #fff; background: rgba(255,255,255,.1); flex: none; }
 .link.on-dark, small.on-dark { color: var(--lime); background: none; border: 0; font: inherit; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; margin-top: 6px; }
 small.on-dark { text-decoration: none; opacity: .8; color: #fff; }
+
+/* never let anything make the page wider than the phone (the browser would zoom the whole app out) */
+html, body { overflow-x: clip; max-width: 100%; }
+.practice-root:not(.focus) > .dock { max-width: 100%; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+.practice-root:not(.focus) > .dock::-webkit-scrollbar { display: none; }
+
+/* keyboard drag handle: a clear bar on top of the keys (drag down = more room for the notes) */
+.keys-card { position: relative; transition: opacity .1s; }
+.kb-handle { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: -6px -8px 4px; padding: 6px 0 4px; cursor: ns-resize; touch-action: none; user-select: none; -webkit-user-select: none; }
+.kb-handle i { display: block; width: 52px; height: 5px; border-radius: 99px; background: rgba(0,0,0,.22); }
+.kb-handle:hover i, .kb-handle:active i { background: rgba(0,0,0,.45); }
+.kb-handle span { font-size: 11.5px; color: var(--muted); }
+.kb-handle.static { margin: 0 0 2px; cursor: pointer; }
+.kb-hidden { flex-direction: column; text-align: center; cursor: pointer; gap: 6px !important; }
+@media (orientation: landscape) and (max-height: 520px) {
+  .practice-root.focus .kb-handle { margin: -4px -8px 0; padding: 2px 0 3px; }
+  .practice-root.focus .kb-hidden { padding: 4px 10px; }
+  .practice-root.focus .kb-hidden .muted { font-size: 11.5px; }
+}
+
+/* ---------- Piano Studio full screen: just the keys ---------- */
+.practice-root.studio.focus > .keys-card { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; }
+.practice-root.studio.focus .studio-help { display: none; }
+.studio-now { display: flex; align-items: baseline; gap: 12px; padding: 0 8px; flex: none; }
+.studio-now small { color: var(--muted); font-size: 12px; }
+.studio-now b { font-size: clamp(22px, 4vw, 34px); letter-spacing: -.01em; }
+.studio-now .beats { margin-left: auto; }
+.practice-root.studio.focus .side .chip-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; }

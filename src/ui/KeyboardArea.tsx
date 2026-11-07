@@ -30,6 +30,7 @@ export function KeyboardArea({ lo, hi, marks, labels, showKeyHints, scrollTo, ba
   const [scale, setScale] = useState(s.kbScale);
   useEffect(() => setScale(s.kbScale), [s.kbScale]);
   const drag = useRef<{ y: number; s: number } | null>(null);
+  const [tuck, setTuck] = useState(0); // 0..1 while pulling past the smallest size
   const card = useRef<HTMLDivElement>(null);
   const [vh, setVh] = useState(typeof window !== 'undefined' ? window.innerHeight : 800);
   useEffect(() => {
@@ -45,22 +46,26 @@ export function KeyboardArea({ lo, hi, marks, labels, showKeyHints, scrollTo, ba
     const inFocus = !!el.closest('.practice-root.focus');
     // a phone held sideways is short: the keys get under half of it, the music gets the rest
     const short = inFocus && vh < 520;
-    const limit = vh * (short ? 0.44 : inFocus ? 0.42 : 0.62);
-    const min = short ? 0.36 : 0.55;
+    const limit = vh * (short ? 0.38 : inFocus ? 0.4 : 0.62);
+    const min = short ? 0.3 : 0.45;
     const h = el.offsetHeight;
     if (h > limit + 4 && scale > min + 0.01) setScale(Math.max(min, scale * (limit / h)));
   });
 
   if (!s.keyboard) {
     return (
-      <div className="card keys-card kb-hidden">
-        <span className="muted small">On-screen keyboard hidden. Play on your MIDI keyboard or piano.</span>
+      <div className="card keys-card kb-hidden" onPointerUp={(e) => { if (!(e.target as HTMLElement).closest('button')) setSettings({ keyboard: true }); }}>
+        <span className="kb-handle static"><i /></span>
+        <span className="muted small">Keyboard tucked away. Play on your MIDI keyboard or piano, or tap here to bring it back.</span>
         <button className="kb-btn" onClick={() => setSettings({ keyboard: true })}><Icon name="keys" size={14} /> Show keyboard</button>
       </div>
     );
   }
   const handsOn = !!hands && s.hands && handsVisible;
   const fit = Math.min(1, scale);
+  // Drag the handle: down makes the keyboard (and hands) smaller and gives the notes room; keep pulling
+  // down past the smallest size to tuck the keyboard away completely. Up makes it bigger again.
+  const MIN = 0.25;
   const onDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest('button, select, .hands-panel')) return;
     drag.current = { y: e.clientY, s: scale };
@@ -68,12 +73,24 @@ export function KeyboardArea({ lo, hi, marks, labels, showKeyHints, scrollTo, ba
   };
   const onMove = (e: React.PointerEvent) => {
     if (!drag.current) return;
-    setScale(Math.max(0.5, Math.min(1.6, drag.current.s - (e.clientY - drag.current.y) / 260)));
+    const want = drag.current.s - (e.clientY - drag.current.y) / Math.max(160, baseHeight * 1.2);
+    setScale(Math.max(MIN, Math.min(1.6, want)));
+    setTuck(want < MIN ? Math.min(1, (MIN - want) / 0.3) : 0);
   };
-  const onUp = () => { if (drag.current) { drag.current = null; setSettings({ kbScale: Math.round(scale * 100) / 100 }); } };
+  const onUp = () => {
+    if (!drag.current) return;
+    drag.current = null;
+    if (tuck >= 1) { setTuck(0); setSettings({ keyboard: false }); return; }
+    setTuck(0);
+    setSettings({ kbScale: Math.round(scale * 100) / 100 });
+  };
+  const dragProps = { onPointerDown: onDown, onPointerMove: onMove, onPointerUp: onUp, onPointerCancel: onUp };
   return (
-    <div className="card keys-card" ref={card}>
-      <div className="kb-bar" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} title="Drag up or down to resize the keyboard">
+    <div className="card keys-card" ref={card} style={tuck ? { opacity: 1 - tuck * 0.6, transform: `translateY(${tuck * 30}px)` } : undefined}>
+      <div className="kb-handle" {...dragProps} role="separator" aria-orientation="horizontal" aria-label="Drag to resize or hide the keyboard" title="Drag down for more room for the notes, up for a bigger keyboard">
+        <i />{tuck > 0.5 && <span>Let go to hide the keyboard</span>}
+      </div>
+      <div className="kb-bar" {...dragProps} title="Drag up or down to resize the keyboard">
         <span className="kb-grip" aria-hidden><i /><i /><i /></span>
         <label className="kb-size">Keys
           <select value={String(s.kbKeys)} onChange={(e) => setSettings({ kbKeys: (e.target.value === 'auto' ? 'auto' : +e.target.value) as typeof s.kbKeys })} aria-label="Keyboard size">
