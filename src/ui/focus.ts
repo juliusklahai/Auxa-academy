@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
  * Focus (practice) mode: only the score and the keyboard fill the screen, browser full screen
  * where supported. Esc (or leaving full screen) returns to the normal view.
  */
-const isPhone = () => window.matchMedia?.('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600;
+export const isPhone = () => window.matchMedia?.('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600;
 const isPortrait = () => window.innerHeight > window.innerWidth;
 type OrientationLock = { lock?: (o: string) => Promise<void>; unlock?: () => void };
 

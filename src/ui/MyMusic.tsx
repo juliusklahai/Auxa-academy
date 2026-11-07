@@ -28,7 +28,7 @@ import { icon, Metric, ReportCard } from './LessonView';
 import type { KeyMark } from './Piano';
 import { PitchRoll } from './PitchRoll';
 import { ScoreView, noteKey, type ScoreViewHandle } from './ScoreView';
-import { useFocusMode } from './focus';
+import { isPhone, useFocusMode } from './focus';
 import { DockFab, FocusBar, FloatHead, RotateHint } from './FocusBar';
 import { progress, bumpProgress, setSettings, useSettings } from './settings';
 
@@ -147,6 +147,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
       stop();
       const s = parseXmlString(xml);
       setScore(s);
+      if (isPhone()) fm.enter(); // phones: practice full screen and sideways
       setErr('');
       const song = songByTitle(s.title);
       setMix(Object.fromEntries(s.tracks.map((t) => [t.key, { mute: false, solo: false, vol: 0.8, inst: song?.colors[t.partId] ?? guessInstrument(s.parts.find((p) => p.id === t.partId)) }])));
@@ -306,6 +307,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
 
   const practice = async () => {
     if (!score || !targets.size) return;
+    if (isPhone() && !fm.focus) fm.enter();
     stop();
     if (sing) {
       try { await mic.start(); mic.settings.mode = 'voice'; } catch (e) { setErr(micHelp(e)); return; }

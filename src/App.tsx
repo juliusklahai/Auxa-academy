@@ -18,12 +18,12 @@ import { getAccount, initAccount, openUpgrade, useAccount } from './account/stor
 import { allowLesson, lessonTier, TIER_NAME } from './account/gate';
 
 type Tab = 'home' | 'learn' | 'music' | 'voice' | 'studio' | 'settings' | 'admin';
-const TABS: { id: Tab; label: string; icon: string; title: string }[] = [
-  { id: 'home', label: 'Overview', icon: 'home', title: 'Piano Academy' },
+const TABS: { id: Tab; label: string; short?: string; icon: string; title: string }[] = [
+  { id: 'home', label: 'Overview', short: 'Home', icon: 'home', title: 'Piano Academy' },
   { id: 'learn', label: 'Lessons', icon: 'path', title: 'Lessons' },
-  { id: 'music', label: 'My Music', icon: 'doc', title: 'My Music' },
+  { id: 'music', label: 'My Music', short: 'Music', icon: 'doc', title: 'My Music' },
   { id: 'voice', label: 'Voice', icon: 'mic', title: 'Voice Studio' },
-  { id: 'studio', label: 'Piano Studio', icon: 'piano', title: 'Piano Studio' },
+  { id: 'studio', label: 'Piano Studio', short: 'Piano', icon: 'piano', title: 'Piano Studio' },
   { id: 'settings', label: 'Setup', icon: 'settings', title: 'Setup' },
 ];
 
@@ -87,7 +87,7 @@ export default function App() {
           <svg className="tab-swoop" viewBox="0 0 90 64" preserveAspectRatio="none" aria-hidden><path d="M0 0 C 46 0, 40 64, 90 64 L 0 64 Z" /></svg>
           <nav className="pills" aria-label="Main">
             {tabs.map((t) => (
-              <button key={t.id} className={`pill ${tab === t.id && !lesson ? 'on' : ''} ${tab === t.id && lesson ? 'on' : ''}`} aria-current={tab === t.id}
+              <button key={t.id} className={`pill tabpill ${tab === t.id ? 'on' : ''}`} aria-current={tab === t.id}
                 onClick={() => { setTab(t.id); setLesson(null); }}>
                 <Icon name={t.icon} size={16} /> <span className="pill-label">{t.label}</span>
               </button>
@@ -110,6 +110,16 @@ export default function App() {
                 {tab === 'admin' && <AdminView />}
               </>}
         </main>
+        {/* phones: the main sections live in a thumb-sized bar at the bottom */}
+        <nav className="tabbar" aria-label="Sections">
+          {tabs.map((t) => (
+            <button key={t.id} className={tab === t.id && !lesson ? 'on' : ''} aria-current={tab === t.id && !lesson}
+              onClick={() => { setTab(t.id); setLesson(null); window.scrollTo({ top: 0 }); }}>
+              <span className="tb-ic"><Icon name={t.icon} size={20} /></span>
+              <span className="tb-label">{t.short ?? t.label}</span>
+            </button>
+          ))}
+        </nav>
         <UpgradeSheet /><ResetPasswordSheet />
       </div>
     </div>

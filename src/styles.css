@@ -708,3 +708,21 @@ button.circle.brand:hover { transform: scale(1.05); }
   .practice-root.focus .kb-bar .kb-btn, .practice-root.focus .kb-bar select { height: 26px; font-size: 11.5px; padding: 0 9px; }
   .practice-root.focus .kb-bar .kb-btn span, .practice-root.focus .kb-bar > .muted { display: none; }
 }
+
+/* ---------- phones: bottom tab bar instead of tiny pills at the top ---------- */
+.tabbar { display: none; }
+@media (max-width: 700px) {
+  .pill.tabpill { display: none; }
+  .pills > .pill-gap { display: none; }
+  .title-tab { max-width: none; flex: 1; }
+  .tab-swoop { width: 40px; }
+  .pills { flex: none; padding-right: 4px; }
+  .tabbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 150; background: #2a2a28; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); gap: 2px; box-shadow: 0 -8px 24px rgba(0,0,0,.18); }
+  .tabbar button { flex: 1; min-width: 0; min-height: 56px; border: 0; background: none; color: #cfcfc8; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font: inherit; font-size: 11px; font-weight: 500; border-radius: 14px; -webkit-tap-highlight-color: transparent; }
+  .tabbar .tb-ic { width: 46px; height: 30px; border-radius: 99px; display: grid; place-items: center; transition: background .15s; }
+  .tabbar button.on { color: #fff; }
+  .tabbar button.on .tb-ic { background: var(--lime); color: var(--ink); }
+  .tabbar .tb-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .device { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+  .practice-root:not(.focus) > .dock { bottom: calc(84px + env(safe-area-inset-bottom)); }
+}

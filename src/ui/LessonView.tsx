@@ -17,7 +17,7 @@ import { Piano, type KeyMark } from './Piano';
 import { bumpProgress, progress, setSettings, useProgressVersion, useSettings } from './settings';
 import { Staff } from './Staff';
 import { PitchRoll } from './PitchRoll';
-import { useFocusMode } from './focus';
+import { isPhone, useFocusMode } from './focus';
 import { DockFab, FocusBar, FloatHead, RotateHint } from './FocusBar';
 
 function rangeFor(pitches: number[]): [number, number] {
@@ -139,6 +139,8 @@ interface FeedItem { kind: Feedback['kind']; text: string; id: number }
 function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesson: Lesson; exercise: Exercise; index: number; chips: React.ReactNode; onNext?: () => void }) {
   const settings = useSettings();
   const fm = useFocusMode();
+  // phones: lessons open full screen and sideways (Android turns the screen only in full screen)
+  useEffect(() => { if (isPhone()) fm.enter(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [tempoPct, setTempoPct] = useState(100);
   const [metroOn, setMetroOn] = useState(base.mode === 'timed');
   const exercise = useMemo<Exercise>(() => { const e = applyVoiceLevel(base, allowVoiceLevel(getAccount().ent, settings.voiceLevel) ? settings.voiceLevel : 'easy'); return settings.mistakePolicy === 'pause' ? { ...e, maxConsecutiveMistakes: 99 } : e; }, [base, settings.mistakePolicy, settings.voiceLevel]);
@@ -269,6 +271,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
 
   const [micErr, setMicErr] = useState('');
   const start = (fresh = true) => {
+    if (isPhone() && !fm.focus) fm.enter();
     if (exercise.voice && !mic.active) {
       mic.start().then(() => { mic.settings.mode = 'voice'; setMicErr(''); latest.current.start(fresh); }).catch((e) => setMicErr(micHelp(e)));
       return;
