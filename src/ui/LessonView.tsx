@@ -333,6 +333,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
   };
 
   const demo = () => {
+    if (isPhone() && !fm.focus) fm.enter(); // phones: playback full screen and sideways too
     clearTimers();
     audio.stopAll();
     if (session.current.state === 'LISTENING' || session.current.state === 'COUNT_IN') session.current = new AssessmentSession(exercise, bpm);

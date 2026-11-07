@@ -285,6 +285,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
 
   const listen = () => {
     if (!score) return;
+    if (isPhone() && !fm.focus) fm.enter(); // phones: playback full screen and sideways too
     stop();
     // The microphone is not needed to listen. Pausing it also keeps Bluetooth earphones in their
     // high-quality mode (many switch to a crackly "headset" mode while a microphone is open).

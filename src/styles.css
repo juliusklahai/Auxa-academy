@@ -726,3 +726,12 @@ button.circle.brand:hover { transform: scale(1.05); }
   .device { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
   .practice-root:not(.focus) > .dock { bottom: calc(84px + env(safe-area-inset-bottom)); }
 }
+
+/* ---------- install the app ---------- */
+.install-banner { display: flex; align-items: center; gap: 12px; background: #2a2a28; color: #fff; border-radius: 20px; padding: 12px 12px 12px 14px; margin: 0 0 14px; }
+.install-banner img { border-radius: 10px; flex: none; }
+.ib-text { display: grid; gap: 2px; flex: 1; min-width: 0; font-size: 13px; }
+.ib-text span { opacity: .75; font-size: 12.5px; }
+.install-banner .icon-btn { color: #fff; background: rgba(255,255,255,.1); flex: none; }
+.link.on-dark, small.on-dark { color: var(--lime); background: none; border: 0; font: inherit; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; margin-top: 6px; }
+small.on-dark { text-decoration: none; opacity: .8; color: #fff; }

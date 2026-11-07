@@ -13,6 +13,7 @@ import { VoiceStudio } from './ui/VoiceStudio';
 import { AccountButton, AdminView, ResetPasswordSheet, UpgradeSheet } from './ui/Account';
 import { isGuest, Landing, Splash } from './ui/Landing';
 import { goHome, onGoHome } from './ui/nav';
+import { InstallBanner } from './ui/InstallBanner';
 import { ACCOUNTS_ENABLED } from './account/config';
 import { getAccount, initAccount, openUpgrade, useAccount } from './account/store';
 import { allowLesson, lessonTier, TIER_NAME } from './account/gate';
@@ -101,7 +102,7 @@ export default function App() {
           {lesson
             ? <LessonView key={`${lesson.id}-${exStart ?? ''}`} lesson={lesson} initialExercise={exStart} onNextLesson={nextLesson ? () => open(nextLesson) : undefined} />
             : <>
-                {tab === 'home' && <Dashboard openLesson={open} />}
+                {tab === 'home' && <><InstallBanner /><Dashboard openLesson={open} /></>}
                 {tab === 'learn' && <LearnList openLesson={open} openSong={(id) => { setSongId(id); setTab('music'); }} />}
                 {tab === 'music' && <MyMusic singPart={singPart} onSingHandled={() => setSingPart(null)} songId={songId} onSongHandled={() => setSongId(null)} />}
                 {tab === 'voice' && <VoiceStudio openLesson={open} singChoir={(p) => { setSingPart(p); setTab('music'); }} />}

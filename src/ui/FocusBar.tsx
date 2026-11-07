@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Icon } from './Icon';
 import { goHome } from './nav';
+import { InstallHint } from './InstallBanner';
 
 /** Floating controls shown in full-screen practice: open/close the floating panels, leave (Esc). */
 export function FocusBar({ title, panel, onPanel, onExit, infoLabel = 'Info', settingsLabel }: {
@@ -45,6 +46,7 @@ export function RotateHint({ onDismiss }: { onDismiss: () => void }) {
       <b>Turn your phone sideways</b>
       <p>The score and the keyboard get much more room.</p>
       <button className="btn ghost sm" onClick={onDismiss}>Keep it upright</button>
+      <InstallHint dark />
     </div>
   );
 }
