@@ -1,6 +1,7 @@
 // Account state: sign-in, plan (entitlement), progress sync and payments. Supabase is loaded only when
 // accounts are configured, so the local/offline app stays light and works exactly as before.
 import { useSyncExternalStore } from 'react';
+import { AUTH_RETURN, native } from '../native/bridge';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import { progress } from '../ui/settings';
 import { ACCOUNTS_ENABLED, SUPABASE_ANON_KEY, SUPABASE_URL } from './config';
@@ -87,10 +88,10 @@ export const refreshProfile = async () => loadProfile((await (await supabase()).
 
 export async function signInWithEmail(email: string) {
   const sb = await supabase();
-  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: here() } });
   if (error) throw error;
 }
-const here = () => location.origin + location.pathname;
+const here = () => AUTH_RETURN || location.origin + location.pathname;
 /** Supabase's messages, in plain words */
 export function authMessage(e: unknown): string {
   const m = String((e as Error)?.message ?? e);
@@ -126,6 +127,14 @@ export async function updatePassword(password: string) {
 export const endRecovery = () => set({ recovery: false });
 export async function signInWithGoogle() {
   const sb = await supabase();
+  // Google does not allow sign-in inside an app's web view: the Maestro app opens the phone's browser
+  // and Google sends people straight back into the app.
+  if (native) {
+    const { data, error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: AUTH_RETURN, skipBrowserRedirect: true } });
+    if (error) throw error;
+    if (data.url) native.openExternal(data.url);
+    return;
+  }
   const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
   if (error) throw error;
 }

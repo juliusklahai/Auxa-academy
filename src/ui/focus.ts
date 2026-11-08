@@ -5,7 +5,9 @@ import { useEffect, useRef, useState } from 'react';
  * where supported. Esc (or leaving full screen) returns to the normal view.
  */
 /** running as an installed app (home-screen icon): already full screen, no browser bar, no notice */
-export const isInstalled = () => !!(window.matchMedia?.('(display-mode: standalone)').matches || window.matchMedia?.('(display-mode: fullscreen)').matches || (navigator as Navigator & { standalone?: boolean }).standalone);
+import { native, onBack } from '../native/bridge';
+
+export const isInstalled = () => !!native || !!(window.matchMedia?.('(display-mode: standalone)').matches || window.matchMedia?.('(display-mode: fullscreen)').matches || (navigator as Navigator & { standalone?: boolean }).standalone);
 export const isPhone = () => window.matchMedia?.('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600;
 const isPortrait = () => window.innerHeight > window.innerWidth;
 type OrientationLock = { lock?: (o: string) => Promise<void>; unlock?: () => void };
@@ -20,6 +22,8 @@ export function useFocusMode() {
   const usingFs = useRef(false);
   const focusRef = useRef(false);
   focusRef.current = focus;
+  const panelRef = useRef<'info' | 'settings' | null>(null);
+  panelRef.current = panel;
 
   const enter = () => {
     setFocus(true);
@@ -35,7 +39,9 @@ export function useFocusMode() {
       // some browsers never answer the lock request: check again once the screen had time to turn
       window.setTimeout(() => { if (isPortrait()) setRotateHint(true); }, 1200);
     };
-    // installed app: it is full screen already, so only turn the screen (no browser full-screen notice)
+    // Maestro app: the phone itself turns sideways and hides its bars (no browser notice at all)
+    if (native) { native.setPractice(true); return; }
+    // installed web app: it is full screen already, so only turn the screen (no browser full-screen notice)
     if (isInstalled()) { landscape(); return; }
     try {
       if (!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen({ navigationUI: 'hide' }).then(() => { usingFs.current = true; landscape(); }).catch(landscape);
@@ -47,6 +53,7 @@ export function useFocusMode() {
     setPanel(null);
     setDockOpen(false);
     setRotateHint(false);
+    if (native) { native.setPractice(false); return; }
     try { (screen.orientation as unknown as OrientationLock | undefined)?.unlock?.(); } catch { /* fine */ }
     usingFs.current = false;
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
@@ -58,10 +65,18 @@ export function useFocusMode() {
     const onTurn = () => { if (!isPortrait()) setRotateHint(false); };
     window.addEventListener('resize', onTurn);
     window.addEventListener('keydown', onKey);
+    // Android back button: close a floating panel first, then leave full screen
+    const offBack = onBack(() => {
+      if (!focusRef.current) return false;
+      if (panelRef.current) { setPanel(null); return true; }
+      exit(); return true;
+    }, 10);
     document.addEventListener('fullscreenchange', onFs);
     return () => {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('resize', onTurn);
+      offBack();
+      if (native && focusRef.current) native.setPractice(false);
       try { (screen.orientation as unknown as OrientationLock | undefined)?.unlock?.(); } catch { /* fine */ }
       document.removeEventListener('fullscreenchange', onFs);
       document.documentElement.classList.remove('focus-on');

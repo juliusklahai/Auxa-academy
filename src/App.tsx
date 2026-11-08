@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Lesson } from './core/types';
 import { LESSONS } from './curriculum/lessons';
 import { setExpected } from './input/expect';
@@ -13,6 +13,7 @@ import { VoiceStudio } from './ui/VoiceStudio';
 import { AccountButton, AdminView, ResetPasswordSheet, UpgradeSheet } from './ui/Account';
 import { isGuest, Landing, Splash } from './ui/Landing';
 import { goHome, onGoHome } from './ui/nav';
+import { isNativeApp, onBack } from './native/bridge';
 import { InstallBanner } from './ui/InstallBanner';
 import { ACCOUNTS_ENABLED } from './account/config';
 import { getAccount, initAccount, openUpgrade, useAccount } from './account/store';
@@ -57,8 +58,16 @@ export default function App() {
   const [songId, setSongId] = useState<string | null>(null);
   const account = useAccount();
   const [, bump] = useState(0);
+  // Android back button (inside the Maestro app): close the lesson, then go back to Home, then leave
+  const navRef = useRef({ lesson, tab });
+  navRef.current = { lesson, tab };
+  useEffect(() => onBack(() => {
+    if (navRef.current.lesson) { setLesson(null); return true; }
+    if (navRef.current.tab !== 'home') { setTab('home'); return true; }
+    return false;
+  }), []);
   useEffect(() => onGoHome(() => { setLesson(null); setSongId(null); setTab('home'); window.scrollTo({ top: 0 }); }), []);
-  useEffect(() => { void initAccount(); }, []);
+  useEffect(() => { void initAccount(); if (isNativeApp) midiIn.connect().catch(() => {}); /* the app: MIDI keyboards just work */ }, []);
   const open = (l: Lesson, ex?: number) => {
     if (!allowLesson(getAccount().ent, l)) { openUpgrade(`Level ${l.level} is part of ${TIER_NAME[lessonTier(l)]}`); return; }
     setExStart(ex); setLesson(l); setTab(l.track === 'voice' ? 'voice' : 'learn');
