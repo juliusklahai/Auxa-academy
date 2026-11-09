@@ -4,7 +4,7 @@
   --ink: #e4e4e7; --ink2: #a1a1aa; --ink3: #71717a; --btn: #f4f4f5; --btn-ink: #111; --glow-a: rgba(80,100,170,.22); --glow-b: rgba(60,130,95,.18);
   --num-a: rgba(255,255,255,.55); --num-b: rgba(255,255,255,0); --lime: #ddf35c; --phone: #0f0f10; --phone-card: #1b1b1d; --phone-ink: #f4f4f5;
   --serif: 'Instrument Serif', 'Times New Roman', serif; --head: Geist, 'Helvetica Neue', Arial, sans-serif; --body: Inter, 'Helvetica Neue', Arial, sans-serif;
-  position: relative; min-height: 100vh; background: var(--bg); color: var(--ink); font-family: var(--body); overflow: hidden; -webkit-font-smoothing: antialiased;
+  position: relative; min-height: 100vh; background: var(--bg); color: var(--ink); font-family: var(--body); overflow: clip; -webkit-font-smoothing: antialiased;
 }
 .lp.light {
   --bg: #f5f5f3; --bg2: #efefec; --card: #ffffff; --card2: #f7f7f5; --line: rgba(0,0,0,.08); --line2: rgba(0,0,0,.14);
@@ -57,7 +57,9 @@
 
 /* steps: cards that stack as you scroll */
 .lp-steps { display: grid; gap: 28px; }
-.lp-step { position: sticky !important; top: 96px; display: grid; grid-template-columns: 1fr 1fr; min-height: 500px; border-radius: 34px; overflow: hidden;
+.lp-steps { gap: 40px !important; padding-bottom: 40px; }
+.lp-step { position: sticky !important; top: 96px; }
+.lp-step-card { display: grid; grid-template-columns: 1fr 1fr; min-height: 500px; border-radius: 34px; overflow: hidden; transform-origin: 50% 0; will-change: transform, filter;
   background: linear-gradient(160deg, var(--card2), var(--card) 60%); border: 1px solid var(--line); box-shadow: 0 -20px 60px -30px rgba(0,0,0,.6), 0 30px 80px -40px rgba(0,0,0,.6); }
 .lp-step:nth-child(2) { top: 120px; } .lp-step:nth-child(3) { top: 144px; }
 .lp-step-copy { padding: 44px 48px; display: flex; flex-direction: column; justify-content: space-between; gap: 30px; border-right: 1px solid var(--line); }
@@ -162,7 +164,8 @@
   .lp-nav { padding-left: 14px; }
   .lp-hero { padding: 80px 18px 40px; }
   .lp-section { padding-top: 60px; }
-  .lp-step { grid-template-columns: 1fr; min-height: 0; top: 84px; border-radius: 28px; }
+  .lp-step { top: 84px; }
+  .lp-step-card { grid-template-columns: 1fr; min-height: 0; border-radius: 28px; }
   .lp-step:nth-child(2) { top: 96px; } .lp-step:nth-child(3) { top: 108px; }
   .lp-step-copy { border-right: 0; border-bottom: 1px solid var(--line); padding: 28px 26px; gap: 18px; }
   .lp-step-shot { padding-top: 30px; }
@@ -173,7 +176,13 @@
   .lp-q > button { font-size: 17px; padding: 20px 0; }
   .lp-final { border-radius: 30px; padding: 50px 18px 60px; }
 }
-.lp.light .lp-step { box-shadow: 0 -12px 40px -28px rgba(0,0,0,.18), 0 24px 60px -40px rgba(0,0,0,.2); }
+.lp.light .lp-step-card { box-shadow: 0 -12px 40px -28px rgba(0,0,0,.18), 0 24px 60px -40px rgba(0,0,0,.2); }
 .lp.light .lp-phone { box-shadow: 0 30px 50px -28px rgba(0,0,0,.35); }
 .lp.light .lp-faq-card, .lp.light .lp-plan.best { box-shadow: 0 30px 70px -45px rgba(0,0,0,.25); }
 .lp.light .lp-nav { box-shadow: 0 10px 30px -22px rgba(0,0,0,.25); }
+
+/* footer: the wordmark as a living field of dashes */
+.lp-field { position: relative; height: clamp(220px, 36vw, 520px); margin: 30px calc(50% - 50vw) 0; cursor: crosshair; touch-action: pan-y; user-select: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 18%); mask-image: linear-gradient(180deg, transparent, #000 18%);
+  background: radial-gradient(ellipse 60% 70% at 50% 100%, color-mix(in srgb, var(--lime) 7%, transparent), transparent 70%); }
+.lp-dashfield { display: block; width: 100%; height: 100%; }

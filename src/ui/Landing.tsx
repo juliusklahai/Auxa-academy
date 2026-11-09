@@ -2,7 +2,8 @@
 // (people can still "Start free" as a guest: the free levels work without an account).
 // Look: charcoal / paper, floating glass nav, Geist headlines with one serif italic word,
 // stacked step cards with phone screens, FAQ card, closing call to action, dotted wordmark.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { DashField } from './DashField';
 import { PLANS } from '../account/config';
 import { SignInForm } from './Account';
 import { Icon } from './Icon';
@@ -45,6 +46,8 @@ export function Landing({ onStart, returning = false }: { onStart: () => void; r
     document.head.appendChild(l);
   }, []);
   const start = () => { if (!returning) setGuest(true); onStart(); };
+  const steps = useRef<HTMLDivElement>(null);
+  useStackedCards(steps, theme);
   const startLabel = returning ? 'Open app' : 'Start free';
   const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -85,7 +88,7 @@ export function Landing({ onStart, returning = false }: { onStart: () => void; r
           <span className="lp-pill"><i />Get started</span>
           <h2>Three steps to <br />your <em>first</em> song.</h2>
         </div>
-        <div className="lp-steps">
+        <div className="lp-steps" ref={steps}>
           <Step n="01" kicker="Step 1 · Start free" title="Pick where you start." text="From your very first note to sight-reading. No card needed." screen={<ScreenLevels />} />
           <Step n="02" kicker="Step 2 · Play" title="Play. It listens." text="Any piano near your phone, or a MIDI keyboard. Every note checked as you play." screen={<ScreenListen />} />
           <Step n="03" kicker="Step 3 · Play along" title="The band plays, you join in." text="Short songs for every new key, until it feels easy." screen={<ScreenPlayAlong />} />
@@ -144,7 +147,7 @@ export function Landing({ onStart, returning = false }: { onStart: () => void; r
             {returning ? <button onClick={start}>Open app</button> : <button onClick={() => setAuth('signin')}>Sign in</button>}
           </nav>
         </div>
-        <div className="lp-word" aria-hidden>maestro</div>
+        <div className="lp-field"><DashField text="maestro" dark={theme === 'dark'} /></div>
         <small className="lp-copy">© {new Date().getFullYear()} Maestro Academy</small>
       </footer>
 
@@ -161,9 +164,45 @@ export function Landing({ onStart, returning = false }: { onStart: () => void; r
   );
 }
 
+/**
+ * Step cards stack as you scroll: each card sticks a little lower than the one before, and as the next
+ * card slides over it, the card underneath shrinks back and dims, following the scroll exactly.
+ */
+function useStackedCards(box: React.RefObject<HTMLDivElement | null>, theme: Theme) {
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const items = [...el.querySelectorAll<HTMLElement>('.lp-step')];
+    const cards = items.map((a) => a.querySelector<HTMLElement>('.lp-step-card')!);
+    const dim = theme === 'dark' ? 0.5 : 0.12;
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      for (let i = 0; i < items.length; i++) {
+        const next = items[i + 1];
+        let p = 0;
+        if (next) {
+          const cur = items[i].getBoundingClientRect(), nx = next.getBoundingClientRect();
+          // 0 when the next card starts to cover this one, 1 once it has fully slid over it
+          p = Math.max(0, Math.min(1, (cur.bottom - nx.top) / cur.height));
+        }
+        const c = cards[i];
+        c.style.transform = p ? `translateY(${(-p * 14).toFixed(1)}px) scale(${(1 - p * 0.1).toFixed(4)})` : '';
+        c.style.filter = p ? `brightness(${(1 - p * dim).toFixed(3)})` : '';
+      }
+    };
+    const on = () => { if (!raf) raf = requestAnimationFrame(update); };
+    update();
+    window.addEventListener('scroll', on, { passive: true });
+    window.addEventListener('resize', on);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('scroll', on); window.removeEventListener('resize', on); };
+  }, [box, theme]);
+}
+
 function Step({ n, kicker, title, text, screen }: { n: string; kicker: string; title: string; text: string; screen: React.ReactNode }) {
   return (
     <article className="lp-step">
+      <div className="lp-step-card">
       <div className="lp-step-copy">
         <span className="lp-num" aria-hidden>{n}</span>
         <div>
@@ -173,6 +212,7 @@ function Step({ n, kicker, title, text, screen }: { n: string; kicker: string; t
         </div>
       </div>
       <div className="lp-step-shot"><Phone>{screen}</Phone></div>
+      </div>
     </article>
   );
 }
