@@ -135,7 +135,7 @@ class MainActivity : Activity() {
             window.decorView.systemUiVisibility = if (on)
                 (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
                     View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_LAYOUT_STABLE)
-            else View.SYSTEM_UI_FLAG_VISIBLE
+            else (View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
         }
         root.requestApplyInsets()
     }
@@ -145,18 +145,49 @@ class MainActivity : Activity() {
         if (hasFocus && practice) immersive(true) // the bars come back after dialogs / notifications
     }
 
-    /** Keep the page out from under the status and navigation bars (Android draws edge to edge). */
+    /**
+     * Edge to edge: the page draws under the status bar and the navigation bar. Their sizes go to the page
+     * as CSS variables (--sat/--sab/--sal/--sar) so buttons and text stay clear of them. Only the
+     * on-screen keyboard pushes the page up.
+     */
+    private var insetsJs = ""
     private fun applyInsets() {
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+        if (Build.VERSION.SDK_INT >= 29) window.isNavigationBarContrastEnforced = false
+        if (Build.VERSION.SDK_INT >= 30) window.setDecorFitsSystemWindows(false)
+        else @Suppress("DEPRECATION") {
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+        }
         root.setOnApplyWindowInsetsListener { v, insets ->
+            val d = resources.displayMetrics.density
+            var l = 0; var t = 0; var r = 0; var b = 0; var ime = 0
             if (Build.VERSION.SDK_INT >= 30) {
                 val bars = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
-                val ime = insets.getInsets(WindowInsets.Type.ime())
-                v.setPadding(bars.left, bars.top, bars.right, maxOf(bars.bottom, ime.bottom))
-            } else {
-                @Suppress("DEPRECATION")
-                v.setPadding(insets.systemWindowInsetLeft, insets.systemWindowInsetTop, insets.systemWindowInsetRight, insets.systemWindowInsetBottom)
+                l = bars.left; t = bars.top; r = bars.right; b = bars.bottom
+                ime = insets.getInsets(WindowInsets.Type.ime()).bottom
+            } else @Suppress("DEPRECATION") {
+                l = insets.systemWindowInsetLeft; t = insets.systemWindowInsetTop; r = insets.systemWindowInsetRight; b = insets.systemWindowInsetBottom
+                if (b > 200 * d) { ime = b; b = 0 } // old Androids report the keyboard as the bottom inset
             }
+            v.setPadding(0, 0, 0, if (ime > b) ime else 0)
+            fun px(x: Int) = "${(x / d).toInt()}px"
+            insetsJs = "(function(s){s.setProperty('--sat','${px(t)}');s.setProperty('--sab','${px(if (ime > b) 0 else b)}');s.setProperty('--sal','${px(l)}');s.setProperty('--sar','${px(r)}')})(document.documentElement.style)"
+            sendInsets()
             insets
+        }
+    }
+    private fun sendInsets() { if (insetsJs.isNotEmpty()) web.evaluateJavascript(insetsJs, null) }
+
+    /** Dark icons on light pages (the light home page), light icons on dark ones. */
+    fun setBars(lightBackground: Boolean) = runOnUiThread {
+        if (Build.VERSION.SDK_INT >= 30) {
+            val flags = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+            window.insetsController?.setSystemBarsAppearance(if (lightBackground) flags else 0, flags)
+        } else @Suppress("DEPRECATION") {
+            val v = window.decorView
+            v.systemUiVisibility = if (lightBackground) v.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                else v.systemUiVisibility and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
         }
     }
 
@@ -179,7 +210,7 @@ class MainActivity : Activity() {
             return true
         }
 
-        override fun onPageFinished(view: WebView, url: String) { hideOffline() }
+        override fun onPageFinished(view: WebView, url: String) { hideOffline(); sendInsets() }
 
         override fun onReceivedError(view: WebView, req: WebResourceRequest, err: WebResourceError) {
             if (req.isForMainFrame) showOffline()

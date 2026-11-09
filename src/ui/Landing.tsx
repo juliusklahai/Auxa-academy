@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { PLANS } from '../account/config';
 import { SignInForm } from './Account';
 import { Icon } from './Icon';
+import { native } from '../native/bridge';
 
 const GUEST = 'maestro.guest.v1';
 export const isGuest = () => { try { return localStorage.getItem(GUEST) === '1'; } catch { return false; } };
@@ -30,11 +31,11 @@ const FAQ: [string, string][] = [
   ['Does it work offline?', 'Once opened, lessons keep working without data. Your progress syncs when you are back online.'],
 ];
 
-export function Landing({ onStart }: { onStart: () => void }) {
+export function Landing({ onStart, returning = false }: { onStart: () => void; returning?: boolean }) {
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const [auth, setAuth] = useState<false | 'signin' | 'signup'>(false);
   const [open, setOpen] = useState(0);
-  useEffect(() => { try { localStorage.setItem(THEME, theme); } catch { /* fine */ } }, [theme]);
+  useEffect(() => { try { localStorage.setItem(THEME, theme); } catch { /* fine */ } native?.setBars?.(theme === 'light'); return () => native?.setBars?.(false); }, [theme]);
   useEffect(() => {
     const id = 'landing-fonts';
     if (document.getElementById(id)) return;
@@ -43,7 +44,8 @@ export function Landing({ onStart }: { onStart: () => void }) {
     l.href = 'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@1&display=swap';
     document.head.appendChild(l);
   }, []);
-  const start = () => { setGuest(true); onStart(); };
+  const start = () => { if (!returning) setGuest(true); onStart(); };
+  const startLabel = returning ? 'Open app' : 'Start free';
   const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   return (
@@ -63,8 +65,8 @@ export function Landing({ onStart }: { onStart: () => void }) {
               ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
               : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" /></svg>}
           </button>
-          <button className="lp-signin" onClick={() => setAuth('signin')}>Sign in</button>
-          <button className="lp-btn light" onClick={start}>Start free</button>
+          {!returning && <button className="lp-signin" onClick={() => setAuth('signin')}>Sign in</button>}
+          <button className="lp-btn light" onClick={start}>{startLabel}</button>
         </div>
       </header>
 
@@ -73,8 +75,8 @@ export function Landing({ onStart }: { onStart: () => void }) {
         <h1>Learn piano with a teacher <em>that listens.</em></h1>
         <p>Play on any piano. Maestro hears every note and shows you what to fix.</p>
         <div className="lp-cta">
-          <button className="lp-btn light big" onClick={start}>Start free</button>
-          <button className="lp-btn ghost big" onClick={() => setAuth('signup')}>Create account</button>
+          <button className="lp-btn light big" onClick={start}>{returning ? 'Continue learning' : 'Start free'}</button>
+          {!returning && <button className="lp-btn ghost big" onClick={() => setAuth('signup')}>Create account</button>}
         </div>
       </section>
 
@@ -139,7 +141,7 @@ export function Landing({ onStart }: { onStart: () => void }) {
           <nav>
             <button onClick={() => go('plans')}>Plans</button>
             <button onClick={() => go('faq')}>FAQ</button>
-            <button onClick={() => setAuth('signin')}>Sign in</button>
+            {returning ? <button onClick={start}>Open app</button> : <button onClick={() => setAuth('signin')}>Sign in</button>}
           </nav>
         </div>
         <div className="lp-word" aria-hidden>maestro</div>

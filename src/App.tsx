@@ -10,7 +10,7 @@ import { progress } from './ui/settings';
 import { Dashboard, LearnList, PianoStudio, SettingsView } from './ui/Views';
 import { MyMusic } from './ui/MyMusic';
 import { VoiceStudio } from './ui/VoiceStudio';
-import { AccountButton, AdminView, ResetPasswordSheet, UpgradeSheet } from './ui/Account';
+import { AccountButton, AccountSheet, AdminView, ResetPasswordSheet, UpgradeSheet } from './ui/Account';
 import { isGuest, Landing, Splash } from './ui/Landing';
 import { goHome, onGoHome } from './ui/nav';
 import { isNativeApp, onBack } from './native/bridge';
@@ -66,7 +66,15 @@ export default function App() {
     if (navRef.current.tab !== 'home') { setTab('home'); return true; }
     return false;
   }), []);
-  useEffect(() => onGoHome(() => { setLesson(null); setSongId(null); setTab('home'); window.scrollTo({ top: 0 }); }), []);
+  // The logo, from any screen: the Maestro home page (landing). Without accounts: the Overview.
+  const [landing, setLanding] = useState(false);
+  const [acctOpen, setAcctOpen] = useState(false);
+  useEffect(() => onGoHome(() => {
+    setLesson(null); setSongId(null); setTab('home');
+    if (ACCOUNTS_ENABLED) setLanding(true);
+    window.scrollTo({ top: 0 });
+  }), []);
+  useEffect(() => (landing ? onBack(() => { setLanding(false); return true; }, 20) : undefined), [landing]);
   useEffect(() => { void initAccount(); if (isNativeApp) midiIn.connect().catch(() => {}); /* the app: MIDI keyboards just work */ }, []);
   const open = (l: Lesson, ex?: number) => {
     if (!allowLesson(getAccount().ent, l)) { openUpgrade(`Level ${l.level} is part of ${TIER_NAME[lessonTier(l)]}`); return; }
@@ -77,9 +85,9 @@ export default function App() {
   const tabs = account.ent.admin ? [...TABS, { id: 'admin' as Tab, label: 'Admin', icon: 'lock', title: 'Admin' }] : TABS;
   const title = lesson ? lesson.title : tabs.find((t) => t.id === tab)?.title ?? '';
 
-  if (ACCOUNTS_ENABLED && !account.user && !isGuest()) {
-    if (!account.ready) return <Splash />;
-    return <Landing onStart={() => bump((x) => x + 1)} />;
+  if (ACCOUNTS_ENABLED && (landing || (!account.user && !isGuest()))) {
+    if (!account.ready && !landing) return <Splash />;
+    return <Landing returning={!!account.user || isGuest()} onStart={() => { setLanding(false); bump((x) => x + 1); window.scrollTo({ top: 0 }); }} />;
   }
 
   return (
@@ -104,7 +112,7 @@ export default function App() {
             ))}
             <span className="pill-gap" />
             <InputPills openSetup={() => { setTab('settings'); setLesson(null); }} />
-            <AccountButton onOpen={() => { setTab('settings'); setLesson(null); }} />
+            <AccountButton onOpen={() => setAcctOpen(true)} />
           </nav>
         </header>
         <main className="panel">
@@ -130,7 +138,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <UpgradeSheet /><ResetPasswordSheet />
+        <UpgradeSheet /><ResetPasswordSheet />{acctOpen && <AccountSheet onClose={() => setAcctOpen(false)} />}
       </div>
     </div>
   );

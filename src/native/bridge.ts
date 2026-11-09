@@ -11,6 +11,8 @@ interface NativeApi {
   openExternal(url: string): void;
   /** start listening to every connected MIDI keyboard */
   midiStart(): void;
+  /** status/navigation bar icons: dark on light pages */
+  setBars?(lightBackground: boolean): void;
   appVersion?(): string;
 }
 

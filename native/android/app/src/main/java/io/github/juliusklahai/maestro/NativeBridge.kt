@@ -13,4 +13,5 @@ class NativeBridge(private val a: MainActivity) {
         if (url.startsWith("https://")) a.openExternal(url)
     }
     @JavascriptInterface fun midiStart() = a.midi.start()
+    @JavascriptInterface fun setBars(lightBackground: Boolean) = a.setBars(lightBackground)
 }

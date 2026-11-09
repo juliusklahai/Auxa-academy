@@ -717,14 +717,14 @@ button.circle.brand:hover { transform: scale(1.05); }
   .title-tab { max-width: none; flex: 1; }
   .tab-swoop { width: 40px; }
   .pills { flex: none; padding-right: 4px; }
-  .tabbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 150; background: #2a2a28; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); gap: 2px; box-shadow: 0 -8px 24px rgba(0,0,0,.18); }
+  .tabbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 150; background: #2a2a28; padding: 6px max(4px, var(--sal)) calc(6px + var(--sab)) max(4px, var(--sar)); gap: 2px; box-shadow: 0 -8px 24px rgba(0,0,0,.18); }
   .tabbar button { flex: 1; min-width: 0; min-height: 56px; border: 0; background: none; color: #cfcfc8; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font: inherit; font-size: 11px; font-weight: 500; border-radius: 14px; -webkit-tap-highlight-color: transparent; }
   .tabbar .tb-ic { width: 46px; height: 30px; border-radius: 99px; display: grid; place-items: center; transition: background .15s; }
   .tabbar button.on { color: #fff; }
   .tabbar button.on .tb-ic { background: var(--lime); color: var(--ink); }
   .tabbar .tb-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-  .device { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
-  .practice-root:not(.focus) > .dock { bottom: calc(84px + env(safe-area-inset-bottom)); }
+  .device { padding-bottom: calc(80px + var(--sab)); }
+  .practice-root:not(.focus) > .dock { bottom: calc(84px + var(--sab)); }
 }
 
 /* ---------- install the app ---------- */
@@ -763,3 +763,38 @@ html, body { overflow-x: clip; max-width: 100%; }
 .studio-now b { font-size: clamp(22px, 4vw, 34px); letter-spacing: -.01em; }
 .studio-now .beats { margin-left: auto; }
 .practice-root.studio.focus .side .chip-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; }
+
+/* ---------- Setup: one short section at a time ---------- */
+.setup-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.setup-head > b { font-size: 26px; letter-spacing: -.02em; }
+.setup-tabs { display: flex; gap: 4px; padding: 4px; border-radius: 99px; background: rgba(0,0,0,.05); }
+.setup-tabs button { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 16px; border-radius: 99px; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 500; color: var(--ink2); cursor: pointer; }
+.setup-tabs button.on { background: #fff; color: var(--ink); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.setup-body { max-width: 760px; }
+.setup-body .card { min-width: 0; overflow: hidden; }
+.setup-body .card > .card-head:first-child { margin-top: 0; }
+@media (max-width: 700px) {
+  .setup-head > b { display: none; }
+  .setup-tabs { width: 100%; }
+  .setup-tabs button { flex: 1; justify-content: center; padding: 0 6px; font-size: 13px; gap: 5px; }
+}
+/* account sheet */
+.acct-sheet { max-width: 460px; }
+.acct-card.bare { display: grid; gap: 14px; }
+.acct-card.bare .acct-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.acct-card.bare .acct-actions .btn { justify-content: center; }
+
+/* ---------- edge to edge on phones: the app reaches under the status bar and the navigation bar ---------- */
+/* The Maestro app sets these from the phone's real insets; installed web apps use env(). */
+:root { --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px); --sal: env(safe-area-inset-left, 0px); --sar: env(safe-area-inset-right, 0px); }
+@media (max-width: 700px) {
+  .backdrop { padding: 0; min-height: 100dvh; }
+  .device { border-radius: 0; box-shadow: none; padding-top: calc(var(--sat) + 6px); padding-left: max(6px, var(--sal)); padding-right: max(6px, var(--sar)); min-height: 100dvh; box-sizing: border-box; }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .backdrop { padding: 0; }
+  .device { border-radius: 0; padding-top: calc(var(--sat) + 6px); padding-left: max(10px, var(--sal)); padding-right: max(10px, var(--sar)); }
+}
+.fab-stack { bottom: calc(16px + var(--sab)); right: calc(16px + var(--sar)); }
+.lp-nav { top: calc(14px + var(--sat)) !important; margin-top: calc(14px + var(--sat)) !important; }
+.lp-modal { padding-top: calc(20px + var(--sat)); padding-bottom: calc(20px + var(--sab)); }

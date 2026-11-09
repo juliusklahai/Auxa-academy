@@ -4,7 +4,6 @@ import { metronome } from '../audio/metronome';
 import { midiToName } from '../core/music';
 import type { Lesson, SkillId } from '../core/types';
 import { LEVEL_GROUP, LEVEL_NAMES } from '../curriculum/levels';
-import { AccountCard } from './Account';
 import { allowLesson, lessonTier, TIER_NAME } from '../account/gate';
 import { getAccount, useAccount } from '../account/store';
 import { LESSONS, PIANO_LESSONS, VOICE_LESSONS } from '../curriculum/lessons';
@@ -338,6 +337,7 @@ export function SettingsView() {
   const [chord, setChord] = useState<string>('');
   const [msg, setMsg] = useState(() => { const m = mic.lastError; mic.lastError = ''; return m; });
   const [confirmReset, setConfirmReset] = useState(false);
+  const [sec, setSec] = useState<'input' | 'sound' | 'learn' | 'data'>('input');
   const raf = useRef(0);
   useEffect(() => {
     mic.onFrame = (f) => { cancelAnimationFrame(raf.current); raf.current = requestAnimationFrame(() => setFrame(f)); };
@@ -389,20 +389,19 @@ export function SettingsView() {
   const changeLatency = (m: 'smooth' | 'low') => restartMic(async () => { setSettings({ latencyMode: m }); await audio.setLatencyMode(m); });
   const inTune = frame && frame.confidence >= st.micSensitivity && frame.rms > st.noiseGate;
   const exportJson = JSON.stringify(progress.data);
+  const SECTIONS = [['input', 'Input', 'mic'], ['sound', 'Sound', 'wave'], ['learn', 'Learning', 'note'], ['data', 'Data', 'doc']] as const;
   return (
-    <div className="page">
-      <section className="head-row">
-        <div className="id-card"><span className="avatar"><Icon name="settings" size={22} /></span><div><small>Input, sound and aids</small><b>Setup</b></div></div>
-        <div className="metrics">
-          <Metric label="Input" value={midiIn.devices.length ? 'MIDI keyboard' : micOn ? `Microphone (${{ piano: 'piano', epiano: 'digital piano', organ: 'organ', synth: 'keyboard', mono: 'one-note instrument', voice: 'voice' }[st.micInstrument]})` : 'Touch and keys'} big />
-          <Metric label="A4" value={st.a4} unit="Hz" />
-          <Metric label="Latency" value={st.latencyMs} unit="ms" />
-          <Metric label="Strictness" value={Math.round(st.micSensitivity * 100)} unit="%" />
+    <div className="page setup">
+      <section className="setup-head">
+        <b>Setup</b>
+        <div className="setup-tabs" role="tablist">
+          {SECTIONS.map(([id, label, icon]) => (
+            <button key={id} role="tab" aria-selected={sec === id} className={sec === id ? 'on' : ''} onClick={() => setSec(id)}><Icon name={icon} size={16} />{label}</button>
+          ))}
         </div>
       </section>
-      <AccountCard />
-      <div className="grid2">
-        <section className="card">
+      <div className="setup-body">
+        {sec === 'input' && <section className="card">
           <div className="card-head"><b>MIDI keyboard</b></div>
           <p className="small muted">Most precise. Exact keys, timing, chords, velocity and pedal.</p>
           <button className="btn dark" onClick={connectMidi} disabled={!midiIn.supported}>Connect MIDI</button>
@@ -451,9 +450,8 @@ export function SettingsView() {
           )}
           <label className="field">Strictness {Math.round(st.micSensitivity * 100)}%<input type="range" min={0.7} max={0.97} step={0.01} value={st.micSensitivity} onChange={(e) => setSettings({ micSensitivity: +e.target.value })} /></label>
           <label className="field">Latency compensation {st.latencyMs} ms<input type="range" min={0} max={300} step={5} value={st.latencyMs} onChange={(e) => setSettings({ latencyMs: +e.target.value })} /></label>
-          <p className="small muted">Piano mode hears chords and several notes at once. It knows which notes the lesson expects, so it listens for those first, but they still have to be in the sound. Unclear sounds are never counted as mistakes. Headphones stop the app's own sound reaching the mic.</p>
-        </section>
-        <section className="card">
+        </section>}
+        {sec === 'sound' && <section className="card">
           <div className="card-head"><b>Sound</b></div>
           <label className="field">Piano volume<input type="range" min={0} max={1} step={0.05} value={st.volume} onChange={(e) => setSettings({ volume: +e.target.value })} /></label>
           <div className="field">Playback quality
@@ -471,14 +469,18 @@ export function SettingsView() {
             <small className="muted">With speakers, the microphone ignores the notes the app itself plays (play-along in My Music) and the play-along is a little quieter.</small>
           </div>
           <label className="field">Reference pitch A4 = {st.a4} Hz<input type="range" min={415} max={466} step={1} value={st.a4} onChange={(e) => setSettings({ a4: +e.target.value })} /></label>
-          <div className="card-head" style={{ marginTop: 18 }}><b>Learning aids</b></div>
+        </section>}
+        {sec === 'learn' && <section className="card">
+          <div className="card-head"><b>Learning aids</b></div>
           <label className="field">Key labels<select value={st.labels} onChange={(e) => setSettings({ labels: e.target.value as 'letters' })}><option value="letters">Letters (C D E)</option><option value="solfege">Solfège (Do Re Mi)</option><option value="none">None</option></select></label>
           <label className="check"><input type="checkbox" checked={st.hands} onChange={(e) => setSettings({ hands: e.target.checked })} /> Show guide hands on the keyboard</label>
           <label className="check"><input type="checkbox" checked={st.autoFocus} onChange={(e) => setSettings({ autoFocus: e.target.checked })} /> Full-screen practice when I press Start (Esc returns)</label>
           <label className="check"><input type="checkbox" checked={st.keyHints} onChange={(e) => setSettings({ keyHints: e.target.checked })} /> Show computer-keyboard letters on keys</label>
           <label className="field">Mistake policy<select value={st.mistakePolicy} onChange={(e) => setSettings({ mistakePolicy: e.target.value as 'restart' })}><option value="restart">Challenge: 3 in a row restarts (earns mastery)</option><option value="pause">Supported: never restart (practice only)</option></select></label>
           <label className="check"><input type="checkbox" checked={st.highContrast} onChange={(e) => setSettings({ highContrast: e.target.checked })} /> High-contrast mode</label>
-          <div className="card-head" style={{ marginTop: 18 }}><b>Data</b></div>
+        </section>}
+        {sec === 'data' && <section className="card">
+          <div className="card-head"><b>Your progress</b></div>
           <p className="small muted">Progress is stored on this device and works offline.</p>
           <div className="row wrap">
             <button className="btn" onClick={() => { try { void navigator.clipboard.writeText(exportJson); setMsg('Progress copied to the clipboard.'); } catch { /* ignore */ } }}>Copy progress</button>
@@ -487,7 +489,7 @@ export function SettingsView() {
               ? <><button className="btn danger" onClick={() => { progress.reset(); bumpProgress(); setConfirmReset(false); }}>Yes, erase</button><button className="btn" onClick={() => setConfirmReset(false)}>Cancel</button></>
               : <button className="btn danger" onClick={() => setConfirmReset(true)}>Reset progress</button>}
           </div>
-        </section>
+        </section>}
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 // Account UI: sign in, plan status, upgrade (Stripe subscriptions or Monime passes), and the admin page.
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ACCOUNTS_ENABLED, MONIME_ENABLED, PLANS, type PlanOption } from '../account/config';
 import { TIER_NAME } from '../account/gate';
 import {
@@ -114,14 +114,14 @@ export function ResetPasswordSheet() {
 }
 
 /** Account card for the Setup page. */
-export function AccountCard() {
+export function AccountCard({ bare }: { bare?: boolean }) {
   const a = useAccount();
   if (!ACCOUNTS_ENABLED) return null;
   const p = a.profile;
   return (
-    <div className="card acct-card">
-      <div className="card-head"><b>Account</b>{a.syncing && <span className="muted small">Syncing progress…</span>}</div>
-      {!a.ready ? <p className="muted small">Loading…</p> : !a.user ? <SignInForm /> : (
+    <div className={bare ? 'acct-card bare' : 'card acct-card'}>
+      {!bare && <div className="card-head"><b>Account</b>{a.syncing && <span className="muted small">Syncing progress…</span>}</div>}
+      {!a.ready ? <p className="muted small">Loading…</p> : !a.user ? <SignInForm compact={bare} /> : (
         <>
           <div className="acct-who">
             <span className="avatar">{(p?.email ?? '?')[0].toUpperCase()}</span>
@@ -137,6 +137,22 @@ export function AccountCard() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/** Account in its own sheet (from the account button): who you are, your plan, sign in or out. */
+export function AccountSheet({ onClose }: { onClose: () => void }) {
+  const a = useAccount();
+  // signing in or out closes the sheet (signing out also returns to the home page)
+  const was = useRef(a.user?.id ?? null);
+  useEffect(() => { const now = a.user?.id ?? null; if (now !== was.current) onClose(); was.current = now; }, [a.user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div className="sheet-back" onClick={onClose}>
+      <div className="sheet acct-sheet" role="dialog" aria-label="Account" onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-head"><div><small className="muted">Maestro</small><b>{a.user ? 'Your account' : 'Sign in'}</b></div><button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="close" size={16} /></button></div>
+        <AccountCard bare />
+      </div>
     </div>
   );
 }
