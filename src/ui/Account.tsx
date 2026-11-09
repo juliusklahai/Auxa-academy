@@ -88,6 +88,8 @@ function strength(pw: string) {
   return pw.length >= 12 && kinds >= 3 ? 3 : kinds >= 2 ? 2 : 1;
 }
 
+const alertSaved = () => { const t = document.createElement('div'); t.className = 'toast-ok'; t.textContent = 'New password saved'; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); };
+
 /** After opening a password-reset email: choose a new password. */
 export function ResetPasswordSheet() {
   const a = useAccount();
@@ -101,9 +103,10 @@ export function ResetPasswordSheet() {
         e.preventDefault();
         if (pw.length < 8) { setErr('Please use at least 8 characters.'); return; }
         setBusy(true); setErr('');
-        try { await updatePassword(pw); } catch (x) { setErr(authMessage(x)); } finally { setBusy(false); }
+        try { await updatePassword(pw); setPw(''); alertSaved(); } catch (x) { setErr(authMessage(x)); } finally { setBusy(false); }
       }}>
         <b className="auth-title">Choose a new password</b>
+        <small className="muted">You opened a password reset link. Pick a new password for your account.</small>
         <label>New password<input type="password" autoComplete="new-password" required minLength={8} value={pw} onChange={(e) => setPw(e.target.value)} autoFocus /></label>
         {err && <p className="err small">{err}</p>}
         <button className="btn dark auth-main" disabled={busy}>{busy ? 'Saving…' : 'Save password'}</button>

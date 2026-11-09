@@ -45,40 +45,51 @@ export function DashField({ text, dark }: { text: string; dark: boolean }) {
       draw(true);
     };
 
-    /** one frame; returns true while anything is still moving */
+    /** one frame; returns true while anything is still moving. Dashes are grouped into a few
+     *  brightness levels and each level is drawn as ONE path (thousands of strokes → ~16). */
+    const LEVELS = 16;
+    const paths: Path2D[] = Array.from({ length: LEVELS }, () => new Path2D());
     const draw = (force = false) => {
       const dk = darkRef.current;
       const ink = dk ? '255,255,255' : '24,24,27';
       ctx.clearRect(0, 0, W, H);
-      const R = Math.max(120, Math.min(220, W * 0.14));
+      const R = Math.max(110, Math.min(200, W * 0.13));
+      const R2 = R * R;
       let moving = force;
-      ctx.lineCap = 'round';
-      ctx.lineWidth = cell < 11 ? 1.1 : 1.35;
+      for (let k = 0; k < LEVELS; k++) paths[k] = new Path2D();
+      const half = cell * 0.24;        // short dashes at rest
+      const grow = cell * 0.1;         // a little longer near the pointer
       for (let r = 0; r < rows; r++) {
+        const y = r * cell + cell / 2;
         for (let c = 0; c < cols; c++) {
           const i = r * cols + c;
-          const x = c * cell + cell / 2, y = r * cell + cell / 2;
+          const x = c * cell + cell / 2;
           let target = REST, g = 0;
           if (ptr.on) {
-            const dx = x - ptr.x, dy = y - ptr.y, d = Math.hypot(dx, dy);
-            if (d < R) { const w = 1 - d / R; g = w * w * (3 - 2 * w); target = Math.atan2(dy, dx); }
+            const dx = x - ptr.x, dy = y - ptr.y, d2 = dx * dx + dy * dy;
+            if (d2 < R2) { const w = 1 - Math.sqrt(d2) / R; g = w * w * (3 - 2 * w); target = Math.atan2(dy, dx); }
           }
           // turn the short way round (a dash looks the same every half turn)
           let da = target - ang[i];
           da = ((da + Math.PI / 2) % Math.PI + Math.PI) % Math.PI - Math.PI / 2;
-          const ka = g > 0 ? 0.28 : 0.09;
-          if (Math.abs(da) > 0.002) { ang[i] += da * ka; moving = true; }
+          if (da > 0.003 || da < -0.003) { ang[i] += da * (g > 0 ? 0.22 : 0.1); moving = true; }
           const dg = g - glow[i];
-          if (Math.abs(dg) > 0.003) { glow[i] += dg * (g > glow[i] ? 0.35 : 0.08); moving = true; }
+          if (dg > 0.004 || dg < -0.004) { glow[i] += dg * (dg > 0 ? 0.3 : 0.09); moving = true; }
           const gl = glow[i];
-          const base = inside[i] ? (dk ? 0.62 : 0.7) : (dk ? 0.07 : 0.09);
-          const a = Math.min(1, base + gl * (inside[i] ? 0.4 : 0.75));
-          if (a < 0.02) continue;
-          const len = cell * (0.36 + gl * 0.3);
+          const base = inside[i] ? (dk ? 0.6 : 0.68) : (dk ? 0.07 : 0.09);
+          const a = Math.min(1, base + gl * (inside[i] ? 0.4 : 0.7));
+          if (a < 0.03) continue;
+          const len = half + gl * grow;
           const cx = Math.cos(ang[i]) * len, cy = Math.sin(ang[i]) * len;
-          ctx.strokeStyle = `rgba(${ink},${a.toFixed(3)})`;
-          ctx.beginPath(); ctx.moveTo(x - cx, y - cy); ctx.lineTo(x + cx, y + cy); ctx.stroke();
+          const path = paths[Math.min(LEVELS - 1, Math.round(a * (LEVELS - 1)))];
+          path.moveTo(x - cx, y - cy); path.lineTo(x + cx, y + cy);
         }
+      }
+      ctx.lineCap = 'round';
+      ctx.lineWidth = cell < 11 ? 1.1 : 1.3;
+      for (let k = 1; k < LEVELS; k++) {
+        ctx.strokeStyle = `rgba(${ink},${(k / (LEVELS - 1)).toFixed(3)})`;
+        ctx.stroke(paths[k]);
       }
       return moving;
     };

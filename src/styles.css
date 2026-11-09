@@ -798,3 +798,4 @@ html, body { overflow-x: clip; max-width: 100%; }
 .fab-stack { bottom: calc(16px + var(--sab)); right: calc(16px + var(--sar)); }
 .lp-nav { top: calc(14px + var(--sat)) !important; margin-top: calc(14px + var(--sat)) !important; }
 .lp-modal { padding-top: calc(20px + var(--sat)); padding-bottom: calc(20px + var(--sab)); }
+.toast-ok { position: fixed; left: 50%; bottom: calc(100px + var(--sab)); transform: translateX(-50%); z-index: 400; background: #1f1f1d; color: #fff; padding: 12px 18px; border-radius: 99px; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.3); animation: dock-in .2s ease-out; }

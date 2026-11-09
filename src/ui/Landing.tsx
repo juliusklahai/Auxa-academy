@@ -89,9 +89,9 @@ export function Landing({ onStart, returning = false }: { onStart: () => void; r
           <h2>Three steps to <br />your <em>first</em> song.</h2>
         </div>
         <div className="lp-steps" ref={steps}>
-          <Step n="01" kicker="Step 1 · Start free" title="Pick where you start." text="From your very first note to sight-reading. No card needed." screen={<ScreenLevels />} />
-          <Step n="02" kicker="Step 2 · Play" title="Play. It listens." text="Any piano near your phone, or a MIDI keyboard. Every note checked as you play." screen={<ScreenListen />} />
-          <Step n="03" kicker="Step 3 · Play along" title="The band plays, you join in." text="Short songs for every new key, until it feels easy." screen={<ScreenPlayAlong />} />
+          <Step n="01" kicker="Step 1 · Start free" title="Pick where you start." text="From your very first note to sight-reading. No card needed." screen={<Device3D src="landing/screen-home.jpg" alt="Maestro overview with your lessons" chips={CHIPS_START} />} />
+          <Step n="02" kicker="Step 2 · Play" title="Play. It listens." text="Any piano near your phone, or a MIDI keyboard. Every note checked as you play." screen={<Device3D src="landing/screen-play.jpg" alt="A lesson: notes turn green as you play them" chips={CHIPS_PLAY} />} />
+          <Step n="03" kicker="Step 3 · Play along" title="The band plays, you join in." text="Short songs for every new key, until it feels easy." screen={<Device3D src="landing/screen-along.jpg" alt="A play-along song with guide hands" chips={CHIPS_ALONG} />} />
         </div>
       </section>
 
@@ -211,7 +211,7 @@ function Step({ n, kicker, title, text, screen }: { n: string; kicker: string; t
           <p>{text}</p>
         </div>
       </div>
-      <div className="lp-step-shot"><Phone>{screen}</Phone></div>
+      <div className="lp-step-shot">{screen}</div>
       </div>
     </article>
   );
@@ -229,63 +229,72 @@ function Plan({ name, price: p, note, items, onPick, cta, best }: { name: string
   );
 }
 
-function Phone({ children }: { children: React.ReactNode }) {
+/* ---------- realistic phone: titanium frame with depth, real app screen, glass cards floating in front ---------- */
+
+interface Chip { x: number; y: number; z: number; r?: number; w?: number; node: React.ReactNode }
+
+function Device3D({ src, alt, chips }: { src: string; alt: string; chips: Chip[] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  // tilt toward the pointer (eased by CSS); back to rest when it leaves
+  const move = (e: React.PointerEvent) => {
+    const el = ref.current; if (!el || e.pointerType === 'touch') return;
+    const r = el.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width - 0.5, py = (e.clientY - r.top) / r.height - 0.5;
+    el.style.setProperty('--ry', `${(-16 + px * 14).toFixed(2)}deg`);
+    el.style.setProperty('--rx', `${(6 - py * 10).toFixed(2)}deg`);
+  };
+  const leave = () => { ref.current?.style.removeProperty('--ry'); ref.current?.style.removeProperty('--rx'); };
   return (
-    <div className="lp-phone">
-      <div className="lp-phone-bar"><span>9:41</span><i className="lp-island" /><span className="lp-dots"><i /><i /><i /></span></div>
-      <div className="lp-phone-screen">{children}</div>
+    <div className="lp-scene" ref={ref} onPointerMove={move} onPointerLeave={leave}>
+      <div className="lp-dev">
+        {[6, 5, 4, 3, 2, 1].map((k) => <i key={k} className="lp-dev-edge" style={{ transform: `translateZ(${-k * 2.2}px)` }} />)}
+        <div className="lp-dev-body">
+          <i className="lp-dev-key k1" /><i className="lp-dev-key k2" /><i className="lp-dev-key k3" /><i className="lp-dev-key k4" />
+          <div className="lp-dev-screen">
+            <img src={src} alt={alt} loading="lazy" draggable={false} />
+            <i className="lp-dev-island" />
+            <i className="lp-dev-glare" />
+          </div>
+        </div>
+        {chips.map((c, i) => (
+          <div key={i} className="lp-glass" style={{ left: `${c.x}%`, top: `${c.y}%`, width: c.w ? `${c.w}px` : undefined, transform: `translateZ(${c.z}px) rotateZ(${c.r ?? 0}deg)`, animationDelay: `${i * -1.7}s` }}>{c.node}</div>
+        ))}
+      </div>
+      <i className="lp-dev-shadow" />
     </div>
   );
 }
 
-function ScreenLevels() {
-  const rows: [string, string, boolean][] = [['Level 0', 'Meet the keyboard', true], ['Level 1', 'Five-finger tunes', true], ['Level 2', 'Both hands', false], ['Level 3', 'Rhythm & rests', false]];
-  return (
-    <>
-      <b className="ps-title">Where do you start?</b>
-      <small className="ps-sub">Pick a level. You can change it later.</small>
-      <div className="ps-list">
-        {rows.map(([l, t, done], i) => (
-          <div key={l} className={`ps-row ${i === 1 ? 'on' : ''}`}>
-            <span className="ps-badge">{l.split(' ')[1]}</span>
-            <span className="ps-row-text"><b>{t}</b><small>{l}</small></span>
-            <span className={`ps-check ${done ? 'done' : ''}`}>{done ? '✓' : ''}</span>
-          </div>
-        ))}
-      </div>
-      <span className="ps-button">Start Level 1</span>
-    </>
-  );
-}
+const MicIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg>;
+const Toggle = ({ on }: { on?: boolean }) => <span className={`lp-toggle ${on ? 'on' : ''}`}><i /></span>;
 
-function ScreenListen() {
-  return (
-    <>
-      <div className="ps-top"><span className="ps-chip">Listening</span><span className="ps-mic"><i /><i /><i /><i /><i /></span></div>
-      <div className="ps-staff">
-        {[0, 1, 2, 3, 4].map((i) => <i key={i} className="line" style={{ top: 18 + i * 10 }} />)}
-        <span className="ps-note ok" style={{ left: '18%', top: 54 }} />
-        <span className="ps-note ok" style={{ left: '38%', top: 49 }} />
-        <span className="ps-note now" style={{ left: '58%', top: 44 }} />
-        <span className="ps-note" style={{ left: '78%', top: 39 }} />
-      </div>
-      <div className="ps-heard"><b>E4</b><span>Heard. Nice and even.</span></div>
-      <div className="ps-keys">{Array.from({ length: 10 }, (_, i) => <i key={i} className={i === 2 ? 'on' : ''} />)}{[0, 1, 3, 4, 5, 7, 8].map((k) => <b key={k} style={{ left: `${(k + 1) * 10 - 3}%` }} />)}</div>
-    </>
-  );
-}
-
-function ScreenPlayAlong() {
-  return (
-    <>
-      <b className="ps-title">Copper Market Lullaby</b>
-      <small className="ps-sub">Band plays · you play middle C</small>
-      <div className="ps-ring"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" className="bg" /><circle cx="50" cy="50" r="42" className="fg" strokeDasharray="243 264" /></svg><span><b>92%</b><small>on the beat</small></span></div>
-      <div className="ps-week">{['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => <span key={i} className={i < 5 ? 'on' : ''}>{d}</span>)}</div>
-      <span className="ps-button">Next song</span>
-    </>
-  );
-}
+const CHIPS_START: Chip[] = [
+  { x: -34, y: 22, z: 90, r: -4, w: 236, node: (
+    <div className="lg-alert">
+      <span className="lg-ic"><MicIcon /></span>
+      <b>“Maestro” would like to use the microphone</b>
+      <small>So it can hear you play and sing.</small>
+      <div className="lg-alert-btns"><span>Don’t allow</span><span className="ok">Allow</span></div>
+    </div>) },
+  { x: 62, y: 62, z: 120, r: 3, w: 190, node: (
+    <div className="lg-row"><span className="lg-badge">0</span><span><b>Foundations</b><small>Level 0 · free</small></span><span className="lg-tick">✓</span></div>) },
+];
+const CHIPS_PLAY: Chip[] = [
+  { x: 64, y: 16, z: 110, r: 4, w: 168, node: (
+    <div className="lg-row"><span className="lg-tick big">✓</span><span><b>C4 · Correct</b><small>right on time</small></span></div>) },
+  { x: -30, y: 58, z: 80, r: -3, w: 178, node: (
+    <div className="lg-listen"><span className="lg-ic"><MicIcon /></span><span className="lg-wave">{Array.from({ length: 9 }, (_, i) => <i key={i} style={{ animationDelay: `${i * 0.11}s` }} />)}</span><small>Listening</small></div>) },
+];
+const CHIPS_ALONG: Chip[] = [
+  { x: 60, y: 14, z: 100, r: 3, w: 196, node: (
+    <div className="lg-toggles">
+      <div><span>Band</span><Toggle on /></div>
+      <div><span>Metronome</span><Toggle /></div>
+      <div><span>Guide hands</span><Toggle on /></div>
+    </div>) },
+  { x: -28, y: 60, z: 120, r: -4, w: 150, node: (
+    <div className="lg-score"><b>92%</b><small>on the beat</small><span className="lg-days">{['M', 'T', 'W', 'T', 'F'].map((d, i) => <i key={i}>{d}</i>)}</span></div>) },
+];
 
 /** Shown for a moment while we check whether someone is signed in. */
 export function Splash() {

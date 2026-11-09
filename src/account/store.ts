@@ -72,11 +72,21 @@ export function progressChanged() {
 export async function initAccount() {
   if (!ACCOUNTS_ENABLED) return;
   progress.onSave = progressChanged;
+  // Arriving from a password-reset email: remember it before the sign-in code in the address is used up,
+  // so we ask for a new password instead of just signing the person in.
+  const q0 = new URLSearchParams(location.search);
+  if (q0.get('reset') === '1') {
+    try { sessionStorage.setItem(RESET, '1'); } catch { /* fine */ }
+    q0.delete('reset');
+    history.replaceState(null, '', location.pathname + (q0.toString() ? `?${q0}` : '') + location.hash);
+  }
   const sb = await supabase();
   const { data } = await sb.auth.getSession();
   await loadProfile(data.session?.user ?? null).catch((e) => set({ ready: true, error: String(e?.message ?? e) }));
+  checkReset(!!data.session);
   sb.auth.onAuthStateChange((e, session) => {
     if (e === 'PASSWORD_RECOVERY') set({ recovery: true });
+    if (session) checkReset(true);
     if ((session?.user?.id ?? null) !== (state.user?.id ?? null)) void loadProfile(session?.user ?? null);
   });
   // back from a payment page
@@ -92,6 +102,12 @@ export async function signInWithEmail(email: string) {
   if (error) throw error;
 }
 const here = () => AUTH_RETURN || location.origin + location.pathname;
+const RESET = 'maestro.reset';
+function checkReset(signedIn: boolean) {
+  let pending = false;
+  try { pending = sessionStorage.getItem(RESET) === '1'; } catch { /* fine */ }
+  if (pending && signedIn) { try { sessionStorage.removeItem(RESET); } catch { /* fine */ } set({ recovery: true }); }
+}
 /** Supabase's messages, in plain words */
 export function authMessage(e: unknown): string {
   const m = String((e as Error)?.message ?? e);
@@ -116,7 +132,7 @@ export async function signUp(email: string, password: string, name: string) {
   return !!data.session;
 }
 export async function sendPasswordReset(email: string) {
-  const { error } = await (await supabase()).auth.resetPasswordForEmail(email, { redirectTo: here() });
+  const { error } = await (await supabase()).auth.resetPasswordForEmail(email, { redirectTo: `${here()}?reset=1` });
   if (error) throw new Error(authMessage(error));
 }
 export async function updatePassword(password: string) {
