@@ -6,6 +6,7 @@ import { audio } from './audio/engine';
 // diagnostics hook (read-only use in tests and the browser console)
 (window as unknown as { maestroAudio: typeof audio }).maestroAudio = audio;
 import './styles.css';
+import './landing.css';
 
 // Bundled font (works offline, inlined in the single-file build)
 try {
