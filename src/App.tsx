@@ -10,7 +10,7 @@ import { progress } from './ui/settings';
 import { Dashboard, LearnList, PianoStudio, SettingsView } from './ui/Views';
 import { MyMusic } from './ui/MyMusic';
 import { VoiceStudio } from './ui/VoiceStudio';
-import { AccountButton, AccountSheet, AdminView, ResetPasswordSheet, UpgradeSheet } from './ui/Account';
+import { AccountSheet, AdminView, ResetPasswordSheet, UpgradeSheet, UserMenu } from './ui/Account';
 import { isGuest, Landing, Splash } from './ui/Landing';
 import { goHome, onGoHome } from './ui/nav';
 import { isNativeApp, onBack } from './native/bridge';
@@ -26,8 +26,8 @@ const TABS: { id: Tab; label: string; short?: string; icon: string; title: strin
   { id: 'music', label: 'My Music', short: 'Music', icon: 'doc', title: 'My Music' },
   { id: 'voice', label: 'Voice', icon: 'mic', title: 'Voice Studio' },
   { id: 'studio', label: 'Piano Studio', short: 'Piano', icon: 'piano', title: 'Piano Studio' },
-  { id: 'settings', label: 'Setup', icon: 'settings', title: 'Setup' },
 ];
+const MENU_TITLES: Partial<Record<Tab, string>> = { settings: 'Setup', admin: 'Admin' };
 
 function InputPills({ openSetup }: { openSetup: () => void }) {
   const [, force] = useState(0);
@@ -40,11 +40,11 @@ function InputPills({ openSetup }: { openSetup: () => void }) {
   };
   return (
     <>
-      <button className={`pill io ${micOn ? 'live' : ''}`} aria-label={micOn ? 'Microphone on: tap to stop' : 'Start microphone'} onClick={toggleMic} title="Listen to an acoustic piano through the microphone">
-        <Icon name="mic" size={16} /> <span className="pill-label">{micOn ? 'Listening' : 'Microphone'}</span>
+      <button className={`nav-io ${micOn ? 'live' : ''}`} aria-label={micOn ? 'Microphone on: tap to stop' : 'Start microphone'} onClick={toggleMic} title={micOn ? 'Listening: tap to stop' : 'Start the microphone'}>
+        <Icon name="mic" size={17} />
       </button>
-      <button className={`pill io ${midiOn ? 'live' : ''}`} aria-label={midiOn ? 'MIDI keyboard connected' : 'Connect MIDI keyboard'} onClick={async () => { try { await midiIn.connect(); } catch { /* unsupported */ } openSetup(); }} title="Connect a MIDI keyboard">
-        <Icon name="midi" size={16} /> <span className="pill-label">{midiOn ? 'MIDI on' : 'MIDI'}</span>
+      <button className={`nav-io ${midiOn ? 'live' : ''}`} aria-label={midiOn ? 'MIDI keyboard connected' : 'Connect MIDI keyboard'} onClick={async () => { try { await midiIn.connect(); } catch { /* unsupported */ } if (!midiIn.devices.length) openSetup(); force((x) => x + 1); }} title={midiOn ? 'MIDI keyboard connected' : 'Connect a MIDI keyboard'}>
+        <Icon name="midi" size={17} />
       </button>
     </>
   );
@@ -82,8 +82,9 @@ export default function App() {
   };
   const nextLesson = lesson ? LESSONS.find((l) => l !== lesson && (l.track ?? 'piano') === (lesson.track ?? 'piano') && !progress.lessonComplete(l) && progress.lessonUnlocked(l, LESSONS)) : undefined;
   useEffect(() => { if (!lesson) setExpected(null); }, [lesson, tab]);
-  const tabs = account.ent.admin ? [...TABS, { id: 'admin' as Tab, label: 'Admin', icon: 'lock', title: 'Admin' }] : TABS;
-  const title = lesson ? lesson.title : tabs.find((t) => t.id === tab)?.title ?? '';
+  const tabs = TABS;
+  const title = lesson ? lesson.title : MENU_TITLES[tab] ?? tabs.find((t) => t.id === tab)?.title ?? '';
+  const go = (t: Tab) => { setTab(t); setLesson(null); window.scrollTo({ top: 0 }); };
 
   if (ACCOUNTS_ENABLED && (landing || (!account.user && !isGuest()))) {
     if (!account.ready && !landing) return <Splash />;
@@ -93,27 +94,28 @@ export default function App() {
   return (
     <div className="backdrop">
       <div className="device">
-        <header className="topbar">
-          <div className="title-tab">
-            <button className="circle brand" onClick={goHome} aria-label="Home" title="Home"><i /><i /><i /></button>
-            {lesson && <button className="circle" onClick={() => setLesson(null)} aria-label="Close lesson" title="Back to the lesson list"><Icon name="close" size={16} /></button>}
-            <div className="title-text">
-              {lesson && <small>Level {lesson.level} · {lesson.id}</small>}
-              <h1>{title}</h1>
+        <header className="appbar">
+          <button className="app-logo" onClick={goHome} aria-label="Maestro home page" title="Home page">
+            <span className="lp-mark" aria-hidden><i /><i /><i /></span><span className="app-logo-word">maestro</span>
+          </button>
+          {lesson && (
+            <div className="app-crumb">
+              <button className="nav-io" onClick={() => setLesson(null)} aria-label="Back to lessons" title="Back to the lesson list"><Icon name="back" size={17} /></button>
+              <div className="title-text"><small>Level {lesson.level} · {lesson.id}</small><h1>{title}</h1></div>
             </div>
-          </div>
-          <svg className="tab-swoop" viewBox="0 0 90 64" preserveAspectRatio="none" aria-hidden><path d="M0 0 C 46 0, 40 64, 90 64 L 0 64 Z" /></svg>
-          <nav className="pills" aria-label="Main">
+          )}
+          {!lesson && MENU_TITLES[tab] && <div className="app-crumb"><div className="title-text"><h1>{title}</h1></div></div>}
+          <nav className="app-tabs" aria-label="Main">
             {tabs.map((t) => (
-              <button key={t.id} className={`pill tabpill ${tab === t.id ? 'on' : ''}`} aria-current={tab === t.id}
-                onClick={() => { setTab(t.id); setLesson(null); }}>
-                <Icon name={t.icon} size={16} /> <span className="pill-label">{t.label}</span>
+              <button key={t.id} className={tab === t.id && !lesson ? 'on' : ''} aria-current={tab === t.id && !lesson} onClick={() => go(t.id)}>
+                <Icon name={t.icon} size={15} /><span>{t.label}</span>
               </button>
             ))}
-            <span className="pill-gap" />
-            <InputPills openSetup={() => { setTab('settings'); setLesson(null); }} />
-            <AccountButton onOpen={() => setAcctOpen(true)} />
           </nav>
+          <div className="app-end">
+            <InputPills openSetup={() => go('settings')} />
+            <UserMenu onAccount={() => setAcctOpen(true)} onSetup={() => go('settings')} onAdmin={() => go('admin')} onHome={goHome} current={tab} />
+          </div>
         </header>
         <main className="panel">
           {lesson

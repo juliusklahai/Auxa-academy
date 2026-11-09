@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ACCOUNTS_ENABLED, MONIME_ENABLED, PLANS, type PlanOption } from '../account/config';
 import { TIER_NAME } from '../account/gate';
+import { toggleTheme, useTheme } from './theme';
 import {
   adminGrant, adminPayments, adminSearch, adminSetRole, authMessage, closeUpgrade, endRecovery, openBillingPortal, openUpgrade, refreshProfile,
   sendPasswordReset, signInWithEmail, signInWithGoogle, signInWithPassword, signOut, signUp, startCheckout, updatePassword, useAccount, useUpgrade, type Profile,
@@ -217,6 +218,59 @@ export function AccountButton({ onOpen }: { onOpen: () => void }) {
     <button className={`pill io acct-btn ${a.ent.pro ? 'pro' : ''}`} onClick={onOpen} aria-label={label} title={label}>
       {a.user ? <span className="avatar sm">{(a.profile?.email ?? '?')[0].toUpperCase()}</span> : <Icon name="lock" size={16} />}
     </button>
+  );
+}
+
+/** The account menu in the top bar: you and your plan, Setup, Admin, light/dark, home page, sign in/out. */
+export function UserMenu({ onAccount, onSetup, onAdmin, onHome, current }: { onAccount: () => void; onSetup: () => void; onAdmin: () => void; onHome: () => void; current: string }) {
+  const a = useAccount();
+  const theme = useTheme();
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const off = (e: PointerEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', off); document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', off); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  const pick = (f: () => void) => () => { setOpen(false); f(); };
+  const email = a.profile?.email ?? a.user?.email ?? '';
+  const plan = a.ent.admin ? 'Admin' : a.ent.pro ? TIER_NAME[a.ent.tier] : 'Free';
+  return (
+    <div className="umenu" ref={box}>
+      <button className={`umenu-btn ${open ? 'on' : ''}`} onClick={() => setOpen(!open)} aria-haspopup="menu" aria-expanded={open} aria-label="Menu">
+        {a.user ? <span className="avatar sm">{(email || '?')[0].toUpperCase()}</span> : <Icon name="settings" size={17} />}
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 9l6 6 6-6" /></svg>
+      </button>
+      {open && (
+        <div className="umenu-pop" role="menu">
+          {ACCOUNTS_ENABLED && (a.user ? (
+            <button className="umenu-who" role="menuitem" onClick={pick(onAccount)}>
+              <span className="avatar">{(email || '?')[0].toUpperCase()}</span>
+              <span><b>{email}</b><small>{plan} plan · Account and billing</small></span>
+            </button>
+          ) : (
+            <button className="umenu-who" role="menuitem" onClick={pick(onAccount)}>
+              <span className="avatar"><Icon name="lock" size={16} /></span>
+              <span><b>Sign in</b><small>Save progress on every device</small></span>
+            </button>
+          ))}
+          {ACCOUNTS_ENABLED && a.user && !a.ent.plus && !a.ent.admin && (
+            <button className="umenu-item upgrade" role="menuitem" onClick={pick(() => openUpgrade(a.ent.pro ? 'Go further with Plus' : 'Choose your plan'))}><Icon name="flame" size={16} />{a.ent.pro ? 'Upgrade to Plus' : 'Upgrade'}</button>
+          )}
+          <div className="umenu-sep" />
+          <button className={`umenu-item ${current === 'settings' ? 'on' : ''}`} role="menuitem" onClick={pick(onSetup)}><Icon name="settings" size={16} />Setup<small>Input, sound, learning</small></button>
+          {a.ent.admin && <button className={`umenu-item ${current === 'admin' ? 'on' : ''}`} role="menuitem" onClick={pick(onAdmin)}><Icon name="lock" size={16} />Admin<small>People and payments</small></button>}
+          <button className="umenu-item" role="menuitem" onClick={() => toggleTheme()}>
+            <Icon name={theme === 'dark' ? 'eye' : 'eye'} size={16} />{theme === 'dark' ? 'Light mode' : 'Dark mode'}
+            <span className={`lp-toggle ${theme === 'dark' ? 'on' : ''}`}><i /></span>
+          </button>
+          {ACCOUNTS_ENABLED && <button className="umenu-item" role="menuitem" onClick={pick(onHome)}><Icon name="home" size={16} />Maestro home page</button>}
+          {ACCOUNTS_ENABLED && a.user && (<><div className="umenu-sep" /><button className="umenu-item quiet" role="menuitem" onClick={pick(() => void signOut())}><Icon name="back" size={16} />Sign out</button></>)}
+        </div>
+      )}
+    </div>
   );
 }
 

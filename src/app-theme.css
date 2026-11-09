@@ -1,0 +1,110 @@
+/* ---------- App theme: matches the home page (Geist + Inter, paper / charcoal, glass bar) ---------- */
+html.theme-light {
+  --bg1: #f5f5f3; --bg2: #efefec; --frame: #f5f5f3; --panel: #f5f5f3; --card: #ffffff; --white: #ffffff;
+  --ink: #18181b; --ink2: #52525b; --muted: #8a8a93; --line: #c9c9c6; --line2: rgba(0,0,0,.1); --soft: #ececea; --on-ink: #fafafa;
+  --glass: rgba(239,239,236,.72); --hair: rgba(0,0,0,.08); --pillbg: rgba(0,0,0,.045);
+  --shadow: 0 1px 2px rgba(0,0,0,.04), 0 10px 30px -18px rgba(0,0,0,.18);
+}
+html.theme-dark {
+  --bg1: #181818; --bg2: #161616; --frame: #181818; --panel: #181818; --card: #222222; --white: #2c2c2e;
+  --ink: #e4e4e7; --ink2: #b4b4bb; --muted: #7d7d86; --line: #45454a; --line2: rgba(255,255,255,.12); --soft: #2a2a2c; --on-ink: #111111;
+  --ok-soft: rgba(52,199,89,.16); --amber-soft: rgba(230,160,40,.16); --bad-soft: rgba(230,70,60,.16);
+  --glass: rgba(29,29,29,.72); --hair: rgba(255,255,255,.09); --pillbg: rgba(255,255,255,.05);
+  --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 14px 34px -20px rgba(0,0,0,.7);
+  color-scheme: dark;
+}
+html.theme-light, html.theme-dark { --font: Inter, 'Helvetica Neue', Arial, sans-serif; --head: Geist, 'Helvetica Neue', Arial, sans-serif; }
+html.theme-light body, html.theme-dark body { background: var(--bg1); color: var(--ink); }
+html.theme-dark body { background: radial-gradient(70% 50% at 100% 0%, rgba(80,100,170,.12), transparent), radial-gradient(60% 50% at 0% 100%, rgba(60,130,95,.1), transparent), var(--bg1); background-attachment: fixed; }
+html[class*=theme-] h1, html[class*=theme-] h2, html[class*=theme-] h3, html[class*=theme-] .id-card b, html[class*=theme-] .metric b, html[class*=theme-] .card-head b, html[class*=theme-] .setup-head > b { font-family: var(--head); letter-spacing: -.03em; font-weight: 500; }
+
+/* shell: no dark frame, the page is the panel */
+html[class*=theme-] .backdrop { padding: 0; }
+html[class*=theme-] .device { background: transparent; box-shadow: none; border-radius: 0; padding: 0 clamp(10px, 2vw, 26px) 20px; max-width: 1440px; }
+html[class*=theme-] .panel { background: transparent; border-radius: 0; }
+html[class*=theme-] .page { padding: 18px 4px 16px; }
+
+/* floating glass top bar */
+.appbar { position: sticky; top: calc(10px + var(--sat)); z-index: 60; display: flex; align-items: center; gap: 12px; margin: calc(10px + var(--sat)) 0 6px; padding: 7px 7px 7px 16px; min-height: 58px;
+  border-radius: 22px; background: var(--glass); border: 1px solid var(--hair); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); box-shadow: 0 10px 34px -22px rgba(0,0,0,.5); }
+.app-logo { display: inline-flex; align-items: center; gap: 9px; border: 0; background: none; padding: 0; color: var(--ink); flex: none; }
+.app-logo-word { font-family: var(--head); font-weight: 600; font-size: 21px; letter-spacing: -.045em; }
+.appbar .lp-mark { width: 28px; height: 28px; border-radius: 8px; background: var(--ink); display: inline-flex; gap: 2px; align-items: flex-start; justify-content: center; padding-top: 6px; box-sizing: border-box; }
+.appbar .lp-mark i { width: 4px; height: 14px; border-radius: 2px; background: var(--bg1); }
+.appbar .lp-mark i:nth-child(3) { background: var(--lime2); }
+.app-crumb { display: flex; align-items: center; gap: 10px; min-width: 0; padding-left: 12px; border-left: 1px solid var(--hair); }
+.app-crumb .title-text h1 { font-size: 17px; }
+.app-crumb .title-text small { font-size: 11px; }
+.app-tabs { margin: 0 auto; display: flex; gap: 2px; padding: 4px; border-radius: 16px; border: 1px solid var(--hair); background: var(--pillbg); overflow-x: auto; scrollbar-width: none; }
+.app-tabs::-webkit-scrollbar { display: none; }
+.app-tabs button { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 13px; border: 0; border-radius: 12px; background: none; color: var(--ink2); font-size: 13.5px; font-weight: 500; white-space: nowrap; }
+.app-tabs button:hover { color: var(--ink); background: var(--pillbg); }
+.app-tabs button.on { background: var(--white); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 4px 12px -6px rgba(0,0,0,.25); }
+.app-end { display: flex; align-items: center; gap: 6px; flex: none; }
+.nav-io { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--hair); background: var(--pillbg); color: var(--ink2); display: grid; place-items: center; flex: none; }
+.nav-io:hover { color: var(--ink); }
+.nav-io.live { background: var(--lime); color: #111; border-color: transparent; box-shadow: 0 0 0 4px color-mix(in srgb, var(--lime) 30%, transparent); }
+
+/* account menu */
+.umenu { position: relative; }
+.umenu-btn { height: 40px; padding: 0 10px 0 6px; border-radius: 99px; border: 1px solid var(--hair); background: var(--pillbg); color: var(--ink2); display: inline-flex; align-items: center; gap: 6px; }
+.umenu-btn:not(:has(.avatar)) { padding-left: 11px; }
+.umenu-btn.on { background: var(--white); color: var(--ink); }
+.umenu-btn .avatar.sm { width: 28px; height: 28px; background: var(--ink); color: var(--on-ink); }
+.umenu-pop { position: absolute; right: 0; top: calc(100% + 10px); width: 290px; padding: 8px; border-radius: 20px; background: var(--card); border: 1px solid var(--hair); z-index: 80;
+  box-shadow: 0 30px 70px -20px rgba(0,0,0,.45); animation: dock-in .14s ease-out; display: grid; gap: 2px; }
+.umenu-who { display: flex; align-items: center; gap: 12px; padding: 10px; border: 0; border-radius: 14px; background: var(--pillbg); text-align: left; color: var(--ink); }
+.umenu-who .avatar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--on-ink); font-weight: 600; flex: none; }
+.umenu-who > span:last-child { display: grid; min-width: 0; }
+.umenu-who b { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.umenu-who small { font-size: 12px; color: var(--muted); }
+.umenu-item { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border: 0; border-radius: 12px; background: none; color: var(--ink); font-size: 14px; font-weight: 500; text-align: left; }
+.umenu-item:hover, .umenu-item.on { background: var(--pillbg); }
+.umenu-item svg { color: var(--ink2); flex: none; }
+.umenu-item small { margin-left: auto; font-size: 12px; color: var(--muted); font-weight: 400; }
+.umenu-item .lp-toggle { margin-left: auto; transform: scale(.85); }
+.umenu-item.upgrade { background: color-mix(in srgb, var(--lime) 22%, transparent); }
+.umenu-item.quiet { color: var(--ink2); }
+.umenu-sep { height: 1px; background: var(--hair); margin: 6px 4px; }
+
+/* cards, pills, buttons in the new look */
+html[class*=theme-] .card, html[class*=theme-] .id-card, html[class*=theme-] .score-card { background: var(--card); border: 1px solid var(--hair); box-shadow: var(--shadow); }
+html.theme-dark .card, html.theme-dark .id-card { background: linear-gradient(160deg, #262626, #202020); }
+html[class*=theme-] .chip { background: var(--pillbg); color: var(--ink2); border: 1px solid var(--hair); box-shadow: none; }
+html[class*=theme-] .chip.on, html[class*=theme-] .chip:hover { background: var(--white); color: var(--ink); }
+html[class*=theme-] .btn { background: var(--white); color: var(--ink); border: 1px solid var(--hair); box-shadow: none; }
+html[class*=theme-] .btn.dark { background: var(--ink); color: var(--on-ink); border-color: transparent; }
+html[class*=theme-] .btn.lime { background: var(--lime); color: #111; border-color: transparent; }
+html[class*=theme-] select { background: var(--white); color: var(--ink); box-shadow: none; border: 1px solid var(--hair); }
+html[class*=theme-] .seg { background: var(--pillbg); }
+html[class*=theme-] .setup-tabs { background: var(--pillbg); border: 1px solid var(--hair); }
+html[class*=theme-] .sheet { background: var(--card); color: var(--ink); border: 1px solid var(--hair); }
+html[class*=theme-] .tip { background: color-mix(in srgb, var(--lime) 14%, var(--card)); }
+/* sheet music and piano keys stay paper-white in both modes (they are read like paper) */
+html.theme-dark .score-scroll, html.theme-dark .staff-view, html.theme-dark .staff { background: #fbfaf7; color: #1a1a1a; border-radius: 16px; }
+html.theme-dark .ex-pill { background: #3a3a3c; }
+html.theme-dark .lvl.advanced { background: #111 !important; }
+
+/* phones: tabs go to the bottom bar, the top bar keeps logo, inputs and menu */
+@media (max-width: 860px) {
+  .app-tabs { display: none; }
+  .appbar { gap: 8px; padding-left: 12px; margin-left: 0; margin-right: 0; }
+  .app-end { margin-left: auto; }
+  .app-crumb { padding-left: 8px; }
+  .app-crumb .title-text h1 { font-size: 15px; max-width: 34vw; }
+  .app-crumb ~ .app-end { margin-left: 0; }
+  .app-crumb { flex: 1; }
+  .app-logo-word { display: none; }
+  html[class*=theme-] .tabbar { background: var(--glass); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-top: 1px solid var(--hair); box-shadow: none; }
+  html[class*=theme-] .tabbar button { color: var(--ink2); }
+  html[class*=theme-] .tabbar button.on { color: var(--ink); }
+  html[class*=theme-] .device { padding-left: max(10px, var(--sal)); padding-right: max(10px, var(--sar)); padding-top: 0; }
+}
+@media (min-width: 861px) and (max-width: 1100px) { .app-tabs button span { display: none; } .app-tabs button { padding: 0 12px; } }
+/* full-screen practice hides the bar */
+html[class*=theme-] .practice-root.focus { background: var(--bg1); }
+html[class*=theme-] .avatar.you { color: #1a1a1a; }
+html.theme-dark .spark.empty { background: repeating-linear-gradient(135deg, #2a2a2c 0 6px, #262628 6px 12px); }
+html.theme-dark .spark { background-color: #262628; }
+html.theme-dark .bar .track, html.theme-dark .bar > div:nth-child(2) { background: #333336; }
+html.theme-dark input[type=range] { accent-color: #e4e4e7; }

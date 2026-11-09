@@ -7,6 +7,8 @@ import { audio } from './audio/engine';
 (window as unknown as { maestroAudio: typeof audio }).maestroAudio = audio;
 import './styles.css';
 import './landing.css';
+import './app-theme.css';
+import './ui/theme';
 
 // Bundled font (works offline, inlined in the single-file build)
 try {

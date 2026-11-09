@@ -7,18 +7,12 @@ import { DashField } from './DashField';
 import { PLANS } from '../account/config';
 import { SignInForm } from './Account';
 import { Icon } from './Icon';
-import { native } from '../native/bridge';
+import { useTheme, setTheme, type Theme } from './theme';
 
 const GUEST = 'maestro.guest.v1';
 export const isGuest = () => { try { return localStorage.getItem(GUEST) === '1'; } catch { return false; } };
 export const setGuest = (on: boolean) => { try { if (on) localStorage.setItem(GUEST, '1'); else localStorage.removeItem(GUEST); } catch { /* private mode */ } };
 
-const THEME = 'maestro.landing.theme';
-type Theme = 'dark' | 'light';
-const initialTheme = (): Theme => {
-  try { const t = localStorage.getItem(THEME); if (t === 'dark' || t === 'light') return t; } catch { /* fine */ }
-  return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-};
 const ANDROID_APK = 'https://github.com/juliusklahai/maestro-academy/releases/download/android-test/Maestro.apk';
 const price = (id: string) => PLANS.find((p) => p.id === id)?.price ?? '';
 
@@ -33,18 +27,10 @@ const FAQ: [string, string][] = [
 ];
 
 export function Landing({ onStart, returning = false }: { onStart: () => void; returning?: boolean }) {
-  const [theme, setTheme] = useState<Theme>(initialTheme);
+  const theme = useTheme();
   const [auth, setAuth] = useState<false | 'signin' | 'signup'>(false);
   const [open, setOpen] = useState(0);
-  useEffect(() => { try { localStorage.setItem(THEME, theme); } catch { /* fine */ } native?.setBars?.(theme === 'light'); return () => native?.setBars?.(false); }, [theme]);
-  useEffect(() => {
-    const id = 'landing-fonts';
-    if (document.getElementById(id)) return;
-    const l = document.createElement('link');
-    l.id = id; l.rel = 'stylesheet';
-    l.href = 'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@1&display=swap';
-    document.head.appendChild(l);
-  }, []);
+
   const start = () => { if (!returning) setGuest(true); onStart(); };
   const steps = useRef<HTMLDivElement>(null);
   useStackedCards(steps, theme);
