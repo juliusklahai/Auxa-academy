@@ -28,6 +28,7 @@ export function segment(frames: PitchFrame[], opts: { minMs?: number; gapMs?: nu
     return w.length >= 2 ? median(w) : f.midi;
   });
   const notes: SungNote[] = [];
+  const attackAt = new Set<number>();
   type Cur = { start: number; last: number; ps: number[]; peak: number; dip: number; dipT: number };
   let cur: Cur | null = null;
   let pend: { t: number; ps: number[] } | null = null; // a possible change of note, waiting to be confirmed
@@ -51,6 +52,7 @@ export function segment(frames: PitchFrame[], opts: { minMs?: number; gapMs?: nu
       if (gapStart < 0) gapStart = f.t;
       const cg = cur as Cur | null;
       if (cg && f.t - gapStart >= gapMs) { close(cg.last); pend = null; }
+      else if (cg && f.rms < cg.dip) { cg.dip = f.rms; cg.dipT = f.t; } // a short breath counts as a dip in level
       continue;
     }
     gapStart = -1;
@@ -71,6 +73,7 @@ export function segment(frames: PitchFrame[], opts: { minMs?: number; gapMs?: nu
     if (c.dip < c.peak * 0.45 && f.rms > c.dip * 1.8 && c.dipT - c.start > 120 && f.t - c.dipT < 140) {
       close(c.dipT);
       open(c.dipT, [p], f.rms);
+      attackAt.add(c.dipT);
       continue;
     }
     if (f.rms > c.dip * 1.8) { c.dip = f.rms; c.dipT = f.t; }
@@ -78,24 +81,102 @@ export function segment(frames: PitchFrame[], opts: { minMs?: number; gapMs?: nu
   }
   const fin = cur as Cur | null;
   if (fin) close(fin.last);
+  for (const n of notes) if (attackAt.has(n.start)) (n as SungNote & { attack?: boolean }).attack = true;
   return notes;
 }
 
-/** The tempo that best explains the note starts (50 to 160 beats per minute). */
+/**
+ * Clean the raw readings before finding notes:
+ * - drop readings much quieter than the singing itself (breaths, room echo, the tail of a note);
+ * - fix octave slips. Pitch trackers sometimes report a sung note an octave too high (a soft vowel with a
+ *   weak fundamental) or too low. A reading more than ~9.5 semitones from what the singer is doing around
+ *   that moment is moved by an octave towards it.
+ */
+export function cleanFrames(frames: PitchFrame[]): PitchFrame[] {
+  const voiced = frames.filter((f) => f.midi !== null);
+  if (!voiced.length) return frames;
+  const lv = voiced.map((f) => f.rms).sort((a, b) => a - b);
+  const loud = lv[Math.min(lv.length - 1, Math.floor(lv.length * 0.9))];
+  const gate = loud * 0.07;
+  const out = frames.map((f) => (f.midi !== null && f.rms < gate ? { ...f, midi: null } : { ...f }));
+  // loudness-weighted median pitch in a window around each reading (2.5 s each side)
+  const pts = out.filter((f) => f.midi !== null);
+  const wmed = (lo: number, hi: number) => {
+    const w = pts.filter((f) => f.t >= lo && f.t <= hi).map((f) => [f.midi as number, Math.sqrt(f.rms)] as const).sort((a, b) => a[0] - b[0]);
+    const tot = w.reduce((a, x) => a + x[1], 0);
+    let acc = 0;
+    for (const [m, wt] of w) { acc += wt; if (acc >= tot / 2) return m; }
+    return w.length ? w[w.length - 1][0] : null;
+  };
+  const center = wmed(-Infinity, Infinity) as number;
+  for (let pass = 0; pass < 2; pass++) {
+    for (const f of out) {
+      if (f.midi === null) continue;
+      const c = (wmed(f.t - 2500, f.t + 2500) ?? center) * 0.4 + center * 0.6;
+      while (f.midi - c > 9.5) f.midi -= 12;
+      while (c - f.midi > 8) f.midi += 12; // low slips are rarer and the voice seldom goes far below its middle
+    }
+  }
+  return out;
+}
+
+/**
+ * Tidy the notes found: very short blips (a consonant, a scoop, a crack) are folded into the note next to
+ * them, and a note is held until the next one starts when the gap is only a breath (legato).
+ */
+export function tidy(notes: SungNote[], opts: { minMs?: number; breathMs?: number } = {}): SungNote[] {
+  const minMs = opts.minMs ?? 130, breathMs = opts.breathMs ?? 260;
+  const ns = notes.map((n) => ({ ...n }));
+  // fold blips into a touching neighbor (the longer one), or drop them when isolated
+  for (let changed = true; changed;) {
+    changed = false;
+    for (let i = 0; i < ns.length; i++) {
+      const n = ns[i];
+      if (n.end - n.start >= minMs) continue;
+      const prev = ns[i - 1], next = ns[i + 1];
+      const touchP = prev && n.start - prev.end < 90, touchN = next && next.start - n.end < 90;
+      if (touchP && touchN && prev.midi === next.midi) { prev.end = next.end; ns.splice(i, 2); changed = true; break; } // a crack inside one held note
+      if (touchP && (!touchN || prev.end - prev.start >= next.end - next.start)) prev.end = Math.max(prev.end, n.end);
+      else if (touchN) next.start = n.start;
+      ns.splice(i, 1); changed = true; break;
+    }
+  }
+  // legato: hold through short breaths
+  for (let i = 0; i + 1 < ns.length; i++) if (ns[i + 1].start - ns[i].end < breathMs) ns[i].end = ns[i + 1].start;
+  return ns;
+}
+
+/**
+ * The tempo that best explains the note starts. Every tempo from 56 to 150 is tried: starts should land
+ * on an eighth-note grid, and the typical note should be about one beat long (so held notes read as
+ * quarters and halves, not a page of eighths).
+ */
 export function estimateTempo(notes: SungNote[]): number {
   if (notes.length < 3) return 80;
-  const iois: number[] = [];
-  for (let i = 1; i < notes.length; i++) iois.push(notes[i].start - notes[i - 1].start);
-  let bpm0 = 60000 / median(iois);
-  while (bpm0 > 140) bpm0 /= 2;
-  while (bpm0 < 60) bpm0 *= 2;
+  // the typical gap between note starts, counting long notes more (short ones are often ornaments)
+  const pairs: [number, number][] = [];
+  for (let i = 1; i < notes.length; i++) pairs.push([notes[i].start - notes[i - 1].start, Math.min(2, (notes[i - 1].end - notes[i - 1].start) / 250)]);
+  pairs.sort((a, b) => a[0] - b[0]);
+  const half = pairs.reduce((a, p) => a + p[1], 0) / 2;
+  let acc = 0, typical = pairs[pairs.length - 1][0];
+  for (const [g, w] of pairs) { acc += w; if (acc >= half) { typical = g; break; } }
+  const wt = notes.map((n) => Math.min(2, Math.max(0.3, (n.end - n.start) / 250)));
+  const wsum = wt.reduce((a, b) => a + b, 0);
   const t0 = notes[0].start;
-  let best = Math.round(bpm0), bestErr = Infinity;
-  for (let bpm = Math.max(50, Math.round(bpm0 * 0.85)); bpm <= Math.min(160, Math.round(bpm0 * 1.15)); bpm++) {
-    const grid = 60000 / bpm / 2; // eighth notes
-    let err = 0;
-    for (const n of notes) { const x = (n.start - t0) / grid; err += Math.abs(x - Math.round(x)); }
-    err = err / notes.length + Math.abs(bpm - bpm0) / bpm0 * 0.15;
+  let best = 80, bestErr = Infinity;
+  for (let bpm = 56; bpm <= 150; bpm++) {
+    const beat = 60000 / bpm, grid = beat / 2;
+    // best phase: the first note may be a pickup
+    let fitErr = Infinity;
+    for (let ph = 0; ph < 1; ph += 0.125) {
+      let e = 0;
+      notes.forEach((n, i) => { const x = (n.start - t0) / grid + ph; e += wt[i] * Math.abs(x - Math.round(x)); });
+      fitErr = Math.min(fitErr, e / wsum);
+    }
+    // prior: the typical note near one beat, tempos near 70-110 a little more likely
+    const lenErr = Math.abs(Math.log2(typical / beat));
+    const prior = bpm < 66 ? (66 - bpm) / 60 : bpm > 120 ? (bpm - 120) / 90 : 0;
+    const err = fitErr + 0.22 * lenErr + 0.25 * prior;
     if (err < bestErr) { bestErr = err; best = bpm; }
   }
   return best;
@@ -146,42 +227,91 @@ export function detectKey(notes: { midi: number | null; beats?: number; start?: 
  */
 export function quantize(sung: SungNote[], bpm: number, origin: number, timeSig: [number, number] = [4, 4], grid = 0.5): MelodyNote[] {
   const beatMs = 60000 / bpm;
-  const q = (ms: number) => Math.round((ms - origin) / beatMs / grid) * grid;
-  const raw: { midi: number; beat: number; end: number }[] = [];
+  const pos = (ms: number) => (ms - origin) / beatMs;
+  const q = (b: number) => Math.round(b / grid) * grid;
+  // 1. onsets on the grid; two notes landing on one slot keep the longer (the other was a slide)
+  const raw: { midi: number; beat: number; endB: number; len: number }[] = [];
   for (const n of sung) {
-    let beat = q(n.start);
-    if (beat < 0) { if ((n.end - origin) / beatMs < grid) continue; beat = 0; }
+    let beat = q(pos(n.start));
+    const endB = pos(n.end);
+    if (beat < 0) { if (endB < grid) continue; beat = 0; }
+    const len = n.end - n.start;
     const last = raw[raw.length - 1];
     if (last && beat <= last.beat) {
-      if (last.midi === n.midi) { last.end = Math.max(last.end, q(n.end)); continue; }
-      beat = last.beat + grid;
+      if (last.midi === n.midi || len <= last.len) { last.endB = Math.max(last.endB, endB); continue; }
+      // the new note is the real one: replace the short one, or move it one slot later if there is room
+      if (last.len < len * 0.5) { last.midi = n.midi; last.endB = endB; last.len = len; continue; }
+      // a quick run: allow the next finer note value here instead of pushing everything later
+      const fine = grid / 2, bf = Math.round(pos(n.start) / fine) * fine;
+      beat = bf > last.beat + 1e-6 ? bf : last.beat + fine;
     }
-    raw.push({ midi: n.midi, beat, end: Math.max(beat + grid, q(n.end)) });
+    raw.push({ midi: n.midi, beat, endB, len });
   }
+  // 2. lengths: up to the next note, rounded to the grid; rests only for real gaps
   const out: MelodyNote[] = [];
-  let pos = 0;
+  let at = 0;
   raw.forEach((n, i) => {
     const next = raw[i + 1]?.beat ?? Infinity;
-    let end = Math.min(n.end, next);
-    // join tiny gaps (breaths between legato notes)
-    if (next !== Infinity && next - end <= grid && end - n.beat >= 1) end = next;
-    if (n.beat > pos) out.push({ midi: null, beat: pos, beats: n.beat - pos });
-    out.push({ midi: n.midi, beat: n.beat, beats: Math.max(grid, end - n.beat) });
-    pos = n.beat + Math.max(grid, end - n.beat);
+    const step = Math.abs(n.beat / grid - Math.round(n.beat / grid)) > 1e-6 || (raw[i + 1] && Math.abs(raw[i + 1].beat / grid - Math.round(raw[i + 1].beat / grid)) > 1e-6) ? grid / 2 : grid;
+    let end = Math.max(n.beat + step, Math.round(n.endB / step) * step);
+    if (end > next) end = next;
+    if (next !== Infinity && next - end < Math.max(grid, 0.5) + 1e-6) end = next; // tiny gap: hold on
+    if (end - n.beat < step) end = n.beat + step;
+    if (n.beat > at) out.push({ midi: null, beat: at, beats: n.beat - at });
+    out.push({ midi: n.midi, beat: n.beat, beats: end - n.beat });
+    at = end;
   });
   const barBeats = timeSig[0] * (4 / timeSig[1]);
-  const total = Math.max(barBeats, Math.ceil(pos / barBeats - 1e-9) * barBeats);
-  if (total > pos) out.push({ midi: null, beat: pos, beats: total - pos });
+  const total = Math.max(barBeats, Math.ceil(at / barBeats - 1e-9) * barBeats);
+  if (total > at) out.push({ midi: null, beat: at, beats: total - at });
   return out;
+}
+
+/**
+ * Singers drift a little sharp or flat. A note sung between two semitones (more than a quarter tone off)
+ * is written as the neighbor that belongs to the key, when only one of the two does.
+ */
+export function snapToKey(sung: SungNote[], key: KeyInfo) {
+  const scale = key.mode === 'major' ? [0, 2, 4, 5, 7, 9, 11] : [0, 2, 3, 5, 7, 8, 10, 11];
+  const inKey = (m: number) => scale.includes((((m - key.tonic) % 12) + 12) % 12);
+  for (const n of sung) {
+    if (Math.abs(n.cents) < 22 || inKey(n.midi)) continue;
+    const alt = n.midi + (n.cents > 0 ? 1 : -1);
+    if (inKey(alt)) { n.cents = n.cents - (alt - n.midi) * 100; n.midi = alt; }
+  }
+}
+
+/** Where the first downbeat goes when singing without a click: long notes tend to fall on strong beats. */
+export function bestDownbeat(sung: SungNote[], bpm: number, timeSig: [number, number]): number {
+  const beatMs = 60000 / bpm, barBeats = timeSig[0] * (4 / timeSig[1]);
+  const t0 = sung[0].start;
+  let best = t0, bv = -Infinity;
+  for (let k = 0; k < barBeats * 2; k++) {
+    const o = t0 - k * beatMs / 2; // the first note starts k eighths after the downbeat
+    if ((t0 - o) / beatMs > barBeats - 0.5) break;
+    let v = 0;
+    for (const n of sung) {
+      const b = (n.start - o) / beatMs, frac = Math.abs(b - Math.round(b));
+      const inBar = ((Math.round(b) % barBeats) + barBeats) % barBeats;
+      const strong = inBar === 0 ? 1 : barBeats === 4 && inBar === 2 ? 0.6 : 0.25;
+      v += (frac < 0.2 ? strong : 0) * Math.min(3, (n.end - n.start) / beatMs);
+    }
+    v -= k * 0.15; // prefer no pickup
+    if (v > bv) { bv = v; best = o; }
+  }
+  return best;
 }
 
 /** Everything in one go: readings -> melody. Without a fixed tempo, the tempo comes from the singing. */
 export function transcribe(frames: PitchFrame[], opts: { bpm?: number; origin?: number; timeSig?: [number, number]; grid?: number } = {}): Melody | null {
-  const sung = segment(frames);
+  const sung = tidy(segment(cleanFrames(frames)));
   if (!sung.length) return null;
   const timeSig = opts.timeSig ?? [4, 4];
+  snapToKey(sung, detectKey(sung));
   const bpm = opts.bpm ?? estimateTempo(sung);
-  const origin = opts.origin ?? sung[0].start;
+  let origin = opts.origin ?? sung[0].start;
+  // free tempo: line the bar lines up with the strongest notes (a short first note may be a pickup)
+  if (opts.origin === undefined) origin = bestDownbeat(sung, bpm, timeSig);
   const notes = quantize(sung, bpm, origin, timeSig, opts.grid ?? 0.5);
   const barBeats = timeSig[0] * (4 / timeSig[1]);
   const total = notes.reduce((a, n) => Math.max(a, n.beat + n.beats), 0);

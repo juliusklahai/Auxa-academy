@@ -7,6 +7,7 @@ import { freqToMidiFloat, midiToName } from '../core/music';
 import { harmonize } from '../compose/harmony';
 import { melodyXml, playbackNotes, satbXml } from '../compose/score';
 import { keyInfo, transcribe, type Melody, type PitchFrame } from '../compose/transcribe';
+import { framesFromFile } from '../compose/audioFile';
 import { mic, type MicFrame } from '../input/mic';
 import { Icon } from './Icon';
 import { ScoreView } from './ScoreView';
@@ -22,6 +23,14 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
   const [click, setClick] = useState(true);
   const [meter, setMeter] = useState<'4/4' | '3/4'>('4/4');
   const [grid, setGrid] = useState('0.5');
+  /** how to read the rhythm: as heard, or every note twice as long / half as long */
+  const [feel, setFeel] = useState<'1' | '0.5' | '2'>('1');
+  const [take, setTake] = useState<string | null>(null); // the recording itself, to compare with the score
+  const [busy, setBusy] = useState(false);
+  const rec = useRef<MediaRecorder | null>(null);
+  const takeEl = useRef<HTMLAudioElement | null>(null);
+  const fileIn = useRef<HTMLInputElement>(null);
+  const heard = useRef<{ free: boolean; bpm: number; origin?: number } | null>(null);
   const [view, setView] = useState<'melody' | 'satb'>('melody');
   const [title, setTitle] = useState('My song');
   const [mel, setMel] = useState<Melody | null>(null);
@@ -53,13 +62,15 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
     return () => { mic.frameListeners.delete(l); };
   }, [phase]);
 
-  useEffect(() => () => { timers.current.forEach(clearTimeout); metronome.stop(); audio.stopAll(); onRecording?.(false); }, []); // eslint-disable-line
+  useEffect(() => () => { timers.current.forEach(clearTimeout); metronome.stop(); audio.stopAll(); mic.singing = false; if (rec.current && rec.current.state !== 'inactive') rec.current.stop(); onRecording?.(false); }, []); // eslint-disable-line
   useEffect(() => { onRecording?.(phase === 'rec' || phase === 'countin'); }, [phase]); // eslint-disable-line
 
   const record = async () => {
     if (!micOn) { try { await startMic(); } catch { return; } }
     audio.stopAll(); setPlaying(false);
-    frames.current = []; setMel(null); setKeyOverride('');
+    frames.current = []; setMel(null); setKeyOverride(''); setFeel('1');
+    mic.singing = true;
+    startTake();
     const beatMs = 60000 / bpm;
     if (free) { setPhase('rec'); return; }
     metronome.start(bpm, ts[0]);
@@ -69,13 +80,75 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
     timers.current.push(window.setTimeout(() => { setPhase('rec'); setCount(0); if (!click) metronome.stop(); }, 80 + ts[0] * beatMs));
   };
 
+  const startTake = () => {
+    if (take) URL.revokeObjectURL(take);
+    setTake(null);
+    const st = mic.mediaStream;
+    if (!st || typeof MediaRecorder === 'undefined') return;
+    try {
+      const r = new MediaRecorder(st), chunks: Blob[] = [];
+      r.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+      r.onstop = () => setTake(URL.createObjectURL(new Blob(chunks, { type: r.mimeType || 'audio/webm' })));
+      r.start(); rec.current = r;
+    } catch { rec.current = null; }
+  };
+
+  /** Readings -> melody, honoring the rhythm reading chosen. */
+  const write = (fr: PitchFrame[], h: { free: boolean; bpm: number; origin?: number }, f: string) => {
+    const k = +f;
+    if (h.free) {
+      const auto = transcribe(fr, { timeSig: ts, grid: +grid });
+      if (!auto || k === 1) return auto;
+      return transcribe(fr, { bpm: Math.round(auto.bpm * k), timeSig: ts, grid: +grid });
+    }
+    return transcribe(fr, { bpm: h.bpm * k, origin: h.origin, timeSig: ts, grid: +grid });
+  };
+
   const stop = () => {
     timers.current.forEach(clearTimeout); timers.current = [];
     metronome.stop();
+    mic.singing = false;
+    if (rec.current && rec.current.state !== 'inactive') rec.current.stop();
+    rec.current = null;
     (window as unknown as { __s2s?: PitchFrame[] }).__s2s = frames.current; // for troubleshooting
-    const m = transcribe(frames.current, free ? { timeSig: ts, grid: +grid } : { bpm, origin: origin.current, timeSig: ts, grid: +grid });
+    heard.current = free ? { free: true, bpm } : { free: false, bpm, origin: origin.current };
+    const m = write(frames.current, heard.current, '1');
     setMel(m); setPhase('done'); setLive(null);
     if (m && free) setBpm(m.bpm);
+  };
+
+  const reread = (f: '1' | '0.5' | '2') => {
+    setFeel(f);
+    if (!heard.current) return;
+    setMel(write(frames.current, heard.current, f));
+  };
+
+  /** Score from an audio file: a voice memo, a recording of you singing. */
+  const fromFile = async (file: File) => {
+    setBusy(true); audio.stopAll(); setPlaying(false); setMel(null); setKeyOverride(''); setFeel('1');
+    try {
+      const ctx = audio.ensure();
+      const fr = await framesFromFile(file, ctx, audio.a4);
+      frames.current = fr;
+      heard.current = { free: true, bpm };
+      if (take) URL.revokeObjectURL(take);
+      setTake(URL.createObjectURL(file));
+      const name = file.name.replace(/\.[^.]+$/, '');
+      if (name) setTitle(name.slice(0, 60));
+      const m = write(fr, heard.current, '1');
+      setMel(m); setPhase('done');
+      if (m) setBpm(m.bpm);
+    } catch {
+      setMel(null); setPhase('done');
+    } finally { setBusy(false); }
+  };
+
+  const hearTake = () => {
+    const el = takeEl.current;
+    if (!el) return;
+    if (!el.paused) { el.pause(); return; }
+    audio.stopAll(); setPlaying(false);
+    el.currentTime = 0; void el.play();
   };
 
   const melody = useMemo(() => {
@@ -114,13 +187,15 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
         <div>
           <span className="s2s-kicker"><i />New</span>
           <b className="s2s-title">Sing to score</b>
-          <p className="muted small">Sing a tune. Maestro writes down every note and how long you held it, then can arrange it for four voices.</p>
+          <p className="muted small">Sing a tune, or load a recording of yourself singing. Maestro writes down every note and how long you held it, then can arrange it for four voices.</p>
         </div>
         {!recording && (
           <button className="btn lime s2s-rec" onClick={() => void record()}><span className="rec-dot" />{phase === 'done' ? 'Sing again' : 'Start singing'}</button>
         )}
         {recording && <button className="btn dark s2s-rec" onClick={stop}><span className="stop-sq" />Stop</button>}
       </div>
+      <input ref={fileIn} type="file" accept="audio/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void fromFile(f); }} />
+      {take && <audio ref={takeEl} src={take} preload="auto" hidden />}
 
       {!recording && phase !== 'done' && (
         <div className="s2s-opts">
@@ -137,6 +212,7 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
             <Select value={grid} aria-label="Shortest note" onChange={(e) => setGrid(e.target.value)}><option value="1">Quarter</option><option value="0.5">Eighth</option><option value="0.25">Sixteenth</option></Select>
           </label>
           {!free && <label className="s2s-check"><input type="checkbox" checked={click} onChange={(e) => setClick(e.target.checked)} /> Click while I sing</label>}
+          <button className="btn s2s-file" disabled={busy} onClick={() => fileIn.current?.click()}><Icon name="upload" size={15} />{busy ? 'Listening to it…' : 'Use a recording'}</button>
         </div>
       )}
 
@@ -166,6 +242,9 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
               <optgroup label="Major">{KEYS.map((k) => <option key={`M${k}`} value={`${k}:major`}>{keyInfo(k, 'major').name}</option>)}</optgroup>
               <optgroup label="Minor">{KEYS.map((k) => <option key={`m${k}`} value={`${(k + 9) % 12}:minor`}>{keyInfo((k + 9) % 12, 'minor').name}</option>)}</optgroup>
             </Select>
+            <Select value={feel} aria-label="Rhythm" onChange={(e) => reread(e.target.value as '1')}>
+              <option value="1">Rhythm as heard</option><option value="0.5">Longer notes (half time)</option><option value="2">Shorter notes (double time)</option>
+            </Select>
             <input className="s2s-name" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Song title" />
             <span className="muted small s2s-stats">{noteCount} notes · {melody.bars} bars · {melody.bpm} bpm{view === 'satb' && harmony?.melodyShift ? ` · tune written ${harmony.melodyShift > 0 ? 'an octave up' : 'an octave down'} for soprano` : ''}</span>
           </div>
@@ -175,6 +254,8 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
           <div className="s2s-score"><ScoreView xml={xml} zoom={0.85} /></div>
           <div className="s2s-actions">
             <button className="btn dark" onClick={play}><Icon name={playing ? 'pause' : 'play'} size={15} />{playing ? 'Stop' : 'Play it back'}</button>
+            {take && <button className="btn" onClick={hearTake}><Icon name="mic" size={15} />Hear my recording</button>}
+            <button className="btn" onClick={() => fileIn.current?.click()} disabled={busy}><Icon name="upload" size={15} />Use a recording</button>
             <button className="btn" onClick={() => openScore(xml)}><Icon name="note" size={15} />Practice in My Music</button>
             <button className="btn" onClick={download}><Icon name="doc" size={15} />Download MusicXML</button>
           </div>

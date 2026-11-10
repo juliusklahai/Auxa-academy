@@ -4,6 +4,7 @@
 import { nameToMidi } from '../core/music';
 import type { Clef, Exercise, Hand, Lesson, ScoreEvent, SkillId } from '../core/types';
 import { MORE_LESSONS, type LessonDef } from './levels';
+import { ADVANCED_LESSONS } from './advanced';
 import { playAlongs, type PlayAlongSpec } from './playalong';
 
 /** Build events from "C4:1 D4:1 E4:2 R:1 C4+E4+G4:4" (name:beats, R = rest, + = chord). */
@@ -284,7 +285,7 @@ const BASE_PLAYALONG: Record<string, PlayAlongSpec> = {
 
 const withPlayAlong = (l: Lesson, spec?: PlayAlongSpec): Lesson => (spec ? { ...l, exercises: [...l.exercises, ...playAlongs(l.id, spec)] } : l);
 const pianoBase = BASE_LESSONS.filter((l) => (l.track ?? 'piano') === 'piano').map((l) => withPlayAlong(l, BASE_PLAYALONG[l.id]));
-const more = MORE_LESSONS.map((l: LessonDef) => withPlayAlong(l, l.playAlong));
+const more = [...MORE_LESSONS, ...ADVANCED_LESSONS].map((l: LessonDef) => withPlayAlong(l, l.playAlong));
 export const LESSONS: Lesson[] = [...pianoBase, ...more, ...BASE_LESSONS.filter((l) => l.track === 'voice')];
 
 export const lessonById = (id: string) => LESSONS.find((l) => l.id === id);

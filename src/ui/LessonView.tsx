@@ -16,6 +16,7 @@ import { Icon } from './Icon';
 import { Piano, type KeyMark } from './Piano';
 import { bumpProgress, progress, setSettings, useProgressVersion, useSettings } from './settings';
 import { Staff } from './Staff';
+import { EarDrill } from './EarDrill';
 import { PitchRoll } from './PitchRoll';
 import { isPhone, useFocusMode } from './focus';
 import { DockFab, FocusBar, FloatHead, RotateHint } from './FocusBar';
@@ -59,35 +60,71 @@ export function LessonView({ lesson, onNextLesson, initialExercise }: { lesson: 
     <div className="page lesson">
       {phase === 'teach'
         ? <TeachPanel lesson={lesson} step={step} setStep={setStep} onDone={() => setPhase('practice')} chips={chips} />
-        : <PracticePanel key={ex.id} lesson={lesson} exercise={ex} index={exIdx} chips={chips} onNext={exIdx < lesson.exercises.length - 1 ? () => setExIdx(exIdx + 1) : onNextLesson} />}
+        : ex.drill
+          ? <DrillPanel key={ex.id} lesson={lesson} exercise={ex} index={exIdx} chips={chips} onNext={exIdx < lesson.exercises.length - 1 ? () => setExIdx(exIdx + 1) : onNextLesson} />
+          : <PracticePanel key={ex.id} lesson={lesson} exercise={ex} index={exIdx} chips={chips} onNext={exIdx < lesson.exercises.length - 1 ? () => setExIdx(exIdx + 1) : onNextLesson} />}
     </div>
+  );
+}
+
+function DrillPanel({ lesson, exercise, index, chips, onNext }: { lesson: Lesson; exercise: Exercise; index: number; chips: React.ReactNode; onNext?: () => void }) {
+  useProgressVersion();
+  const p = progress.ex(exercise.id);
+  return (
+    <>
+      <section className="head-row">
+        <div className="id-card">
+          <span className="avatar"><Icon name="ear" size={22} /></span>
+          <div><small>Exercise {index + 1} of {lesson.exercises.length}</small><b>{exercise.title}</b></div>
+        </div>
+        <div className="metrics">
+          <Metric label="Goal" value={exercise.objective} big />
+          <Metric label="Best" value={p.best} unit="%" />
+          <Metric label="Pass mark" value={exercise.passScore} unit="%" />
+        </div>
+      </section>
+      {chips}
+      <EarDrill exercise={exercise} onNext={onNext} />
+    </>
   );
 }
 
 function TeachPanel({ lesson, step, setStep, onDone, chips }: { lesson: Lesson; step: number; setStep: (n: number) => void; onDone: () => void; chips: React.ReactNode }) {
   const s = lesson.teach[step];
   const settings = useSettings();
-  const [demo, setDemo] = useState<number | null>(null);
-  const show = s.show ?? s.play ?? [];
-  const [lo, hi] = rangeFor([...show, ...(s.play ?? [])]);
+  const [demo, setDemo] = useState<Set<number>>(new Set());
+  const seq = s.seq ?? (s.compare ? s.compare[s.compare.length - 1].seq : undefined);
+  const show = s.show ?? s.play ?? (seq ? [...new Set(seq.slice(0, 1).flat())] : []);
+  const [lo, hi] = rangeFor([...show, ...(s.play ?? []), ...(seq ?? []).flat()]);
   const marks = new Map<number, KeyMark>(show.map((m) => [m, 'show']));
-  if (demo !== null) marks.set(demo, 'demo');
+  demo.forEach((m) => marks.set(m, 'demo'));
   useEffect(() => {
     setExpected(null);
-    audio.onAppNote = (m, on) => setDemo(on ? m : null);
+    audio.onAppNote = (m, on) => setDemo((d) => { const n = new Set(d); if (on) n.add(m); else n.delete(m); return n; });
     return () => { audio.onAppNote = null; audio.stopAll(); };
   }, []);
+  const beatsOf = (q: number[][]) => s.seqBeats ?? (q.some((c) => c.length > 1) ? 2 : 1);
+  const playSeq = (q: number[][]) => {
+    audio.stopAll();
+    const b = beatsOf(q) * 480;
+    audio.playNotes(q.flatMap((c, i) => c.map((m) => ({ midi: m, startMs: i * b, durMs: b * 0.94 }))));
+  };
   const play = () => {
+    if (seq) return playSeq(seq);
     if (!s.play) return;
     audio.stopAll();
     audio.playNotes(s.play.map((m, i) => ({ midi: m, startMs: s.sequential ? i * 550 : 0, durMs: s.sequential ? 500 : 1500 })));
   };
   const seqShow = s.sequential ? (s.play ?? show) : show;
   const staffEvents = useMemo(() => {
+    if (seq) { const b = beatsOf(seq); return seq.slice(0, 8).map((c, i) => ({ pitches: c, beat: i * b, beats: b })); }
     const notes = s.sequential || show.length > 4 ? seqShow.slice(0, 8) : show;
     return s.sequential || show.length > 4 ? notes.map((m, i) => ({ pitches: [m], beat: i, beats: 1 })) : [{ pitches: notes, beat: 0, beats: 4 }];
   }, [step]); // eslint-disable-line
-  const clef = show.length && Math.max(...show) < 60 ? 'bass' : 'treble';
+  const allStaff = staffEvents.flatMap((e) => e.pitches);
+  const grand = allStaff.some((m) => m < 57) && allStaff.some((m) => m > 64);
+  const clef = allStaff.length && Math.max(...allStaff) < 60 ? 'bass' : 'treble';
+  const paras = s.body.split(/\n\n+/);
   return (
     <>
       <section className="head-row">
@@ -107,18 +144,26 @@ function TeachPanel({ lesson, step, setStep, onDone, chips }: { lesson: Lesson; 
         <div className="card teach-card">
           <div className="stage-row"><span>See it</span><span>Hear it</span><span>Understand it</span></div>
           <h2>{s.title}</h2>
-          <p>{s.body}</p>
+          {paras.map((p, i) => <p key={i}>{p}</p>)}
+          {s.tips && <ul className="teach-tips">{s.tips.map((t, i) => <li key={i}>{t}</li>)}</ul>}
+          {s.compare && (
+            <div className="teach-compare">
+              {s.compare.map((c, i) => <button key={i} className={`btn ${i === s.compare!.length - 1 ? 'lime' : ''}`} onClick={() => playSeq(c.seq)}><Icon name="play" size={14} />{c.label}</button>)}
+            </div>
+          )}
         </div>
         <div className="card staff-card">
           <div className="card-head"><b>On the staff</b></div>
-          {show.length > 0 ? <Staff events={staffEvents} clef={clef} timeSig={[4, 4]} highContrast={settings.highContrast} measureWidth={staffEvents.length > 1 ? 210 : 160} showTime={false} /> : <p className="muted">This step is about your body and the keyboard. No notation yet.</p>}
+          {staffEvents.length > 0 && allStaff.length > 0
+            ? <Staff events={staffEvents} clef={clef} grand={grand} timeSig={[4, 4]} highContrast={settings.highContrast} measureWidth={staffEvents.length > 1 ? 210 : 160} showTime={false} height={grand ? 260 : undefined} />
+            : <p className="muted">This step is about listening and thinking. No notation needed.</p>}
         </div>
       </section>
       <section className="card keys-card">
         <Piano lo={lo} hi={hi} marks={marks} labels={settings.labels} scrollTo={show[0]} />
       </section>
       <div className="dock">
-        <button className="dock-btn lime" onClick={play} disabled={!s.play}><Icon name="play" size={18} /></button>
+        <button className="dock-btn lime" onClick={play} disabled={!s.play && !seq}><Icon name="play" size={18} /></button>
         <span className="dock-label">Hear it</span>
         <span className="dock-sep" />
         <div className="dock-steps">
@@ -341,7 +386,13 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
     if (session.current.state === 'LISTENING' || session.current.state === 'COUNT_IN') session.current = new AssessmentSession(exercise, bpm);
     const mspb = msPerBeat(bpm);
     const sw = exercise.swing;
-    const end = audio.playNotes(exercise.events.flatMap((e) => e.pitches.map((m) => ({ midi: m, startMs: feelBeat(e.beat, sw) * mspb, durMs: (feelBeat(e.beat + e.beats, sw) - feelBeat(e.beat, sw)) * mspb * 0.92 }))));
+    // by ear: hear the key first (a few chords), then the phrase
+    const ctx = exercise.byEar && exercise.context ? exercise.context : [];
+    const off = ctx.length ? ctx.length * 900 + 500 : 0;
+    const end = audio.playNotes([
+      ...ctx.flatMap((c, i) => c.map((m) => ({ midi: m, startMs: i * 900, durMs: 850 }))),
+      ...exercise.events.flatMap((e) => e.pitches.map((m) => ({ midi: m, startMs: off + feelBeat(e.beat, sw) * mspb, durMs: (feelBeat(e.beat + e.beats, sw) - feelBeat(e.beat, sw)) * mspb * 0.92 }))),
+    ]);
     earDemo.current = !!exercise.byEar;
     playBacking(0, Infinity, 50);
     const bandEnd = Math.max(0, ...(exercise.backing ?? []).map((n) => (n.beat + n.beats) * mspb));
@@ -366,7 +417,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
   const [lo, hi] = rangeFor(allPitches);
   const marks = new Map<number, KeyMark>();
   const reveal = !exercise.hideLabels || s.consecutive >= 2;
-  if (curEv && s.state === 'LISTENING' && reveal) curEv.pitches.forEach((p) => marks.set(p, 'target'));
+  if (curEv && s.state === 'LISTENING' && reveal) curEv.pitches.forEach((p) => { if (!curEv.hidden?.includes(p) || s.consecutive >= 2) marks.set(p, 'target'); });
   if (exercise.mode === 'timed' && s.state === 'LISTENING' && !exercise.hideLabels) exercise.events[timedIdx]?.pitches.forEach((p) => marks.set(p, 'target'));
   held.forEach((v, k) => marks.set(k, v));
   demoKeys.forEach((k) => marks.set(k, 'demo'));
@@ -441,8 +492,9 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
               <div className="card feed panel-info" aria-live="polite">
                 <div className="card-head"><b>Teacher</b><span className={`state-pill ${s.state.toLowerCase()}`}>{s.state.replace('_', '-')}</span></div>
                 {curEv && s.state === 'LISTENING' && !exercise.hideLabels && <div className="next"><small>Next</small><b>{curEv.pitches.map(midiToName).join(' + ')}</b>{curEv.fingers && <span>finger{curEv.fingers.length > 1 ? 's' : ''} {curEv.fingers.join('-')}</span>}</div>}
+                {feed.length === 0 && !exercise.byEar && exercise.events.some((e) => e.hidden) && <p className="muted small">Some notes are hidden: work them out from the rules in this lesson, then play the whole chord. A hidden note appears when you get it. Two misses and its key lights up.</p>}
                 {feed.length === 0 && exercise.byEar && <p className="muted small">This one is by ear: the notes stay hidden. Press <b>Listen</b>, hum it back, then press <b>Start</b> and find the notes. Each one appears on the staff when you get it. Stuck twice on a note and the key lights up.</p>}
-                {feed.length === 0 && !exercise.byEar && <p className="muted small">Press <b>Demo</b> to see and hear it, then the lime <b>Start</b> button. I'll explain every mistake. Three in a row restarts the attempt, never your course.</p>}
+                {feed.length === 0 && !exercise.byEar && !exercise.events.some((e) => e.hidden) && <p className="muted small">Press <b>Demo</b> to see and hear it, then the lime <b>Start</b> button. I'll explain every mistake. Three in a row restarts the attempt, never your course.</p>}
                 {feed.map((f) => <div key={f.id} className={`fb ${f.kind}`}><span className="ic">{icon(f.kind)}</span>{f.text}</div>)}
               </div>
             )}

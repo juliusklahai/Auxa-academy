@@ -107,3 +107,28 @@ export class OnsetTracker {
 
   reset() { this.candidate = -1; this.count = 0; this.emitted = -1; this.lastRms = 0; this.uncertainFrames = 0; }
 }
+
+/** Amplitude of one frequency in a Hann-windowed buffer (a single DFT bin). */
+function toneAmp(buf: Float32Array, sampleRate: number, f: number): number {
+  const n = buf.length, w = 2 * Math.PI * f / sampleRate;
+  let re = 0, im = 0;
+  for (let i = 0; i < n; i++) {
+    const v = buf[i] * (0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (n - 1)));
+    re += v * Math.cos(w * i); im -= v * Math.sin(w * i);
+  }
+  return Math.hypot(re, im) / n;
+}
+
+/**
+ * Octave check for voices. A soft vowel can have a fundamental much weaker than its second harmonic, and
+ * then the period finder reports the note an octave too high. If there is real energy at half the found
+ * frequency (and at one and a half times it), those are the voice's 1st and 3rd harmonics: the true note
+ * is an octave lower.
+ */
+export function fixOctave(buf: Float32Array, sampleRate: number, freq: number, minFreq = 70): number {
+  if (!(freq > 0) || freq / 2 < minFreq) return freq;
+  const main = Math.hypot(toneAmp(buf, sampleRate, freq), toneAmp(buf, sampleRate, freq * 2));
+  if (main <= 0) return freq;
+  const sub = Math.hypot(toneAmp(buf, sampleRate, freq / 2), toneAmp(buf, sampleRate, freq * 1.5));
+  return sub / main > 0.14 ? freq / 2 : freq;
+}

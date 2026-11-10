@@ -3,7 +3,7 @@
 
 import { audio } from '../audio/engine';
 import { freqToNote } from '../core/music';
-import { OnsetTracker, yin } from './pitch';
+import { fixOctave, OnsetTracker, yin } from './pitch';
 import { PolyTracker, type SoundProfile } from './poly';
 import { getExpected } from './expect';
 
@@ -30,6 +30,8 @@ export class MicListener {
   onFrame: ((f: MicFrame) => void) | null = null;
   /** additional frame subscribers (pitch roll, voice studio) */
   frameListeners = new Set<(f: MicFrame) => void>();
+  /** Sing to score is listening: use the voice octave check even in piano mode */
+  singing = false;
   private centsHist: number[] = [];
   onNote: ((n: MicNote) => void) | null = null;
   onChord: ((c: MicChord) => void) | null = null;
@@ -42,6 +44,8 @@ export class MicListener {
   deviceId = '';
   onUncertain: (() => void) | null = null;
   get active() { return !!this.stream; }
+  /** the live microphone stream (for recording a take), null when off */
+  get mediaStream(): MediaStream | null { return this.stream; }
 
   async start(): Promise<void> {
     if (this.stream) return;
@@ -77,6 +81,7 @@ export class MicListener {
     // Tuner / level meter (monophonic YIN on the latest 2048 samples)
     const [minF, maxF] = this.settings.mode === 'voice' ? [70, 1100] : [55, 2100];
     const est = yin(this.buf.subarray(2048), audio.ctx.sampleRate, minF, maxF);
+    if (this.settings.mode === 'voice' || this.singing) est.freq = fixOctave(this.buf.subarray(2048), audio.ctx.sampleRate, est.freq, 70);
     const { midi, cents } = est.freq > 0 ? freqToNote(est.freq, audio.a4) : { midi: -1, cents: 0 };
     const frame = { freq: est.freq, midi, cents, confidence: est.confidence, rms: est.rms, suppressed };
     this.onFrame?.(frame);

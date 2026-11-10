@@ -260,6 +260,8 @@ html.theme-light button.ex-pill:hover:not(:disabled) { color: #fafafa; }
 .rec-dot { width: 12px; height: 12px; border-radius: 50%; background: #e5484d; box-shadow: 0 0 0 3px rgba(229,72,77,.25); }
 .stop-sq { width: 11px; height: 11px; border-radius: 2px; background: currentColor; }
 .s2s-opts { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: flex-end; }
+.s2s-file { margin-left: auto; }
+@media (max-width: 720px) { .s2s-file { grid-column: 1 / -1; margin-left: 0; justify-content: center; } }
 .s2s-opt { display: grid; gap: 6px; font-size: 12px; color: var(--muted); font-weight: 500; }
 .s2s-opt .mselect { min-width: 150px; }
 .s2s-opt input[type=range] { width: 180px; }
@@ -289,3 +291,42 @@ html.theme-light button.ex-pill:hover:not(:disabled) { color: #fafafa; }
   .s2s-opt, .s2s-opt .mselect, .s2s-opt input[type=range] { width: 100%; }
   .s2s-opts { display: grid; grid-template-columns: 1fr 1fr; }
 }
+
+/* ---------- ear-training drills ---------- */
+.drill { display: flex; flex-direction: column; gap: 16px; padding: 22px; }
+.drill-top { display: flex; align-items: center; gap: 14px; justify-content: space-between; }
+.drill-round { font-size: 13px; color: var(--muted); }
+.drill-dots { display: flex; gap: 5px; flex-wrap: wrap; }
+.drill-dots i { width: 18px; height: 5px; border-radius: 3px; background: var(--hair); }
+.drill-dots i.past { background: var(--lime, #d7f25c); opacity: .65; }
+.drill-dots i.now { background: var(--lime, #d7f25c); }
+.drill-prompt { font-size: 20px; line-height: 1.35; margin: 0; max-width: 46ch; }
+.drill-listen { display: flex; gap: 10px; flex-wrap: wrap; }
+.drill-opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.drill-opts.many { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
+.drill-opt { padding: 14px 10px; border-radius: 14px; border: 1px solid var(--hair); background: var(--pillbg); color: inherit; font: inherit; font-size: 15px; cursor: pointer; transition: transform .12s, background .15s; }
+.drill-opt:hover:not(:disabled) { transform: translateY(-1px); border-color: var(--lime, #d7f25c); }
+.drill-opt:disabled { cursor: default; }
+.drill-opt.wrong { opacity: .4; text-decoration: line-through; }
+.drill-opt.right { background: #2f9e5b; border-color: #2f9e5b; color: #fff; }
+.drill-opt.shown { background: var(--lime, #d7f25c); color: var(--on-lime, #141414); border-color: transparent; }
+.drill-slots { display: flex; gap: 10px; }
+.drill-slot { min-width: 64px; padding: 10px 12px; border-radius: 12px; border: 1px dashed var(--hair); text-align: center; font-weight: 600; }
+.drill-slot.now { border-style: solid; border-color: var(--lime, #d7f25c); }
+.drill-slot.right { background: rgba(47, 158, 91, .18); border-color: #2f9e5b; border-style: solid; }
+.drill-slot.wrong { background: rgba(214, 158, 46, .16); border-color: #d69e2e; border-style: solid; }
+.drill-explain { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 16px; border-radius: 14px; background: rgba(214, 158, 46, .12); line-height: 1.45; }
+.drill-explain.ok { background: rgba(47, 158, 91, .14); }
+.drill-explain .btn { margin-left: auto; }
+.drill-hint { margin: 0; }
+.drill-done { align-items: center; text-align: center; padding: 40px 22px; }
+.drill-big { font-size: 64px; font-weight: 600; letter-spacing: -.03em; line-height: 1; }
+.drill-big small { font-size: 26px; color: var(--muted); }
+.drill-actions { display: flex; gap: 10px; }
+/* teach steps: tips and A/B listening */
+.teach-tips { margin: 12px 0 0; padding-left: 18px; display: grid; gap: 6px; line-height: 1.45; }
+.teach-tips li::marker { color: var(--lime, #d7f25c); }
+.teach-compare { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.teach-card p + p { margin-top: 10px; }
+.teach-card p { color: var(--ink2); }
+html.theme-dark .dock-text.light { background: #f4f4f2; color: #141414; }

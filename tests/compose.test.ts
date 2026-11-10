@@ -3,6 +3,7 @@ import { segment, estimateTempo, quantize, detectKey, transcribe, type PitchFram
 import { harmonize, chordPcs, RANGE } from '../src/compose/harmony';
 import { melodyXml, satbXml } from '../src/compose/score';
 import { parseMusicXml } from '../src/musicxml/parse';
+import { framesFromSamples } from '../src/compose/audioFile';
 
 const parse = (xml: string) => parseMusicXml(new DOMParser().parseFromString(xml, 'text/xml') as unknown as Document, xml);
 let seed = 3; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
@@ -131,5 +132,33 @@ describe('Sing to score: MusicXML', () => {
     const sync = transcribe(sing([[60, 3], [64, 2], [67, 3]], 90), { bpm: 90, origin: 300 })!;
     const s2 = parse(melodyXml(sync, 't'));
     expect(s2.notes.map((n) => [n.midi, n.durQ])).toEqual([[60, 3], [64, 2], [67, 3]]);
+  });
+});
+
+describe('Sing to score: from real audio', () => {
+  // a low male voice where the fundamental is weak (a soft "oo"): pitch trackers love to jump an octave up
+  const synth = (tune: [number, number][], bpm: number, sr = 16000) => {
+    const beat = 60 / bpm, total = tune.reduce((a, [, b]) => a + b * beat, 0) + 0.6;
+    const x = new Float32Array(Math.ceil(total * sr));
+    let t0 = 0.3, ph = 0;
+    for (const [m, b] of tune) {
+      const dur = b * beat, n0 = Math.round(t0 * sr), n1 = Math.round((t0 + dur - 0.08) * sr);
+      for (let i = n0; i < n1; i++) {
+        const age = (i - n0) / sr, f = 440 * 2 ** ((m - 69) / 12) * 2 ** (0.3 * Math.sin(2 * Math.PI * 5.5 * age) / 12);
+        ph += 2 * Math.PI * f / sr;
+        const env = Math.min(1, age / 0.04) * Math.min(1, (n1 - i) / sr / 0.03);
+        x[i] = env * 0.3 * (0.22 * Math.sin(ph) + 1 * Math.sin(2 * ph) + 0.15 * Math.sin(3 * ph));
+      }
+      t0 += dur;
+    }
+    return x;
+  };
+  it('writes the right notes and lengths from a low voice with a weak fundamental', () => {
+    const tune: [number, number][] = [[53, 1], [55, 1], [57, 2], [55, 1], [53, 1], [52, 1], [53, 1], [50, 2], [48, 2], [53, 4]];
+    const m = transcribe(framesFromSamples(synth(tune, 80), 16000), { timeSig: [4, 4], grid: 0.5 })!;
+    const written = m.notes.filter((n) => n.midi !== null);
+    expect(written.map((n) => n.midi)).toEqual(tune.map(([x]) => x));
+    expect(written.map((n) => n.beats).slice(0, -1)).toEqual(tune.map(([, b]) => b).slice(0, -1));
+    expect(Math.abs(m.bpm - 80)).toBeLessThan(5);
   });
 });

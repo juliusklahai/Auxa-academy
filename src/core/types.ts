@@ -22,6 +22,8 @@ export interface ScoreEvent {
   hands?: Hand[];         // per-pitch hand when one event has notes for both hands
   /** written length per hand when both hands start together with different note values (drawing only) */
   handBeats?: Partial<Record<Hand, number>>;
+  /** pitches you have to work out yourself: hidden on the staff until you play them (complete the voicing) */
+  hidden?: number[];
 }
 
 export type AssessMode = 'wait' | 'timed';
@@ -48,6 +50,10 @@ export interface Exercise {
   swing?: boolean;
   /** spell black keys as flats on the staff (blues, jazz, flat keys) */
   flats?: boolean;
+  /** ear-training drill instead of reading a score (see DrillSpec) */
+  drill?: DrillSpec;
+  /** chords played before a by-ear phrase so you hear the key first */
+  context?: number[][];
   voice?: boolean;        // sung exercise (microphone, voice mode)
   octaveFree?: boolean;   // accept the right note in any octave (men singing treble-clef melodies)
   centsTolerance?: number;// intonation tolerance for sung notes (default 30)
@@ -79,6 +85,14 @@ export interface BackNote {
 export interface TeachStep {
   title: string;
   body: string;
+  /** short points shown as a list under the text */
+  tips?: string[];
+  /** a passage to hear: chords (or single notes) one after another */
+  seq?: number[][];
+  /** beats per item in seq (default 1 for notes, 2 for chords) and tempo */
+  seqBeats?: number;
+  /** A/B listening: hear the wrong way and the right way */
+  compare?: { label: string; seq: number[][] }[];
   /** Notes to highlight/play for SEE IT and HEAR IT. */
   show?: number[];
   play?: number[];
@@ -145,4 +159,27 @@ export interface AssessmentReport {
   problemEvents: number[];
   advice: string[];
   hadThreeConsecutive: boolean;
+}
+
+/**
+ * Ear-training drills. Each round plays something and you answer by tapping a choice or playing it on
+ * the keys. Context (a cadence in the key) is played first when the answer depends on the key.
+ * - tonic: a phrase in a random key, find the home note
+ * - degree: the key, then one note: which scale degree (do re mi...)
+ * - interval: two notes, name the distance
+ * - quality: one chord, name its type
+ * - progression: four chords in a key, name each one (I ii iii IV V vi...)
+ * - bass: four chords, play their bass notes (roots)
+ */
+export type DrillKind = 'tonic' | 'degree' | 'interval' | 'quality' | 'progression' | 'bass';
+export interface DrillSpec {
+  kind: DrillKind;
+  /** answers that can come up: degrees '1'..'7' (and 'b3','b7'...), intervals 'm2'..'P8', qualities 'maj','min','dim','aug','maj7','m7','7','m7b5','dim7', progressions like 'I-V-vi-IV' */
+  pool: string[];
+  rounds?: number;
+  /** tonics (midi) to use; default a few comfortable keys */
+  keys?: number[];
+  mode?: 'major' | 'minor';
+  /** interval style */
+  style?: 'up' | 'down' | 'together' | 'mixed';
 }

@@ -146,6 +146,9 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
           const col = hide ? 'rgba(0,0,0,0)' : it.ghost ? (rest ? '#c9c7c0' : '#a9a7a0') : highContrast && st === 'pending' ? '#000' : COLORS[st];
           n.setStyle({ fillStyle: col, strokeStyle: col });
           if (hide) n.setLedgerLineStyle({ fillStyle: col, strokeStyle: col });
+          // work-it-out notes inside a chord: invisible until found
+          const hid = it.idx !== null && !it.ghost ? events[it.idx]?.hidden : undefined;
+          if (hid?.length && !rest && st !== 'correct') sorted.forEach((p, k) => { if (hid.includes(p)) n.setKeyStyle(k, { fillStyle: 'rgba(0,0,0,0)', strokeStyle: 'rgba(0,0,0,0)' }); });
           return { n, idx: it.ghost ? null : it.idx };
         });
         const voice = new Voice({ num_beats: timeSig[0], beat_value: timeSig[1] }).setMode(Voice.Mode.SOFT);
