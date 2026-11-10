@@ -108,3 +108,65 @@ html.theme-dark .spark.empty { background: repeating-linear-gradient(135deg, #2a
 html.theme-dark .spark { background-color: #262628; }
 html.theme-dark .bar .track, html.theme-dark .bar > div:nth-child(2) { background: #333336; }
 html.theme-dark input[type=range] { accent-color: #e4e4e7; }
+
+/* ======================================================================
+   Contrast: anything on lime, white or another light surface uses dark
+   text and icons in BOTH themes; lime is never used as text on light.
+   ====================================================================== */
+:root { --on-lime: #141414; --on-light: #18181b; --deep: #1f1f1d; }
+
+/* lime surfaces → dark text/icons */
+.node.open, .dock-btn.lime, .dock-chip.on, .dock-text.lime, .dot-btn.on, .cal-dot i, .stage-row span:first-child,
+.state-pill.listening, .vrow .dotc, .fing.on, .hands-chip.on, .btn.lime, .acct-btn.pro .avatar.sm, .plan .tag, .tier .tag,
+.pro-tag.plus, .land-kicker, .land-ic, .land-plan .tag, .auth-ok, .fab.lime, .nav-io.live, .pill.live, .chip.on .badge,
+.tabbar button.on .tb-ic, .lp-tag, .lg-tick, .lg-days i, .ps-check.done, .umenu-item.upgrade, .key.target, .key.show,
+.btn.lime *, .fab.lime *, .dock-btn.lime *, .node.open *, .vrow .dotc *, .tabbar button.on .tb-ic * { color: var(--on-lime) !important; }
+.dock-btn.lime svg, .fab.lime svg, .node.open svg, .vrow .dotc svg, .tabbar button.on .tb-ic svg, .btn.lime svg, .nav-io.live svg { stroke: var(--on-lime); color: var(--on-lime); }
+
+/* dark chips that show lime text keep a truly dark background in dark mode too */
+.node.done, .nice, .state-pill.completed, .key .finger, .mini.on, .vrow.done .dotc, .fbtn.on, .pro-tag, .match-target { background: var(--deep) !important; }
+.node.done, .vrow.done .dotc { color: var(--lime) !important; }
+.match-target { color: #f4f4f5 !important; }
+.match-target small { color: #a1a1aa !important; } .match-target span { color: #d4d4d8 !important; }
+
+/* white / paper surfaces → dark text in both themes */
+.state-pill, .lvl, .lvl.easy, .lvl.intermediate, .staff-view, .score-scroll, .pitch-roll, .key.white, .mix-row.mine,
+.fb, .cal-dot.on, .tip, .land-plan.plus, .pill:not(.tabpill):hover, .dock-btn.on, .dock-text.light, .dot-btn.done, .fab.on,
+.state-pill.count_in, .ex-pill .dotc, .chip.on, .setup-tabs button.on, .app-tabs button.on, .umenu-btn.on { color: var(--on-light); }
+.state-pill *, .lvl *, .staff-view *, .key.white *, .fb *, .ex-pill .dotc *, .dock-btn.on *, .fab.on * { color: inherit; }
+.lvl.advanced { color: #fff !important; }
+.fb.wrong, .fb.restart { color: #7f1d1d; } .fb.uncertain { color: #134e48; } .fb.ok, .fb.correct { color: #14532d; }
+
+/* in dark mode the "white" surfaces are real light surfaces, so the active ones stay readable */
+html.theme-dark .chip.on, html.theme-dark .setup-tabs button.on, html.theme-dark .app-tabs button.on, html.theme-dark .dock-btn.on,
+html.theme-dark .fab.on, html.theme-dark .umenu-btn.on, html.theme-dark .seg button.on { background: #f4f4f5; color: var(--on-light); }
+html.theme-dark .seg button.on { color: var(--on-light) !important; }
+html.theme-dark .btn:not(.dark):not(.lime):not(.danger) { background: #2c2c2e; color: #f4f4f5; }
+html.theme-dark .btn.dark { background: #f4f4f5; color: var(--on-light); }
+html.theme-dark .chip.dark { background: #f4f4f5; color: var(--on-light); }
+html.theme-dark .state-pill { background: #e4e4e7; }
+html.theme-dark .state-pill.listening { background: var(--lime); }
+html.theme-dark .fb { background: #2a2a2c; color: #e4e4e7; }
+html.theme-dark .fb.ok, html.theme-dark .fb.correct { background: rgba(52,199,89,.18); color: #86efac; }
+html.theme-dark .fb.wrong, html.theme-dark .fb.restart { background: rgba(239,68,68,.18); color: #fca5a5; }
+html.theme-dark .fb.uncertain { background: rgba(45,212,191,.15); color: #99f6e4; }
+html.theme-dark .fb.timing, html.theme-dark .fb.partial { background: rgba(245,158,11,.18); color: #fcd34d; }
+html.theme-dark .tip { background: rgba(227,245,58,.12); color: #ecfccb; }
+html.theme-dark .mix-row.mine { background: rgba(227,245,58,.1); color: #f4f4f5; }
+html.theme-dark .cal-dot.on { background: #f4f4f5; }
+
+/* light-grey controls become dark controls in dark mode (instead of light-on-light) */
+html.theme-dark .chip .num, html.theme-dark .chip .badge, html.theme-dark .zoom button, html.theme-dark .mini, html.theme-dark .fclose,
+html.theme-dark .inst-tags i, html.theme-dark select.inst, html.theme-dark .vrow:disabled .dotc { background: #3a3a3c; color: #e4e4e7; }
+html.theme-dark .track, html.theme-dark .meter, html.theme-dark .log-bar { background: #333336; }
+html.theme-dark .drop { background: #222224; border-color: #444448; color: #d4d4d8; }
+html.theme-dark .pill { background: #2c2c2e; color: #e4e4e7; }
+
+/* lime used as TEXT only where the surface is dark */
+html.theme-light .link.on-dark { color: var(--lime); }
+html.theme-light .lp .lp-mark i:nth-child(3), html.theme-light .appbar .lp-mark i:nth-child(3) { background: var(--lime2); }
+html.theme-dark .chip.on .badge { background: var(--lime); }
+html.theme-light { --muted: #6f6f78; }
+html.theme-dark { --muted: #8e8e97; }
+.id-card .avatar, .avatar:not(.sm) { color: var(--on-lime); }
+.umenu-who .avatar { color: var(--on-ink); }
