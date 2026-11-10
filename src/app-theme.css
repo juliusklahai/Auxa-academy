@@ -170,3 +170,81 @@ html.theme-light { --muted: #6f6f78; }
 html.theme-dark { --muted: #8e8e97; }
 .id-card .avatar, .avatar:not(.sm) { color: var(--on-lime); }
 .umenu-who .avatar { color: var(--on-ink); }
+
+/* ---------- no green focus ring; a soft neutral ring for keyboard users only ---------- */
+:focus, :focus-visible { outline: none; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:focus-visible, .mselect:focus-visible {
+  outline: none; box-shadow: 0 0 0 2px var(--bg1), 0 0 0 4px color-mix(in srgb, var(--ink) 45%, transparent); }
+input:focus, textarea:focus { outline: none; border-color: color-mix(in srgb, var(--ink) 40%, transparent) !important; }
+.auth input:focus { outline: none !important; }
+
+/* ---------- app dropdown ---------- */
+.mselect { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px 0 14px; max-width: 100%; min-width: 0; border-radius: 12px;
+  border: 1px solid var(--hair); background: var(--white); color: var(--ink); font: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer; text-align: left; transition: border-color .15s, background .15s; }
+.mselect:hover { border-color: var(--line2); }
+.mselect.open { border-color: color-mix(in srgb, var(--ink) 30%, transparent); }
+.mselect:disabled { opacity: .5; cursor: default; }
+.ms-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-prefix { color: var(--muted); }
+.ms-chev { flex: none; color: var(--muted); transition: transform .15s; }
+.mselect.open .ms-chev { transform: rotate(180deg); }
+.mselect-pop { position: fixed; z-index: 1000; overflow: auto; padding: 6px; border-radius: 16px; background: var(--card); color: var(--ink); border: 1px solid var(--hair);
+  box-shadow: 0 24px 60px -18px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.08); animation: ms-in .13s ease-out; transform-origin: top; scrollbar-width: thin; font-family: var(--font); }
+.mselect-pop.up { transform-origin: bottom; }
+@keyframes ms-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+.mselect-pop.up { animation-name: ms-in-up; } @keyframes ms-in-up { from { opacity: 0; transform: translateY(4px) scale(.98); } }
+.ms-group { padding: 10px 10px 4px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.ms-opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 10px; border-radius: 10px; font-size: 14px; cursor: pointer; }
+.ms-opt.hi { background: var(--pillbg); }
+.ms-opt.sel { font-weight: 600; }
+.ms-opt.dis { opacity: .4; cursor: default; }
+html.theme-dark .mselect-pop { background: #26262a; }
+html.theme-dark .ms-opt.hi { background: rgba(255,255,255,.07); }
+/* variants where the old select had its own look */
+.mselect.chip, .mselect.chip-select { height: 36px; border-radius: 999px; }
+.mselect.inst { height: 28px; font-size: 11.5px; padding: 0 8px 0 10px; border-radius: 8px; max-width: 150px; }
+.mselect.dock-select { height: 34px; border-radius: 99px; background: rgba(255,255,255,.1); color: #f4f4f5; border-color: transparent; }
+.kb-bar .mselect { height: 30px; font-size: 12.5px; border-radius: 99px; }
+label.field .mselect { width: 100%; height: 44px; }
+.setup-body .mselect { width: 100%; height: 44px; }
+.admin-table .mselect { height: 30px; font-size: 12.5px; }
+
+/* ---------- tooltips ---------- */
+.mtip { position: fixed; z-index: 1100; max-width: 260px; padding: 7px 11px; border-radius: 10px; background: #1f1f22; color: #f4f4f5; font: 500 12.5px/1.35 var(--font, Inter, sans-serif);
+  box-shadow: 0 10px 30px -10px rgba(0,0,0,.5); pointer-events: none; opacity: 0; transform: translateY(3px); transition: opacity .12s, transform .12s; }
+.mtip.below { transform: translateY(-3px); }
+.mtip.show { opacity: 1; transform: none; }
+html.theme-dark .mtip { background: #f4f4f5; color: #18181b; }
+
+/* ---------- lesson list on the overview (dark mode contrast) ---------- */
+html.theme-dark .ex-pill { background: #333336; color: #e9e9ec; box-shadow: none; border: 1px solid rgba(255,255,255,.06); }
+html.theme-dark .ex-pill.ok { background: #3d3d41; }
+html.theme-dark .ex-pill .dotc { background: #1c1c1e; color: #e4e4e7; }
+html.theme-dark .ex-pill .x { color: #b4b4bb; opacity: 1; }
+html.theme-dark button.ex-pill:hover:not(:disabled) { background: #f4f4f5; color: #18181b; }
+html.theme-dark button.ex-pill:hover:not(:disabled) .x { color: #52525b; }
+html.theme-dark button.ex-pill:hover:not(:disabled) .dotc { background: #18181b; color: #f4f4f5; }
+html.theme-dark button.ex-pill:disabled { opacity: .55; }
+html.theme-light button.ex-pill:hover:not(:disabled) { color: #fafafa; }
+
+/* ---------- phone vs wide controls ---------- */
+.only-phone { display: none !important; }
+@media (max-width: 700px) {
+  .only-phone { display: inline-flex !important; }
+  .only-wide { display: none !important; }
+  .lesson-filter { flex-wrap: nowrap; gap: 8px; }
+  .lesson-filter .mselect { flex: 1; height: 42px; border-radius: 99px; }
+  .lesson-filter .chip { height: 42px; flex: none; }
+  .path-select { width: 100%; height: 44px; border-radius: 14px; margin-bottom: 6px; }
+}
+
+/* ---------- microphone prompt: text, then the button ---------- */
+.card.call.stacked { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.card.call.stacked .btn { align-self: flex-start; }
+
+/* ---------- song library header ---------- */
+.shelf-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; }
+.shelf-title { display: grid; gap: 2px; } .shelf-title b { font-size: 18px; }
+.shelf-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+.shelf-filters .mselect { min-width: 170px; }
+@media (max-width: 700px) { .shelf-filters { width: 100%; } .shelf-filters .mselect { flex: 1; min-width: 0; } }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Select } from './Select';
 import { audio } from '../audio/engine';
 import { metronome } from '../audio/metronome';
 import { midiToName } from '../core/music';
@@ -89,7 +90,10 @@ function PathTimeline({ lessons: all, openLesson }: { lessons: Lesson[]; openLes
   }, [next, group]);
   return (
     <>
-    <div className="path-groups seg">{groups.map((g) => <button key={g} className={g === group ? 'on' : ''} onClick={() => setGroup(g)}>{g}<small> · Levels {[...new Set(all.filter((l) => LEVEL_GROUP[l.level] === g).map((l) => l.level))].join(', ')}</small></button>)}</div>
+    <Select className="only-phone path-select" value={group} aria-label="Lesson stage" onChange={(e) => setGroup(e.target.value)}>
+      {groups.map((g) => <option key={g} value={g}>{g} · Levels {[...new Set(all.filter((l) => LEVEL_GROUP[l.level] === g).map((l) => l.level))].join(', ')}</option>)}
+    </Select>
+    <div className="path-groups seg only-wide">{groups.map((g) => <button key={g} className={g === group ? 'on' : ''} onClick={() => setGroup(g)}>{g}<small> · Levels {[...new Set(all.filter((l) => LEVEL_GROUP[l.level] === g).map((l) => l.level))].join(', ')}</small></button>)}</div>
     <div className="path" ref={ref}>
       <div className="path-track">
         <div className="path-line" />
@@ -176,9 +180,12 @@ export function Dashboard({ openLesson }: { openLesson: (l: Lesson, ex?: number)
           <Metric label="Today" value={Math.round(today / 60)} unit="min" />
         </div>
       </section>
-      <div className="chip-row">
+      <div className="chip-row lesson-filter">
+        <Select className="only-phone" value={String(filter)} aria-label="Show lessons" onChange={(e) => { const v = e.target.value; setFilter(v === 'all' || v === 'done' ? v : (+v as 0 | 1)); }}>
+          <option value="all">All lessons</option><option value="0">Level 0</option><option value="1">Level 1</option><option value="done">Mastered ({completed.length})</option>
+        </Select>
         {(['all', 0, 1, 'done'] as const).map((f) => (
-          <button key={String(f)} className={`chip ${filter === f ? 'on' : ''}`} onClick={() => setFilter(f)}>
+          <button key={String(f)} className={`chip only-wide ${filter === f ? 'on' : ''}`} onClick={() => setFilter(f)}>
             {f === 'all' ? 'All lessons' : f === 'done' ? `Mastered (${completed.length})` : `Level ${f}`}
           </button>
         ))}
@@ -408,14 +415,14 @@ export function SettingsView() {
           <p className="small">{midiIn.supported ? (midiState || 'Not connected yet.') : 'This browser has no Web MIDI. Use Chrome or Edge on a computer, or the microphone.'}</p>
           <div className="card-head" style={{ marginTop: 18 }}><b>Microphone</b></div>
           <label className="field">What are you playing into the microphone?
-            <select value={st.micInstrument} onChange={(e) => { const v = e.target.value as typeof st.micInstrument; setSettings({ micInstrument: v, micMode: v === 'mono' || v === 'voice' ? 'voice' : 'piano' }); }}>
+            <Select value={st.micInstrument} onChange={(e) => { const v = e.target.value as typeof st.micInstrument; setSettings({ micInstrument: v, micMode: v === 'mono' || v === 'voice' ? 'voice' : 'piano' }); }}>
               <option value="piano">Acoustic piano (chords)</option>
               <option value="epiano">Digital / electric piano, stage piano (chords)</option>
               <option value="organ">Organ, harmonium, church organ (chords)</option>
               <option value="synth">Keyboard / synthesizer (chords)</option>
               <option value="mono">One-note instrument: violin, flute, sax, trumpet, guitar melody</option>
               <option value="voice">Voice (singing)</option>
-            </select>
+            </Select>
             <small className="muted">Each sound has its own detector settings. Keyboards with a USB or MIDI socket are even more precise: connect them with "Connect MIDI".</small>
           </label>
           <div className="row wrap" style={{ marginTop: 10 }}>
@@ -441,10 +448,10 @@ export function SettingsView() {
           )}
           {devices.length > 1 && (
             <label className="field">Microphone to use
-              <select value={st.micDeviceId} onChange={(e) => restartMic(() => setSettings({ micDeviceId: e.target.value }))}>
+              <Select value={st.micDeviceId} onChange={(e) => restartMic(() => setSettings({ micDeviceId: e.target.value }))}>
                 <option value="">System default</option>
                 {devices.map((d, i) => <option key={d.deviceId || i} value={d.deviceId}>{d.label || `Microphone ${i + 1}`}</option>)}
-              </select>
+              </Select>
               <small className="muted">Using Bluetooth earphones? Pick the computer's or phone's built-in microphone here. Earphones that also act as the microphone often switch to a low-quality, crackly "headset" sound.</small>
             </label>
           )}
@@ -472,11 +479,11 @@ export function SettingsView() {
         </section>}
         {sec === 'learn' && <section className="card">
           <div className="card-head"><b>Learning aids</b></div>
-          <label className="field">Key labels<select value={st.labels} onChange={(e) => setSettings({ labels: e.target.value as 'letters' })}><option value="letters">Letters (C D E)</option><option value="solfege">Solfège (Do Re Mi)</option><option value="none">None</option></select></label>
+          <label className="field">Key labels<Select value={st.labels} onChange={(e) => setSettings({ labels: e.target.value as 'letters' })}><option value="letters">Letters (C D E)</option><option value="solfege">Solfège (Do Re Mi)</option><option value="none">None</option></Select></label>
           <label className="check"><input type="checkbox" checked={st.hands} onChange={(e) => setSettings({ hands: e.target.checked })} /> Show guide hands on the keyboard</label>
           <label className="check"><input type="checkbox" checked={st.autoFocus} onChange={(e) => setSettings({ autoFocus: e.target.checked })} /> Full-screen practice when I press Start (Esc returns)</label>
           <label className="check"><input type="checkbox" checked={st.keyHints} onChange={(e) => setSettings({ keyHints: e.target.checked })} /> Show computer-keyboard letters on keys</label>
-          <label className="field">Mistake policy<select value={st.mistakePolicy} onChange={(e) => setSettings({ mistakePolicy: e.target.value as 'restart' })}><option value="restart">Challenge: 3 in a row restarts (earns mastery)</option><option value="pause">Supported: never restart (practice only)</option></select></label>
+          <label className="field">Mistake policy<Select value={st.mistakePolicy} onChange={(e) => setSettings({ mistakePolicy: e.target.value as 'restart' })}><option value="restart">Challenge: 3 in a row restarts (earns mastery)</option><option value="pause">Supported: never restart (practice only)</option></Select></label>
           <label className="check"><input type="checkbox" checked={st.highContrast} onChange={(e) => setSettings({ highContrast: e.target.checked })} /> High-contrast mode</label>
         </section>}
         {sec === 'data' && <section className="card">

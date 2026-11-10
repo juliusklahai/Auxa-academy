@@ -3,6 +3,7 @@
 // listens through MIDI / microphone / touch, colors every note, and the other parts accompany you.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Select } from './Select';
 import { AssessmentSession, type Feedback } from '../assessment/session';
 import { audio, INSTRUMENTS, type Instrument, type Drum } from '../audio/engine';
 import { SONGS, SONG_LEVELS, songXml, songByTitle, type Groove, type SongLevel } from '../songs';
@@ -496,9 +497,9 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
       <div className="chip-row">
         <button className="chip" onClick={() => pickFile()}><Icon name="plus" size={13} /> Open another</button>
         <button className="chip" onClick={() => load(demoChoraleXml(), false)}>Demo chorale</button>
-        <select className="chip chip-select" value="" onChange={(e) => { if (e.target.value) openSong(e.target.value); }} aria-label="Open a song">
-          <option value="">Songs…</option>{SONG_LEVELS.map((l) => <optgroup key={l} label={l}>{SONGS.filter((sg) => sg.level === l).map((sg) => <option key={sg.id} value={sg.id}>{sg.title}</option>)}</optgroup>)}
-        </select>
+        <Select className="chip chip-select" value="" onChange={(e) => { if (e.target.value) openSong(e.target.value); }} aria-label="Open a song" placeholder="Songs…">
+          {SONG_LEVELS.map((l) => <optgroup key={l} label={l}>{SONGS.filter((sg) => sg.level === l).map((sg) => <option key={sg.id} value={sg.id}>{sg.title}</option>)}</optgroup>)}
+        </Select>
         {lib.slice(0, 4).map((it) => <button key={it.id} className="chip" onClick={() => load(it.xml, false)}><Icon name="note" size={12} /> {it.title}</button>)}
         <button className="chip" onClick={() => { stop(); setScore(null); }}>Library</button>
         <input ref={fileIn} type="file" accept=".musicxml,.xml,.mxl" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ''; }} />
@@ -572,7 +573,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
                 <div key={t.key} className={`mix-row ${targets.has(t.key) ? 'mine' : ''}`}>
                   <i className="role-dot" style={{ background: t.role ? ROLE_COLOR[t.role] : '#8a8984' }} />
                   <span className="mix-name" title={`${t.partName}, staff ${t.staff}, voice ${t.voice}`}>{t.name}{targets.has(t.key) && <small> · you</small>}
-                    <select className="inst" value={m.inst} onChange={(e) => set({ inst: e.target.value as Instrument })} aria-label={`Sound for ${t.name}`}>{INSTRUMENTS.map((i) => <option key={i.id} value={i.id}>{i.label}</option>)}</select>
+                    <Select className="inst" value={m.inst} onChange={(e) => set({ inst: e.target.value as Instrument })} aria-label={`Sound for ${t.name}`}>{INSTRUMENTS.map((i) => <option key={i.id} value={i.id}>{i.label}</option>)}</Select>
                   </span>
                   <button className={`mini ${m.mute ? 'on' : ''}`} onClick={() => set({ mute: !m.mute })} aria-label={`Mute ${t.name}`}>M</button>
                   <button className={`mini ${m.solo ? 'on' : ''}`} onClick={() => set({ solo: !m.solo })} aria-label={`Solo ${t.name}`}>S</button>
@@ -589,7 +590,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
                 <div key={k} className={`mix-row band ${band[k] ? '' : 'off'}`}>
                   <input type="checkbox" checked={band[k]} disabled={run !== 'idle'} onChange={(e) => setBand((b) => ({ ...b, [k]: e.target.checked }))} aria-label={`${label} on or off`} />
                   <span className="mix-name">{label}
-                    <select className="inst" value={m.inst} onChange={(e) => set({ inst: e.target.value as Instrument })} aria-label={`Sound for ${label}`}>{INSTRUMENTS.map((i) => <option key={i.id} value={i.id}>{i.label}</option>)}</select>
+                    <Select className="inst" value={m.inst} onChange={(e) => set({ inst: e.target.value as Instrument })} aria-label={`Sound for ${label}`}>{INSTRUMENTS.map((i) => <option key={i.id} value={i.id}>{i.label}</option>)}</Select>
                   </span>
                   <button className={`mini ${m.mute ? 'on' : ''}`} onClick={() => set({ mute: !m.mute })} aria-label={`Mute ${label}`}>M</button>
                   <button className={`mini ${m.solo ? 'on' : ''}`} onClick={() => set({ solo: !m.solo })} aria-label={`Solo ${label}`}>S</button>
@@ -600,9 +601,9 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
             <div className="mix-row groove-row">
               <i className="role-dot" style={{ background: '#1f1f1d' }} />
               <span className="mix-name">Groove (drums)
-                <select className="inst" value={groove} onChange={(e) => setGroove(e.target.value as Groove)} aria-label="Groove style">
+                <Select className="inst" value={groove} onChange={(e) => setGroove(e.target.value as Groove)} aria-label="Groove style">
                   <option value="none">Off</option><option value="soft">Soft beat</option><option value="waltz">Waltz</option><option value="gentle6">Lilt (6/8)</option>
-                </select>
+                </Select>
               </span>
               <span />
               <span />
@@ -635,9 +636,9 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
         </div>
         </div><div className="row">
         <span className="dock-label">Bars</span>
-        <select className="dock-select" value={from} disabled={run !== 'idle'} onChange={(e) => { const v = +e.target.value; setFrom(v); if (to < v) setTo(v); }} aria-label="From measure">{measOpts}</select>
+        <Select className="dock-select" value={from} disabled={run !== 'idle'} onChange={(e) => { const v = +e.target.value; setFrom(v); if (to < v) setTo(v); }} aria-label="From measure">{measOpts}</Select>
         <span className="dock-label">to</span>
-        <select className="dock-select" value={to} disabled={run !== 'idle'} onChange={(e) => { const v = +e.target.value; setTo(v); if (from > v) setFrom(v); }} aria-label="To measure">{measOpts}</select>
+        <Select className="dock-select" value={to} disabled={run !== 'idle'} onChange={(e) => { const v = +e.target.value; setTo(v); if (from > v) setFrom(v); }} aria-label="To measure">{measOpts}</Select>
         </div><div className="row">
         <span className="dock-label">Key</span>
         <button className="dock-btn sm" disabled={run !== 'idle' || tr <= -12} onClick={() => setTr(tr - 1)} aria-label="Transpose down a semitone">−</button>
@@ -666,10 +667,16 @@ export function SongShelf({ onOpen }: { onOpen: (id: string) => void }) {
   const list = SONGS.filter((sg) => (lvl === 'All' || sg.level === lvl) && (kind === 'all' || (kind === 'original') === !!sg.original));
   return (
     <div className="card">
-      <div className="card-head"><b>Song library</b><span className="muted small">{SONGS.length} pieces, easiest first. Public-domain classics arranged for this app, plus original practice pieces.</span></div>
-      <div className="shelf-filters">
-        <div className="seg">{(['All', ...SONG_LEVELS] as const).map((l) => <button key={l} className={lvl === l ? 'on' : ''} onClick={() => setLvl(l)}>{l}<small> {l === 'All' ? SONGS.length : SONGS.filter((x) => x.level === l).length}</small></button>)}</div>
-        <div className="seg">{([['all', 'All'], ['classic', 'Classics'], ['original', 'Originals']] as const).map(([k, t]) => <button key={k} className={kind === k ? 'on' : ''} onClick={() => setKind(k)}>{t}</button>)}</div>
+      <div className="shelf-top">
+        <div className="shelf-title"><b>Song library</b><small className="muted">{list.length} of {SONGS.length} pieces · easiest first</small></div>
+        <div className="shelf-filters">
+          <Select value={lvl} aria-label="Level" onChange={(e) => setLvl(e.target.value as typeof lvl)}>
+            {(['All', ...SONG_LEVELS] as const).map((l) => <option key={l} value={l}>{l === 'All' ? 'All levels' : l} ({l === 'All' ? SONGS.length : SONGS.filter((x) => x.level === l).length})</option>)}
+          </Select>
+          <Select value={kind} aria-label="Type" onChange={(e) => setKind(e.target.value as typeof kind)}>
+            <option value="all">Classics and originals</option><option value="classic">Classics</option><option value="original">Originals</option>
+          </Select>
+        </div>
       </div>
       {SONG_LEVELS.filter((l) => list.some((x) => x.level === l)).map((l) => (
         <div key={l} className="shelf-level">

@@ -3,6 +3,7 @@
 // a button to hide the keyboard entirely (handy with a MIDI keyboard or acoustic piano).
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { Select } from './Select';
 import { Piano, type KeyMark } from './Piano';
 import { HandControls, HandsLayer, HANDS_MIN_ASPECT, handsBelow, type HandsLayerProps } from './HandsLayer';
 import { setSettings, useSettings } from './settings';
@@ -93,9 +94,9 @@ export function KeyboardArea({ lo, hi, marks, labels, showKeyHints, scrollTo, ba
       <div className="kb-bar" {...dragProps} title="Drag up or down to resize the keyboard">
         <span className="kb-grip" aria-hidden><i /><i /><i /></span>
         <label className="kb-size">Keys
-          <select value={String(s.kbKeys)} onChange={(e) => setSettings({ kbKeys: (e.target.value === 'auto' ? 'auto' : +e.target.value) as typeof s.kbKeys })} aria-label="Keyboard size">
+          <Select value={String(s.kbKeys)} onChange={(e) => setSettings({ kbKeys: (e.target.value === 'auto' ? 'auto' : +e.target.value) as typeof s.kbKeys })} aria-label="Keyboard size">
             {SIZES.map((k) => <option key={k} value={String(k)}>{k === 'auto' ? 'Auto' : `${k} keys`}</option>)}
-          </select>
+          </Select>
         </label>
         <span className="kb-fill" />
         {extra}

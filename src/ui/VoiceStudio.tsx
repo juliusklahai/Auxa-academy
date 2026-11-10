@@ -112,7 +112,7 @@ export function VoiceStudio({ openLesson, singChoir }: { openLesson: (l: Lesson)
           <Metric label="Matched" value={score.hits} />
         </div>
       </section>
-      {!on && <div className="card call"><div><b>Turn on the microphone to sing.</b><p className="muted small">Your voice is analyzed on this device only. Headphones help when the app plays notes.</p>{err && <p className="small tip">{err}</p>}</div><button className="btn dark" onClick={start}><Icon name="mic" size={15} /> Start microphone</button></div>}
+      {!on && <div className="card call stacked"><div><b>Turn on the microphone to sing.</b><p className="muted small">Your voice is analyzed on this device only. Headphones help when the app plays notes.</p>{err && <p className="small tip">{err}</p>}</div><button className="btn dark" onClick={start}><Icon name="mic" size={15} /> Start microphone</button></div>}
       <section className="voice-grid">
         <div className="card voice-level">
           <div className="card-head"><b>Singing level</b><span className="muted small">{lvl.blurb}</span></div>

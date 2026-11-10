@@ -1,5 +1,6 @@
 // Account UI: sign in, plan status, upgrade (Stripe subscriptions or Monime passes), and the admin page.
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Select } from './Select';
 import { ACCOUNTS_ENABLED, MONIME_ENABLED, PLANS, type PlanOption } from '../account/config';
 import { TIER_NAME } from '../account/gate';
 import { toggleTheme, useTheme } from './theme';
@@ -300,7 +301,7 @@ export function AdminView() {
             {rows.map((r) => (
               <tr key={r.id}>
                 <td>{r.email}</td>
-                <td><select value={r.role} onChange={(e) => act(() => adminSetRole(r.email, e.target.value), `Role updated for ${r.email}`)}><option>user</option><option>teacher</option><option>admin</option></select></td>
+                <td><Select value={r.role} onChange={(e) => act(() => adminSetRole(r.email, e.target.value), `Role updated for ${r.email}`)}><option>user</option><option>teacher</option><option>admin</option></Select></td>
                 <td>{fmtDate(r.pro_until) || '-'}</td>
                 <td>{fmtDate(r.plus_until) || '-'}</td>
                 <td>{r.pro_source ?? '-'}{r.stripe_status ? ` (${r.stripe_status})` : ''}</td>

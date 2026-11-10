@@ -9,6 +9,8 @@ import './styles.css';
 import './landing.css';
 import './app-theme.css';
 import './ui/theme';
+import { installTooltips } from './ui/tooltip';
+installTooltips();
 
 // Bundled font (works offline, inlined in the single-file build)
 try {
