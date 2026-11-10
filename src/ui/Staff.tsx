@@ -29,6 +29,10 @@ interface Props {
   backing?: BackNote[];
   /** treble + bass staves (hands together) */
   grand?: boolean;
+  /** by ear: notes you have not found yet are invisible (rhythm and barlines stay) */
+  hidePending?: boolean;
+  /** spell black keys as flats */
+  flats?: boolean;
 }
 
 interface Layout { mx: [number, number][]; ex: number[]; total: number }
@@ -38,7 +42,7 @@ interface Layout { mx: [number, number][]; ex: number[]; total: number }
  * when you reach the last measure on screen, the strip slides so that measure moves to the left
  * and the next ones come into view. A playhead follows the beat in timed mode.
  */
-export function Staff({ events, clef, timeSig, statuses, current = -1, playhead, highContrast, measureWidth = 250, height = 168, showTime = true, backing, grand = false }: Props) {
+export function Staff({ events, clef, timeSig, statuses, current = -1, playhead, highContrast, measureWidth = 250, height = 168, showTime = true, backing, grand = false, hidePending = false, flats = false }: Props) {
   const view = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLDivElement>(null);
   const svgHost = useRef<HTMLDivElement>(null);
@@ -62,7 +66,7 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
       if (!ev.pitches.length) { if (!grand) lanes[0].push({ beat: ev.beat, beats: ev.beats, pitches: [], idx: i, ghost: false }); return; }
       const by = new Map<number, number[]>();
       ev.pitches.forEach((p, k) => { const l = laneOf(p, ev.hands?.[k] ?? ev.hand); by.set(l, [...(by.get(l) ?? []), p]); });
-      by.forEach((ps, l) => lanes[l].push({ beat: ev.beat, beats: ev.beats, pitches: ps, idx: i, ghost: false }));
+      by.forEach((ps, l) => lanes[l].push({ beat: ev.beat, beats: (grand ? ev.handBeats?.[l === 0 ? 'RH' : 'LH'] : undefined) ?? ev.beats, pitches: ps, idx: i, ghost: false }));
     });
     for (const n of backing ?? []) if (n.line === 'melody') lanes[laneOf(n.midi, n.hand)].push({ beat: n.beat, beats: n.beats, pitches: [n.midi], idx: null, ghost: true });
     const lastBeat = Math.max(0, ...events.map((e) => e.beat + e.beats), ...(backing ?? []).map((n) => n.beat + n.beats));
@@ -133,13 +137,15 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
           const { d, dots } = duration(it.beats);
           const rest = it.pitches.length === 0;
           const sorted = [...it.pitches].sort((a, b2) => a - b2);
-          const keys = rest ? [c === 'bass' ? 'd/3' : 'b/4'] : sorted.map(midiToVexKey);
+          const keys = rest ? [c === 'bass' ? 'd/3' : 'b/4'] : sorted.map((p) => midiToVexKey(p, flats));
           const n = new StaveNote({ clef: c, keys, duration: d + (rest ? 'r' : ''), auto_stem: true });
-          if (!rest) sorted.forEach((p, k) => { if (midiToVexKey(p).includes('#')) n.addModifier(new Accidental('#'), k); });
+          if (!rest) sorted.forEach((p, k) => { const nm = midiToVexKey(p, flats).split('/')[0]; if (nm.length > 1) n.addModifier(new Accidental(nm.slice(1)), k); });
           if (dots) Dot.buildAndAttach([n], { all: true });
           const st = it.idx !== null ? statuses?.[it.idx] ?? 'pending' : 'pending';
-          const col = it.ghost ? (rest ? '#c9c7c0' : '#a9a7a0') : highContrast && st === 'pending' ? '#000' : COLORS[st];
+          const hide = hidePending && !it.ghost && !rest && st !== 'correct' && st !== 'partial';
+          const col = hide ? 'rgba(0,0,0,0)' : it.ghost ? (rest ? '#c9c7c0' : '#a9a7a0') : highContrast && st === 'pending' ? '#000' : COLORS[st];
           n.setStyle({ fillStyle: col, strokeStyle: col });
+          if (hide) n.setLedgerLineStyle({ fillStyle: col, strokeStyle: col });
           return { n, idx: it.ghost ? null : it.idx };
         });
         const voice = new Voice({ num_beats: timeSig[0], beat_value: timeSig[1] }).setMode(Voice.Mode.SOFT);
@@ -157,7 +163,7 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
     });
     layout.current = { mx, ex, total };
     if (strip.current) strip.current.style.width = `${total}px`;
-  }, [events, clef, timeSig, statuses, highContrast, measureWidth, height, bpb, showTime, backing, grand]);
+  }, [events, clef, timeSig, statuses, highContrast, measureWidth, height, bpb, showTime, backing, grand, hidePending, flats]);
 
   // page turning
   const ensureVisible = (beat: number) => {

@@ -91,9 +91,9 @@ function PathTimeline({ lessons: all, openLesson }: { lessons: Lesson[]; openLes
   return (
     <>
     <Select className="only-phone path-select" value={group} aria-label="Lesson stage" onChange={(e) => setGroup(e.target.value)}>
-      {groups.map((g) => <option key={g} value={g}>{g} · Levels {[...new Set(all.filter((l) => LEVEL_GROUP[l.level] === g).map((l) => l.level))].join(', ')}</option>)}
+      {groups.map((g) => <option key={g} value={g}>{g} · Level{[...new Set(all.filter((l) => LEVEL_GROUP[l.level] === g).map((l) => l.level))].length > 1 ? "s" : ""} {[...new Set(all.filter((l) => LEVEL_GROUP[l.level] === g).map((l) => l.level))].join(', ')}</option>)}
     </Select>
-    <div className="path-groups seg only-wide">{groups.map((g) => <button key={g} className={g === group ? 'on' : ''} onClick={() => setGroup(g)}>{g}<small> · Levels {[...new Set(all.filter((l) => LEVEL_GROUP[l.level] === g).map((l) => l.level))].join(', ')}</small></button>)}</div>
+    <div className="path-groups seg only-wide">{groups.map((g) => <button key={g} className={g === group ? 'on' : ''} onClick={() => setGroup(g)}>{g}<small> · Level{[...new Set(all.filter((l) => LEVEL_GROUP[l.level] === g).map((l) => l.level))].length > 1 ? "s" : ""} {[...new Set(all.filter((l) => LEVEL_GROUP[l.level] === g).map((l) => l.level))].join(', ')}</small></button>)}</div>
     <div className="path" ref={ref}>
       <div className="path-track">
         <div className="path-line" />

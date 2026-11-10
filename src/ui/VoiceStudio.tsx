@@ -8,6 +8,7 @@ import { mic, type MicFrame, micHelp } from '../input/mic';
 import { Icon } from './Icon';
 import { Metric } from './LessonView';
 import { PitchRoll } from './PitchRoll';
+import { SingToScore } from './SingToScore';
 import { progress, setSettings, useProgressVersion, useSettings } from './settings';
 import { allowVoiceLevel, voiceLevelTier, TIER_NAME } from '../account/gate';
 import { getAccount, openUpgrade } from '../account/store';
@@ -21,7 +22,7 @@ export function voiceType(lo: number, hi: number): { name: string; part: 'S' | '
   return { name: 'Bass range', part: 'B' };
 }
 
-export function VoiceStudio({ openLesson, singChoir }: { openLesson: (l: Lesson) => void; singChoir: (part: 'S' | 'A' | 'T' | 'B') => void }) {
+export function VoiceStudio({ openLesson, singChoir, openScore }: { openLesson: (l: Lesson) => void; singChoir: (part: 'S' | 'A' | 'T' | 'B') => void; openScore: (xml: string) => void }) {
   useProgressVersion();
   const st = useSettings();
   const [on, setOn] = useState(mic.active);
@@ -32,6 +33,7 @@ export function VoiceStudio({ openLesson, singChoir }: { openLesson: (l: Lesson)
   const [held, setHeld] = useState(0); // ms in tune
   const [score, setScore] = useState({ hits: 0, tries: 0 });
   const [rec, setRec] = useState<null | 'low' | 'high'>(null);
+  const [s2sRec, setS2sRec] = useState(false); // Sing to score is recording: the pitch game waits
   const recBuf = useRef<number[]>([]);
   const inTuneSince = useRef<number | null>(null);
   const matched = useRef(false);
@@ -57,7 +59,7 @@ export function VoiceStudio({ openLesson, singChoir }: { openLesson: (l: Lesson)
   // pitch matching: hold in tune (the singing level decides how close and how long)
   const lvl = voiceLevelInfo(allowVoiceLevel(getAccount().ent, st.voiceLevel) ? st.voiceLevel : 'easy');
   useEffect(() => {
-    if (!on || rec) return;
+    if (!on || rec || s2sRec) return;
     const now = performance.now();
     if (cents !== null && Math.abs(cents) <= lvl.matchCents) {
       inTuneSince.current ??= now;
@@ -113,6 +115,7 @@ export function VoiceStudio({ openLesson, singChoir }: { openLesson: (l: Lesson)
         </div>
       </section>
       {!on && <div className="card call stacked"><div><b>Turn on the microphone to sing.</b><p className="muted small">Your voice is analyzed on this device only. Headphones help when the app plays notes.</p>{err && <p className="small tip">{err}</p>}</div><button className="btn dark" onClick={start}><Icon name="mic" size={15} /> Start microphone</button></div>}
+      <SingToScore micOn={on} startMic={async () => { await mic.start(); mic.settings.mode = 'voice'; setOn(true); setErr(''); }} openScore={openScore} onRecording={setS2sRec} />
       <section className="voice-grid">
         <div className="card voice-level">
           <div className="card-head"><b>Singing level</b><span className="muted small">{lvl.blurb}</span></div>

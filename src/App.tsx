@@ -56,6 +56,7 @@ export default function App() {
   const [exStart, setExStart] = useState<number | undefined>(undefined);
   const [singPart, setSingPart] = useState<'S' | 'A' | 'T' | 'B' | null>(null);
   const [songId, setSongId] = useState<string | null>(null);
+  const [xmlToOpen, setXmlToOpen] = useState<string | null>(null);
   const account = useAccount();
   const [, bump] = useState(0);
   // Android back button (inside the Maestro app): close the lesson, then go back to Home, then leave
@@ -123,8 +124,8 @@ export default function App() {
             : <>
                 {tab === 'home' && <><InstallBanner /><Dashboard openLesson={open} /></>}
                 {tab === 'learn' && <LearnList openLesson={open} openSong={(id) => { setSongId(id); setTab('music'); }} />}
-                {tab === 'music' && <MyMusic singPart={singPart} onSingHandled={() => setSingPart(null)} songId={songId} onSongHandled={() => setSongId(null)} />}
-                {tab === 'voice' && <VoiceStudio openLesson={open} singChoir={(p) => { setSingPart(p); setTab('music'); }} />}
+                {tab === 'music' && <MyMusic singPart={singPart} onSingHandled={() => setSingPart(null)} songId={songId} onSongHandled={() => setSongId(null)} xml={xmlToOpen} onXmlHandled={() => setXmlToOpen(null)} />}
+                {tab === 'voice' && <VoiceStudio openLesson={open} singChoir={(p) => { setSingPart(p); setTab('music'); }} openScore={(x) => { setXmlToOpen(x); setTab('music'); window.scrollTo({ top: 0 }); }} />}
                 {tab === 'studio' && <PianoStudio />}
                 {tab === 'settings' && <SettingsView />}
                 {tab === 'admin' && <AdminView />}

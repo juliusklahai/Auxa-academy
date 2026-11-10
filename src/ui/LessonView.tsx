@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AssessmentSession, type Feedback } from '../assessment/session';
 import { audio } from '../audio/engine';
-import { beatToMs, effectiveBpm, metronomeClicks, msPerBeat } from '../audio/timing';
+import { beatToMs, effectiveBpm, feelBeat, metronomeClicks, msPerBeat } from '../audio/timing';
 import { midiToName } from '../core/music';
 import type { AssessmentReport, Exercise, Lesson, NoteStatus } from '../core/types';
 import { onLearnerNote } from '../input/bus';
@@ -155,6 +155,8 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
   const [held, setHeld] = useState<Map<number, KeyMark>>(new Map());
   const [demoKeys, setDemoKeys] = useState<Set<number>>(new Set());
   const [demoIdx, setDemoIdx] = useState<number | null>(null);
+  /** by-ear demo: sound only, no glowing keys, hands or moving notes */
+  const earDemo = useRef(false);
   const [timedIdx, setTimedIdx] = useState(0);
   const [fix, setFix] = useState(false);
   const fixTimer = useRef(0);
@@ -264,7 +266,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
       if (fb.kind === 'wrong' || fb.kind === 'restart') setHeld((h) => new Map(h).set(n.midi, 'wrong'));
       latest.current.handleFeedback(fb);
     });
-    audio.onAppNote = (m, on) => setDemoKeys((d) => { const x = new Set(d); if (on) x.add(m); else x.delete(m); return x; });
+    audio.onAppNote = (m, on) => { if (earDemo.current) return; setDemoKeys((d) => { const x = new Set(d); if (on) x.add(m); else x.delete(m); return x; }); }
     if (exercise.voice) mic.settings.mode = 'voice';
     return () => { off(); clearTimers(); audio.onAppNote = null; audio.stopAll(); setExpected(null); mic.settings.mode = settings.micMode; };
   }, []); // eslint-disable-line
@@ -338,14 +340,17 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
     audio.stopAll();
     if (session.current.state === 'LISTENING' || session.current.state === 'COUNT_IN') session.current = new AssessmentSession(exercise, bpm);
     const mspb = msPerBeat(bpm);
-    const end = audio.playNotes(exercise.events.flatMap((e) => e.pitches.map((m) => ({ midi: m, startMs: e.beat * mspb, durMs: e.beats * mspb * 0.92 }))));
+    const sw = exercise.swing;
+    const end = audio.playNotes(exercise.events.flatMap((e) => e.pitches.map((m) => ({ midi: m, startMs: feelBeat(e.beat, sw) * mspb, durMs: (feelBeat(e.beat + e.beats, sw) - feelBeat(e.beat, sw)) * mspb * 0.92 }))));
+    earDemo.current = !!exercise.byEar;
     playBacking(0, Infinity, 50);
     const bandEnd = Math.max(0, ...(exercise.backing ?? []).map((n) => (n.beat + n.beats) * mspb));
     const startAt = performance.now() + 50;
     clock.current = { t0: startAt, mspb };
-    exercise.events.forEach((e, i) => timers.current.push(window.setTimeout(() => setDemoIdx(i), 50 + e.beat * mspb)));
-    timers.current.push(window.setTimeout(() => { setDemoIdx(null); stopClock(); }, Math.max(end, bandEnd) + 400));
-    pushFeed('progress', 'Demo: watch the hands, the keys and the moving line. Nothing is scored during the demo.');
+    if (exercise.byEar) clock.current = null;
+    else exercise.events.forEach((e, i) => timers.current.push(window.setTimeout(() => setDemoIdx(i), 50 + feelBeat(e.beat, sw) * mspb)));
+    timers.current.push(window.setTimeout(() => { setDemoIdx(null); stopClock(); earDemo.current = false; }, Math.max(end, bandEnd) + 400));
+    pushFeed('progress', exercise.byEar ? 'Listen closely. Sing it back in your head, then find the first note on the keys. Press Listen again any time.' : 'Demo: watch the hands, the keys and the moving line. Nothing is scored during the demo.');
     rerender();
   };
 
@@ -401,7 +406,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
               <span className="legend"><i className="lg correct" />correct <i className="lg partial" />timing <i className="lg wrong" />wrong <i className="lg pending" />to play</span>
             </div>
             {nice && <span key={nice.id} className="nice">{nice.text}</span>}
-            <Staff events={exercise.events} clef={exercise.clef} timeSig={exercise.timeSig} statuses={statuses} current={glowIdx} playhead={playhead} highContrast={settings.highContrast} height={exercise.grand ? (fm.focus ? 300 : 260) : fm.focus ? 240 : 168} measureWidth={fm.focus ? 340 : 250} backing={exercise.backing} grand={exercise.grand} />
+            <Staff events={exercise.events} clef={exercise.clef} timeSig={exercise.timeSig} statuses={statuses} current={glowIdx} playhead={playhead} highContrast={settings.highContrast} height={exercise.grand ? (fm.focus ? 300 : 260) : fm.focus ? 240 : 168} measureWidth={fm.focus ? 340 : 250} backing={exercise.backing} grand={exercise.grand} hidePending={exercise.byEar} flats={exercise.flats} />
             {feed[0] && !report && <div key={feed[0].id} className={`latest fb ${feed[0].kind}`}><span className="ic">{icon(feed[0].kind)}</span>{feed[0].text}</div>}
             {report && <div className={`latest fb ${report.passed ? 'correct' : 'wrong'}`}><span className="ic">{report.passed ? '✓' : '✗'}</span>Score {Math.round(report.score)}/100 · {report.grade}{report.passed ? '' : '. 80 needed to pass.'}</div>}
           </div>
@@ -411,7 +416,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
               {micErr && <p className="small tip">{micErr}</p>}
               <PitchRoll octaveFree={!!exercise.octaveFree}
                 hold={() => (exercise.mode === 'wait' && session.current.state === 'LISTENING' ? exercise.events[session.current.currentIndex()]?.pitches[0] ?? null : null)}
-                targets={() => { const c = clock.current; return c ? exercise.events.filter((e) => e.pitches.length).map((e) => ({ midi: e.pitches[0], startMs: c.t0 + e.beat * c.mspb, endMs: c.t0 + (e.beat + e.beats) * c.mspb - 40 })) : []; }} />
+                targets={() => { const c = clock.current; return c ? exercise.events.filter((e) => e.pitches.length).map((e) => ({ midi: e.pitches[0], startMs: c.t0 + feelBeat(e.beat, exercise.swing) * c.mspb, endMs: c.t0 + feelBeat(e.beat + e.beats, exercise.swing) * c.mspb - 40 })) : []; }} />
             </div>
           )}
           <KeyboardArea lo={lo} hi={hi} marks={marks} labels={labels} showKeyHints={settings.keyHints} baseHeight={exercise.voice ? 120 : fm.focus ? 200 : 180} scrollTo={curEv?.pitches[0] ?? allPitches[0]}
@@ -436,7 +441,8 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
               <div className="card feed panel-info" aria-live="polite">
                 <div className="card-head"><b>Teacher</b><span className={`state-pill ${s.state.toLowerCase()}`}>{s.state.replace('_', '-')}</span></div>
                 {curEv && s.state === 'LISTENING' && !exercise.hideLabels && <div className="next"><small>Next</small><b>{curEv.pitches.map(midiToName).join(' + ')}</b>{curEv.fingers && <span>finger{curEv.fingers.length > 1 ? 's' : ''} {curEv.fingers.join('-')}</span>}</div>}
-                {feed.length === 0 && <p className="muted small">Press <b>Demo</b> to see and hear it, then the lime <b>Start</b> button. I'll explain every mistake. Three in a row restarts the attempt, never your course.</p>}
+                {feed.length === 0 && exercise.byEar && <p className="muted small">This one is by ear: the notes stay hidden. Press <b>Listen</b>, hum it back, then press <b>Start</b> and find the notes. Each one appears on the staff when you get it. Stuck twice on a note and the key lights up.</p>}
+                {feed.length === 0 && !exercise.byEar && <p className="muted small">Press <b>Demo</b> to see and hear it, then the lime <b>Start</b> button. I'll explain every mistake. Three in a row restarts the attempt, never your course.</p>}
                 {feed.map((f) => <div key={f.id} className={`fb ${f.kind}`}><span className="ic">{icon(f.kind)}</span>{f.text}</div>)}
               </div>
             )}
@@ -447,8 +453,8 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
           <Icon name={listening || s.state === 'COMPLETED' || s.state === 'RESTART' ? 'restart' : 'play'} size={18} />
         </button>
         <span className="dock-label">{listening ? 'Restart' : s.state === 'RESTART' ? `Attempt ${s.attempt + 1}` : s.state === 'COMPLETED' ? 'Again' : 'Start'}</span>
-        <button className="dock-btn" onClick={demo} aria-label="Demo"><Icon name="eye" size={17} /></button>
-        <span className="dock-label">Demo</span>
+        <button className="dock-btn" onClick={demo} aria-label={exercise.byEar ? 'Listen' : 'Demo'} title={exercise.byEar ? 'Listen to the phrase' : 'Watch a demo'}><Icon name={exercise.byEar ? 'ear' : 'eye'} size={17} /></button>
+        <span className="dock-label">{exercise.byEar ? 'Listen' : 'Demo'}</span>
         <span className="dock-sep" />
         <div className="dock-group">
           {[50, 75, 100].map((p) => <button key={p} className={`dock-chip ${tempoPct === p ? 'on' : ''}`} disabled={listening} onClick={() => setTempoPct(p)}>{p}%</button>)}

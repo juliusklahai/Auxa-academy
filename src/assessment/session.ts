@@ -7,7 +7,7 @@ import { midiToName } from '../core/music';
 import type {
   AssessState, AssessmentReport, EventResult, Exercise, PerformedNote, RubricComponent,
 } from '../core/types';
-import { beatToMs, msPerBeat } from '../audio/timing';
+import { beatToMs, feelBeat, msPerBeat } from '../audio/timing';
 
 export const CONFIDENCE_THRESHOLD = 0.85;
 const CHORD_WINDOW_MS = 120;
@@ -82,7 +82,7 @@ export class AssessmentSession {
   private resetEvents() {
     this.events = this.exercise.events.map((e, index) => ({
       index, status: e.pitches.length ? 'pending' : 'correct', playedPitches: [], wrongPitches: [], attempts: 0,
-      expectedMs: this.timeOf ? this.timeOf(e.beat) : beatToMs(e.beat, this.bpm), played: new Set<number>(), wrongAttempts: 0,
+      expectedMs: this.timeOf ? this.timeOf(feelBeat(e.beat, this.exercise.swing)) : beatToMs(feelBeat(e.beat, this.exercise.swing), this.bpm), played: new Set<number>(), wrongAttempts: 0,
     }));
     this.cursor = 0;
     this.skipRests();

@@ -38,3 +38,11 @@ export function metronomeClicks(
   }
   return out;
 }
+
+/** Swing: an off-beat eighth (x.5) is played at x + 2/3, the long-short jazz feel. Other positions are unchanged. */
+export function swingBeat(beat: number): number {
+  const w = Math.floor(beat + 1e-9), f = beat - w;
+  return Math.abs(f - 0.5) < 1e-6 ? w + 2 / 3 : beat;
+}
+/** Beat position as heard: swung when the exercise swings. */
+export const feelBeat = (beat: number, swing?: boolean) => (swing ? swingBeat(beat) : beat);

@@ -27,16 +27,17 @@ export function hands(rh: string, lh: string): ScoreEvent[] {
   for (const e of all) {
     const k = Math.round(e.beat * 1000);
     const cur = by.get(k);
-    if (!cur) { by.set(k, { ...e, hands: e.pitches.map(() => e.hand!), hand: undefined }); continue; }
+    if (!cur) { by.set(k, { ...e, hands: e.pitches.map(() => e.hand!), hand: undefined, handBeats: { [e.hand!]: e.beats } }); continue; }
     cur.pitches.push(...e.pitches);
     cur.hands!.push(...e.pitches.map(() => e.hand!));
     cur.beats = Math.min(cur.beats, e.beats);
+    cur.handBeats![e.hand!] = Math.min(cur.handBeats![e.hand!] ?? Infinity, e.beats);
   }
   const evs = [...by.values()].sort((a, b) => a.beat - b.beat);
   for (const e of evs) {
     const o = e.pitches.map((p, i) => [p, e.hands![i]] as const).sort((a, b) => a[0] - b[0]);
     e.pitches = o.map((x) => x[0]); e.hands = o.map((x) => x[1]);
-    if (new Set(e.hands).size === 1) { e.hand = e.hands[0]; e.hands = undefined; }
+    if (new Set(e.hands).size === 1) { e.hand = e.hands[0]; e.hands = undefined; e.handBeats = undefined; }
   }
   return evs;
 }
@@ -56,8 +57,9 @@ const RH_OCT = N('C4 D4 E4 F4 G4 A4 B4 C5');
 export const LEVEL_NAMES: Record<number, string> = {
   0: 'Foundations', 1: 'First notes and melodies', 2: 'Right and left hand technique', 3: 'Grand staff and both hands',
   4: 'Rhythm', 5: 'Keys and scales', 6: 'Chords and accompaniment', 7: 'Expression and touch', 8: 'Sight-reading and intervals', 9: 'Advanced technique',
+  10: 'Playing by ear', 11: 'Jazz and blues', 12: 'Four-part writing and arranging',
 };
-export const LEVEL_GROUP: Record<number, string> = { 0: 'Beginner', 1: 'Beginner', 2: 'Beginner', 3: 'Elementary', 4: 'Elementary', 5: 'Intermediate', 6: 'Intermediate', 7: 'Intermediate', 8: 'Advanced', 9: 'Advanced' };
+export const LEVEL_GROUP: Record<number, string> = { 0: 'Beginner', 1: 'Beginner', 2: 'Beginner', 3: 'Elementary', 4: 'Elementary', 5: 'Intermediate', 6: 'Intermediate', 7: 'Intermediate', 8: 'Advanced', 9: 'Advanced', 10: 'Ear & jazz', 11: 'Ear & jazz', 12: 'Arranging' };
 
 export const MORE_LESSONS: LessonDef[] = [
   // ---------------- Level 3: grand staff and both hands ----------------
@@ -405,6 +407,200 @@ export const MORE_LESSONS: LessonDef[] = [
     exercises: [
       ex('L9-4-a', 'Melody in octaves', 'RH octaves 1 and 5.', 'treble', 'wait', seqOf('C4+C5 D4+D5 E4+E5 C4+C5 G4+G5:2 E4+E5:2', 'RH', [[1, 5], [1, 5], [1, 5], [1, 5], [1, 5], [1, 5]]), ['fingerTechnique']),
       ex('L9-4-b', 'LH stride', 'Bass note, jump, chord.', 'bass', 'timed', seqOf('C2:1 E3+G3+C4:1 G2:1 D3+F3+B3:1 C2:1 E3+G3+C4:1 G2:1 E3+G3+C4:1', 'LH'), ['fingerTechnique', 'rhythm'], { tempo: 66 }),
+    ],
+  },
+  // ---------------- Level 10: playing by ear ----------------
+  {
+    id: 'L10-1', level: 10, title: 'Echo it back', prerequisites: ['L1-3'],
+    summary: 'Hear a short phrase, then find it on the keys without seeing the notes.',
+    teach: [
+      t('Listen first, hands second', 'Playing by ear starts in your head. Press Listen, hum the phrase back, and only then touch the keys. If you can sing it, you can find it.', undefined, N('C4 D4 E4'), true),
+      t('Up, down or same?', 'For every new note ask one question: did it go up, down, or stay? Then: a small step or a jump? That is all you need to find the next key.', undefined, N('E4 D4 C4 C4 G4')),
+      t('Start from a known note', 'These phrases start on middle C. Play C, then follow the shape you heard. The notes appear on the staff as you find them.', [60]),
+    ],
+    exercises: [
+      ex('L10-1-a', 'Three-note echoes', 'Press Listen, then play what you heard. It starts on C.', 'treble', 'wait', seqOf('C4 D4 E4:2 E4 D4 C4:2', 'RH'), ['pitchAccuracy'], { byEar: true, hideLabels: true }),
+      ex('L10-1-b', 'Steps and a jump', 'Steps up, then a leap down. Starts on C.', 'treble', 'wait', seqOf('C4 D4 E4 F4 G4:2 C4:2', 'RH'), ['pitchAccuracy'], { byEar: true, hideLabels: true }),
+      ex('L10-1-c', 'Echo with skips', 'Skips (every other white key). Starts on C.', 'treble', 'wait', seqOf('C4 E4 G4:2 G4 E4 C4:2', 'RH'), ['pitchAccuracy'], { byEar: true, hideLabels: true }),
+    ],
+  },
+  {
+    id: 'L10-2', level: 10, title: 'Find the melody', prerequisites: ['L10-1'],
+    summary: 'Work out tunes you already know, note by note.',
+    teach: [
+      t('Sing it, then search', 'Sing the tune slowly and stop on each note. Hold it with your voice while you look for it on the keys. Wrong keys are fine: they tell you to go higher or lower.'),
+      t('Phrases repeat', 'Most songs reuse their first line. Once you find it, listen for where it comes back and you have half the song for free.', undefined, N('E4 D4 C4 D4 E4 E4 E4')),
+    ],
+    exercises: [
+      ex('L10-2-a', 'Mary had a little lamb', 'You know this one. It starts on E.', 'treble', 'wait', seqOf('E4 D4 C4 D4 E4 E4 E4:2 D4 D4 D4:2 E4 G4 G4:2', 'RH'), ['pitchAccuracy'], { byEar: true, hideLabels: true }),
+      ex('L10-2-b', 'Twinkle, twinkle', 'Starts on C and leaps up.', 'treble', 'wait', seqOf('C4 C4 G4 G4 A4 A4 G4:2 F4 F4 E4 E4 D4 D4 C4:2', 'RH'), ['pitchAccuracy'], { byEar: true, hideLabels: true }),
+      ex('L10-2-c', 'Ode to Joy', 'Starts on E. Listen for the repeated notes.', 'treble', 'wait', seqOf('E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 E4:1.5 D4:0.5 D4:2', 'RH'), ['pitchAccuracy'], { byEar: true, hideLabels: true }),
+    ],
+  },
+  {
+    id: 'L10-3', level: 10, title: 'Bass lines by ear', prerequisites: ['L10-2'],
+    summary: 'Hear the lowest note of each chord: home (I), four (IV) and five (V).',
+    teach: [
+      t('Home, away, tension', 'In C major the bass moves between C (home), F (away) and G (tension, wants to go home). Listen to how G pulls back to C.', [48, 53, 55], N('C3 F3 G3 C3')),
+      t('Hum the low note', 'When a band plays, hum the lowest sound you hear. That note is usually the chord root, and it tells you the chord.'),
+    ],
+    exercises: [
+      ex('L10-3-a', 'I - IV - V - I', 'Listen, then play the four bass notes. Starts on C.', 'bass', 'wait', seqOf('C3:4 F3:4 G3:4 C3:4', 'LH'), ['pitchAccuracy', 'noteReadingBass'], { byEar: true, hideLabels: true }),
+      ex('L10-3-b', 'Which way home?', 'A longer bass line using C, F and G.', 'bass', 'wait', seqOf('C3:2 C3:2 F3:2 F3:2 G3:2 G3:2 C3:4', 'LH'), ['pitchAccuracy'], { byEar: true, hideLabels: true }),
+    ],
+  },
+  {
+    id: 'L10-4', level: 10, title: 'Chords by ear', prerequisites: ['L10-3'],
+    summary: 'Hear a progression and play the chords back.',
+    teach: [
+      t('Major sounds bright, minor sounds soft', 'C major (C E G) and A minor (A C E) share two notes. Listen to the difference one note makes.', N('C4 E4 G4'), [...N('C4 E4 G4'), ...N('A3 C4 E4')], false),
+      t('Bass first, then the chord', 'Find the bass note by ear, then build the triad on top of it. In C major, C, F and G are major and A, D and E are minor.'),
+    ],
+    exercises: [
+      ex('L10-4-a', 'I - IV - V - I chords', 'Listen, then play each chord. Starts on C major.', 'treble', 'wait', seqOf('C4+E4+G4:4 C4+F4+A4:4 B3+D4+G4:4 C4+E4+G4:4', 'RH'), ['pitchAccuracy'], { byEar: true, hideLabels: true }),
+      ex('L10-4-b', 'The pop progression', 'I - V - vi - IV. Starts on C major.', 'treble', 'wait', seqOf('C4+E4+G4:4 B3+D4+G4:4 A3+C4+E4:4 A3+C4+F4:4', 'RH'), ['pitchAccuracy'], { byEar: true, hideLabels: true }),
+    ],
+  },
+  // ---------------- Level 11: jazz and blues ----------------
+  {
+    id: 'L11-1', level: 11, title: 'Swing feel', prerequisites: ['L4-1', 'L10-1'],
+    summary: 'Long-short eighths: the heartbeat of jazz.',
+    teach: [
+      t('Written straight, played long-short', 'Jazz charts write plain eighth notes, but you play them like a triplet: the first note long, the second short. Say "doo-ba doo-ba" and you are swinging.', undefined, N('C4 D4 E4 G4'), true),
+      t('Lean on 2 and 4', 'Swing puts the weight on beats 2 and 4. Tap your foot on 1 and 3 and snap on 2 and 4 while you listen.'),
+    ],
+    exercises: [
+      ex('L11-1-a', 'Swing eighths on one note', 'Play the eighths long-short with the swing click.', 'treble', 'timed', seqOf('C4:0.5 C4:0.5 C4:0.5 C4:0.5 C4:0.5 C4:0.5 C4:1 E4:0.5 E4:0.5 E4:0.5 E4:0.5 G4:2', 'RH'), ['rhythm', 'pulse'], { swing: true, tempo: 96 }),
+      ex('L11-1-b', 'A swinging line', 'Up and down C major in swing eighths.', 'treble', 'timed', seqOf('C4:0.5 D4:0.5 E4:0.5 F4:0.5 G4:0.5 A4:0.5 G4:1 F4:0.5 E4:0.5 D4:0.5 E4:0.5 C4:2', 'RH'), ['rhythm', 'fingerTechnique'], { swing: true, tempo: 100 }),
+    ],
+  },
+  {
+    id: 'L11-2', level: 11, title: 'The blues scale', prerequisites: ['L11-1'],
+    summary: 'Six notes that make anything sound bluesy.',
+    teach: [
+      t('C blues scale', 'C, E flat, F, F sharp, G, B flat, C. The F sharp is the "blue note": slide through it, never stop on it.', N('C4 Eb4 F4 Gb4 G4 Bb4 C5'), N('C4 Eb4 F4 Gb4 G4 Bb4 C5')),
+      t('Fingering', 'RH 1 2 3 4 1 2 3 going up: cross the thumb under after F sharp. Coming down, cross 3 over the thumb.'),
+    ],
+    exercises: [
+      ex('L11-2-a', 'Blues scale up and down', 'C blues scale, RH.', 'treble', 'wait', seqOf('C4 Eb4 F4 Gb4 G4 Bb4 C5:2 Bb4 G4 Gb4 F4 Eb4 C4:3', 'RH', [1, 2, 3, 4, 1, 2, 3, 2, 1, 4, 3, 2, 1]), ['fingerTechnique'], { flats: true }),
+      ex('L11-2-b', 'Blues lick', 'A classic swung lick from the scale.', 'treble', 'timed', seqOf('G4:0.5 Bb4:0.5 C5:1 Bb4:0.5 G4:0.5 F4:0.5 Gb4:0.5 G4:1 Eb4:1 C4:2', 'RH'), ['rhythm', 'fingerTechnique'], { swing: true, tempo: 92, flats: true }),
+    ],
+  },
+  {
+    id: 'L11-3', level: 11, title: 'Shell voicings: ii - V - I', prerequisites: ['L9-3', 'L11-1'],
+    summary: 'Root plus 3rd or 7th in the left hand: how jazz pianists comp.',
+    teach: [
+      t('Only the notes that matter', 'A 7th chord is defined by its root, 3rd and 7th. Jazz players drop the 5th. Dm7 = D + C, G7 = G + F, Cmaj7 = C + B.', N('D3 C4'), [...N('D3 C4'), ...N('G2 F3'), ...N('C3 B3')]),
+      t('Guide tones', 'The 3rds and 7ths move by a half step or stay put from chord to chord: C to B, F to F, F to E. Put them on top and the harmony sings by itself.', undefined, N('F4 C5 F4 B4 E4 B4')),
+    ],
+    exercises: [
+      ex('L11-3-a', 'LH shells', 'Dm7, G7, Cmaj7: root and 7th.', 'bass', 'wait', seqOf('D3+C4:4 G2+F3:4 C3+B3:4', 'LH'), ['fingerTechnique']),
+      ex('L11-3-b', 'Shells with guide tones', 'LH shells, RH guide tones on top.', 'treble', 'wait', hands('F4+C5:4 F4+B4:4 E4+B4:4', 'D3:4 G2:4 C3:4'), ['fingerTechnique'], { grand: true }),
+      ex('L11-3-c', 'ii - V - I in time', 'Comp the progression in swing, one bar per chord.', 'treble', 'timed', hands('F4+C5:4 F4+B4:4 E4+B4:4 E4+B4:4', 'D3:4 G2:4 C3:4 C3:4'), ['rhythm'], { grand: true, tempo: 80, swing: true }),
+    ],
+    playAlong: { keys: [], hand: 'RH', styles: ['chords', 'chords'], voicings: { 2: N('F4 A4 C5'), 5: N('F4 G4 B4'), 1: N('E4 G4 B4'), 6: N('E4 G4 C5'), 4: N('E4 A4 C5') } },
+  },
+  {
+    id: 'L11-4', level: 11, title: '12-bar blues', prerequisites: ['L11-2', 'L11-3'],
+    summary: 'The form behind blues, rock and roll and countless jazz tunes.',
+    teach: [
+      t('Twelve bars, three chords', 'C7 for four bars, F7 for two, C7 for two, then G7, F7, C7, G7 one bar each. Count the bars out loud the first few times.', N('C3 Bb3'), [...N('C3 Bb3'), ...N('F2 Eb3'), ...N('G2 F3')]),
+      t('Dominant shells', 'C7 = C + B flat, F7 = F + E flat, G7 = G + F. Every chord in the blues is a dominant 7th, which is what gives it that gritty sound.'),
+    ],
+    exercises: [
+      ex('L11-4-a', 'Blues shells, LH', 'One shell per bar through the whole form.', 'bass', 'timed', seqOf('C3+Bb3:4 C3+Bb3:4 C3+Bb3:4 C3+Bb3:4 F2+Eb3:4 F2+Eb3:4 C3+Bb3:4 C3+Bb3:4 G2+F3:4 F2+Eb3:4 C3+Bb3:4 G2+F3:4', 'LH'), ['rhythm', 'fingerTechnique'], { tempo: 88, flats: true }),
+      ex('L11-4-b', 'Riff over the blues', 'RH riff over C7 and F7.', 'treble', 'timed', hands('G4:0.5 Bb4:0.5 C5:1 G4:2 G4:0.5 Bb4:0.5 C5:1 G4:2 C5:0.5 Eb5:0.5 F5:1 C5:2 G4:0.5 Bb4:0.5 C5:1 G4:2', 'C3+Bb3:4 C3+Bb3:4 F2+Eb3:4 C3+Bb3:4'), ['rhythm'], { grand: true, tempo: 84, swing: true, flats: true }),
+    ],
+  },
+  {
+    id: 'L11-5', level: 11, title: 'Walking bass', prerequisites: ['L11-4'],
+    summary: 'Four quarter notes per bar that walk from chord to chord.',
+    teach: [
+      t('Root on beat 1', 'Start every bar on the chord root. Fill beats 2 and 3 with chord tones or scale steps.', N('C3 E3 G3 A3')),
+      t('Approach the next chord', 'Beat 4 leads into the next root by a step, often a half step. That pull is what makes the bass walk.', undefined, N('C3 E3 G3 E3 F2 A2 C3 Gb2 G2 B2 D3 Db3 C3')),
+    ],
+    exercises: [
+      ex('L11-5-a', 'Walk C - F - G - C', 'Quarter notes, root on beat 1.', 'bass', 'timed', seqOf('C3 E3 G3 E3 F2 A2 C3 Gb2 G2 B2 D3 Db3 C3:4', 'LH'), ['rhythm', 'noteReadingBass'], { tempo: 96, swing: true, flats: true }),
+      ex('L11-5-b', 'Walk a ii - V - I', 'Dm7 - G7 - Cmaj7 walking line.', 'bass', 'timed', seqOf('D3 F3 A3 Ab3 G2 B2 D3 Db3 C3 E3 G3 B3 C4:4', 'LH'), ['rhythm', 'noteReadingBass'], { tempo: 96, swing: true, flats: true }),
+    ],
+  },
+  // ---------------- Level 12: four-part writing and arranging ----------------
+  {
+    id: 'L12-1', level: 12, title: 'Four voices: S A T B', prerequisites: ['L6-3', 'L3-4'],
+    summary: 'Soprano, alto, tenor and bass: the shape behind choirs, hymns and string quartets.',
+    teach: [
+      t('Four singers, four lines', 'Soprano (top) and alto sit on the treble staff, tenor and bass on the bass staff. Each line is a tune of its own.', N('C3 G3 E4 C5'), N('C3 G3 E4 C5'), false),
+      t('Ranges', 'Soprano C4 to G5, alto G3 to D5, tenor C3 to G4, bass E2 to C4. Keep neighbors within an octave, except tenor and bass, which can be wider.', N('C4 G3 C3 E2')),
+      t('Double the root', 'A triad has three notes but you have four voices, so one is doubled. In root position double the root: C, C, E, G.', N('C3 G3 E4 C5')),
+    ],
+    exercises: [
+      ex('L12-1-a', 'One chord, four voices', 'C major in SATB: LH bass and tenor, RH alto and soprano.', 'treble', 'wait', hands('E4+C5:4 G4+C5:4 E4+G4:4', 'C3+G3:4 C3+E3:4 C3+C4:4'), ['noteReadingTreble', 'noteReadingBass'], { grand: true }),
+      ex('L12-1-b', 'Open and close spacing', 'Same chord, the upper voices close together then spread out.', 'treble', 'wait', hands('C4+E4+G4:4 E4+C5:4', 'C3:4 C3+G3:4'), ['noteReadingTreble', 'noteReadingBass'], { grand: true }),
+    ],
+  },
+  {
+    id: 'L12-2', level: 12, title: 'Smooth voice leading', prerequisites: ['L12-1'],
+    summary: 'Keep common tones, move by step, avoid parallel fifths and octaves.',
+    teach: [
+      t('Hold what you can', 'If two chords share a note, keep it in the same voice. C to F share C: the soprano holds it while the others move one step.', N('C3 G3 E4 C5'), [...N('C3 G3 E4 C5'), ...N('F3 A3 F4 C5')], false),
+      t('Move by the smallest step', 'Upper voices move to the nearest note of the next chord. The bass can leap; the others should mostly step.'),
+      t('No parallel fifths or octaves', 'Two voices a fifth (or octave) apart must not both move to another fifth (or octave). It makes four voices sound like two. Contrary motion against the bass fixes it.'),
+    ],
+    exercises: [
+      ex('L12-2-a', 'I - IV - V - I in four parts', 'The classic progression with smooth voice leading.', 'treble', 'wait', hands('E4+C5:4 F4+C5:4 D4+B4:4 E4+C5:4', 'C3+G3:4 F3+A3:4 G2+G3:4 C3+G3:4'), ['noteReadingTreble', 'noteReadingBass'], { grand: true }),
+      ex('L12-2-b', 'I - vi - ii - V - I', 'A longer chain. Watch the soprano move by step.', 'treble', 'wait', hands('E4+C5:4 E4+C5:4 F4+A4:4 D4+B4:4 E4+C5:4', 'C3+G3:4 A2+A3:4 D3+A3:4 G2+G3:4 C3+G3:4'), ['noteReadingTreble', 'noteReadingBass'], { grand: true }),
+    ],
+  },
+  {
+    id: 'L12-3', level: 12, title: 'Cadences', prerequisites: ['L12-2'],
+    summary: 'How phrases end: full stop, comma, Amen and surprise.',
+    teach: [
+      t('Perfect cadence (V - I)', 'The full stop. The leading tone B rises to C and the bass falls from G to C.', undefined, [...N('G2 G3 D4 B4'), ...N('C3 G3 E4 C5')], false),
+      t('Plagal cadence (IV - I)', 'The "Amen" at the end of hymns. Softer than V - I.', undefined, [...N('F3 A3 F4 C5'), ...N('C3 G3 E4 C5')], false),
+      t('Half and deceptive', 'A half cadence ends on V, like a comma. A deceptive cadence goes V - vi: you expect home and land somewhere sad instead. In V - vi, double the third (C).', undefined, [...N('G2 G3 D4 B4'), ...N('A2 E3 C4 C5')], false),
+    ],
+    exercises: [
+      ex('L12-3-a', 'Perfect and plagal', 'V - I, then IV - I.', 'treble', 'wait', hands('D4+B4:4 E4+C5:4 F4+C5:4 E4+C5:4', 'G2+G3:4 C3+G3:4 F3+A3:4 C3+G3:4'), ['noteReadingTreble', 'noteReadingBass'], { grand: true }),
+      ex('L12-3-b', 'Half and deceptive', 'I - V (half), then V - vi (deceptive).', 'treble', 'wait', hands('E4+C5:4 D4+B4:4 D4+B4:4 C4+C5:4', 'C3+G3:4 G2+G3:4 G2+G3:4 A2+E3:4'), ['noteReadingTreble', 'noteReadingBass'], { grand: true }),
+    ],
+  },
+  {
+    id: 'L12-4', level: 12, title: 'Harmonize a melody', prerequisites: ['L12-3'],
+    summary: 'Pick a chord for each melody note, then voice it.',
+    teach: [
+      t('Which chords contain the note?', 'Every melody note belongs to three chords. E is in C (I), A minor (vi) and E minor (iii). Pick the one that leads well to the next chord and ends phrases with a cadence.', N('E4'), [...N('C4 E4 G4'), ...N('A3 C4 E4')], false),
+      t('Keyboard style', 'Pianists often put three voices in the right hand (melody on top) and the bass alone in the left. It is the same four-part harmony, easier to play.', N('C3 E4 G4 C5')),
+      t('Let Maestro do it with your voice', 'Open Voice, then Sing to score. Sing any tune, switch to Four parts, and Maestro picks the chords and writes S, A, T and B for you. Compare its choices with yours.'),
+    ],
+    exercises: [
+      ex('L12-4-a', 'Twinkle, harmonized (phrase 1)', 'Melody on top of RH chords, bass in LH. I - I - IV - I.', 'treble', 'wait', hands('E4+G4+C5 E4+G4+C5 C5+E5+G5 C5+E5+G5 C5+F5+A5 C5+F5+A5 C5+E5+G5:2', 'C3:2 C3:2 F3:2 C3:2'), ['noteReadingTreble', 'noteReadingBass'], { grand: true }),
+      ex('L12-4-b', 'Twinkle, harmonized (phrase 2)', 'IV - I - V - I to finish with a perfect cadence.', 'treble', 'wait', hands('A4+C5+F5 A4+C5+F5 G4+C5+E5 G4+C5+E5 G4+B4+D5 G4+B4+D5 E4+G4+C5:2', 'F3:2 C3:2 G2:2 C3:2'), ['noteReadingTreble', 'noteReadingBass'], { grand: true }),
+    ],
+  },
+  {
+    id: 'L12-5', level: 12, title: 'Arranging: accompaniment patterns', prerequisites: ['L12-4'],
+    summary: 'Turn one chord chart into many styles: block, broken, Alberti and pop.',
+    teach: [
+      t('Same chords, new texture', 'An arrangement keeps the melody and harmony and changes how the chords are played. Block chords sound like a hymn, broken chords like a ballad.', undefined, N('C3 G3 E4 G3'), true),
+      t('Alberti bass', 'Low, high, middle, high: C G E G. Mozart used it everywhere. Keep it quiet so the melody floats on top.', N('C3 E3 G3'), N('C3 G3 E3 G3 C3 G3 E3 G3')),
+      t('Pop: root and fifth', 'Left hand plays root and fifth on beat 1, the right hand plays the chord on the off-beats. Simple and it grooves.'),
+    ],
+    exercises: [
+      ex('L12-5-a', 'Broken chords', 'LH C - F - G - C broken, two notes per beat.', 'bass', 'timed', seqOf('C3:0.5 G3:0.5 E3:0.5 G3:0.5 C3:0.5 G3:0.5 E3:0.5 G3:0.5 F2:0.5 C3:0.5 A2:0.5 C3:0.5 F2:0.5 C3:0.5 A2:0.5 C3:0.5 G2:0.5 D3:0.5 B2:0.5 D3:0.5 G2:0.5 D3:0.5 B2:0.5 D3:0.5 C3:4', 'LH'), ['rhythm', 'fingerTechnique'], { tempo: 72 }),
+      ex('L12-5-b', 'Melody over Alberti bass', 'RH tune, LH Alberti pattern.', 'treble', 'wait', hands('E4:2 D4:2 C4:4', 'C3:0.5 G3:0.5 E3:0.5 G3:0.5 B2:0.5 G3:0.5 D3:0.5 G3:0.5 C3:0.5 G3:0.5 E3:0.5 G3:0.5 C3:0.5 G3:0.5 E3:0.5 G3:0.5'), ['fingerTechnique'], { grand: true }),
+      ex('L12-5-c', 'Pop groove', 'LH root and fifth, RH chords on the off-beats.', 'treble', 'timed', hands('R:0.5 E4+G4+C5:0.5 R:0.5 E4+G4+C5:0.5 R:0.5 E4+G4+C5:0.5 R:0.5 E4+G4+C5:0.5 R:0.5 D4+G4+B4:0.5 R:0.5 D4+G4+B4:0.5 R:0.5 D4+G4+B4:0.5 R:0.5 D4+G4+B4:0.5', 'C3+G3:2 C3+G3:2 G2+D3:2 G2+D3:2'), ['rhythm'], { grand: true, tempo: 80 }),
+    ],
+  },
+  {
+    id: 'L12-6', level: 12, title: 'Write your own chorale', prerequisites: ['L12-5'],
+    summary: 'Put it together: a short four-part piece with a real cadence.',
+    teach: [
+      t('Plan the chords', 'Four bars: start on I, wander (vi, IV, ii), set up V, end on I. Write the bass and soprano first, then fill alto and tenor.'),
+      t('Check your work', 'Look for parallel fifths and octaves, a doubled leading tone (B in C major), and voices that cross. Fix each by moving one voice by step.'),
+      t('Sing it in', 'In Voice, Sing to score, sing your soprano line and choose Four parts. Download the MusicXML to keep editing it in MuseScore or Sibelius.'),
+    ],
+    exercises: [
+      ex('L12-6-a', 'A four-bar chorale', 'I - vi - IV - ii - V - I with a plagal Amen.', 'treble', 'wait', hands('E4+C5:2 E4+C5:2 F4+C5:2 F4+A4:2 D4+B4:4 E4+C5:4 F4+C5:4 E4+C5:4', 'C3+G3:2 A2+A3:2 F3+A3:2 D3+A3:2 G2+G3:4 C3+G3:4 F3+A3:4 C3+G3:4'), ['noteReadingTreble', 'noteReadingBass'], { grand: true }),
     ],
   },
 ];

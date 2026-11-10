@@ -42,8 +42,9 @@ export function freqToNote(freq: number, a4 = 440): { midi: number; cents: numbe
 }
 
 /** VexFlow key string, e.g. 61 -> "c#/4". */
-export function midiToVexKey(midi: number): string {
-  const n = NOTE_NAMES_SHARP[((midi % 12) + 12) % 12].toLowerCase();
+const NOTE_NAMES_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'] as const;
+export function midiToVexKey(midi: number, flats = false): string {
+  const n = (flats ? NOTE_NAMES_FLAT : NOTE_NAMES_SHARP)[((midi % 12) + 12) % 12].toLowerCase();
   return `${n}/${Math.floor(midi / 12) - 1}`;
 }
 

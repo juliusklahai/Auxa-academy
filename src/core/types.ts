@@ -20,6 +20,8 @@ export interface ScoreEvent {
   hand?: Hand;
   fingers?: number[];     // suggested fingering, parallel to pitches (0 = none)
   hands?: Hand[];         // per-pitch hand when one event has notes for both hands
+  /** written length per hand when both hands start together with different note values (drawing only) */
+  handBeats?: Partial<Record<Hand, number>>;
 }
 
 export type AssessMode = 'wait' | 'timed';
@@ -40,6 +42,12 @@ export interface Exercise {
   inputs: InputSource[];  // supported input methods
   timingToleranceMs?: number;
   hideLabels?: boolean;   // remove key-name scaffolding
+  /** play by ear: noteheads stay hidden until you find each note; listen first */
+  byEar?: boolean;
+  /** swing feel: off-beat eighths land two thirds through the beat (written straight, as in jazz charts) */
+  swing?: boolean;
+  /** spell black keys as flats on the staff (blues, jazz, flat keys) */
+  flats?: boolean;
   voice?: boolean;        // sung exercise (microphone, voice mode)
   octaveFree?: boolean;   // accept the right note in any octave (men singing treble-clef melodies)
   centsTolerance?: number;// intonation tolerance for sung notes (default 30)

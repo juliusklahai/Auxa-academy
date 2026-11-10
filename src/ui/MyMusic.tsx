@@ -82,7 +82,7 @@ export function parseXmlString(xml: string): Score {
   return parseMusicXml(doc, xml);
 }
 
-export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { singPart?: 'S' | 'A' | 'T' | 'B' | null; onSingHandled?: () => void; songId?: string | null; onSongHandled?: () => void }) {
+export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, onXmlHandled }: { singPart?: 'S' | 'A' | 'T' | 'B' | null; onSingHandled?: () => void; songId?: string | null; onSongHandled?: () => void; xml?: string | null; onXmlHandled?: () => void }) {
   const settings = useSettings();
   const fm = useFocusMode();
   const [score, setScore] = useState<Score | null>(null);
@@ -185,6 +185,8 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled }: { si
     openSong(songId);
     onSongHandled?.();
   }, [songId]); // eslint-disable-line
+  // a score made elsewhere (Sing to score) opens here for practice and is saved to the library
+  useEffect(() => { if (!xml) return; load(xml, true); onXmlHandled?.(); }, [xml]); // eslint-disable-line
 
   useEffect(() => {
     if (!singPart) return;
