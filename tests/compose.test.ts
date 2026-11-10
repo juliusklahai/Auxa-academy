@@ -162,3 +162,46 @@ describe('Sing to score: from real audio', () => {
     expect(Math.abs(m.bpm - 80)).toBeLessThan(5);
   });
 });
+
+describe('Sing to score: finds the meter by itself', () => {
+  it('hears a waltz in 3/4 and a march-like tune in 4/4', async () => {
+    const { segment: seg, detectMeter } = await import('../src/compose/transcribe');
+    seed = 21;
+    const waltz: [number, number][] = [[67, 2], [64, 1], [65, 2], [62, 1], [64, 2], [60, 1], [62, 3], [67, 2], [64, 1], [65, 2], [62, 1], [64, 2], [62, 1], [60, 3]];
+    expect(detectMeter(seg(sing(waltz, 120)), 120)).toEqual([3, 4]);
+    expect(detectMeter(seg(sing(ODE, 90)), 90)).toEqual([4, 4]);
+  });
+  it('transcribes without being told the meter', () => {
+    const m = transcribe(sing(ODE, 90))!;
+    expect(m.timeSig).toEqual([4, 4]);
+  });
+});
+
+describe('Sing to score: arrangement styles', () => {
+  const m = transcribe(sing(ODE, 90), { bpm: 90, origin: 300 })!;
+  for (const st of ['hymn', 'moving', 'pad', 'call', 'tenor'] as const) {
+    it(`${st}: four complete parts that fill every bar, in range`, () => {
+      const h = harmonize(m, st);
+      const total = m.bars * 4;
+      for (const v of h.voices) {
+        let pos = 0;
+        for (const n of v.notes) { expect(Math.abs(n.beat - pos)).toBeLessThan(1e-6); pos += n.beats; }
+        expect(Math.abs(pos - total)).toBeLessThan(1e-6);
+      }
+      const r = [[55, 81], RANGE.A, RANGE.T, RANGE.B];
+      h.voices.forEach((v, i) => v.notes.forEach((n) => { if (n.midi !== null) { expect(n.midi).toBeGreaterThanOrEqual(r[i][0] - 2); expect(n.midi).toBeLessThanOrEqual(r[i][1] + 2); } }));
+      expect(h.techniques.length).toBeGreaterThan(1);
+    });
+  }
+  it('hymn changes chord with the melody, not once per bar', () => {
+    const h = harmonize(m, 'hymn');
+    expect(h.slots.length).toBeGreaterThanOrEqual(m.notes.filter((n) => n.midi !== null).length - 4);
+    expect(h.voices[3].notes.filter((n) => n.midi !== null).length).toBeGreaterThan(20);
+  });
+  it('melody in the tenor keeps the tune in the tenor range', () => {
+    const h = harmonize(m, 'tenor');
+    const t = h.voices[2].notes.filter((n) => n.midi !== null).map((n) => n.midi!);
+    expect(t.map((x) => x - h.melodyShift)).toEqual(ODE.map(([x]) => x));
+    expect(Math.max(...t)).toBeLessThanOrEqual(67);
+  });
+});

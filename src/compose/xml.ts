@@ -74,8 +74,14 @@ export function writeXml(s: XmlScore): string {
           const ties = (start ? '<tie type="stop"/>' : '') + (stop ? '<tie type="start"/>' : '');
           const tied = (start ? '<tied type="stop"/>' : '') + (stop ? '<tied type="start"/>' : '');
           const chord = s.chords && vi === 0 && k === 0 && !tiedIn ? s.chords.find((c) => Math.abs(c.beat - st) < 1e-6 && c.chord) : undefined;
-          if (chord?.chord) m += `<harmony><root><root-step>${chordName(chord.chord, s.key).replace(/[^A-G].*$/, '')}</root-step>${/^[A-G]#/.test(chordName(chord.chord, s.key)) ? '<root-alter>1</root-alter>' : /^[A-G]b/.test(chordName(chord.chord, s.key)) ? '<root-alter>-1</root-alter>' : ''}</root><kind text="${esc(chordName(chord.chord, s.key).replace(/^[A-G][#b]?/, ''))}">${chord.chord.seventh ? 'dominant' : chord.chord.quality === 'min' ? 'minor' : chord.chord.quality === 'dim' ? 'diminished' : 'major'}</kind></harmony>`;
-          m += `<note><pitch><step>${sp.step}</step>${sp.alter ? `<alter>${sp.alter}</alter>` : ''}<octave>${sp.octave}</octave></pitch><duration>${bt * DIV}</duration>${ties}<voice>${vi + 1}</voice><type>${type}</type>${dot ? '<dot/>' : ''}${v.stem ? `<stem>${v.stem}</stem>` : ''}${v.staff > 0 ? `<staff>${v.staff}</staff>` : ''}${tied ? `<notations>${tied}</notations>` : ''}</note>`;
+          if (chord?.chord) {
+            const nm = chordName(chord.chord, s.key), [head, slash] = nm.split('/');
+            const rootStep = head[0], rootAlt = head[1] === '#' ? 1 : head[1] === 'b' ? -1 : 0;
+            const kind = chord.chord.seventh ? 'dominant' : chord.chord.quality === 'min' ? 'minor' : chord.chord.quality === 'dim' ? 'diminished' : 'major';
+            m += `<harmony><root><root-step>${rootStep}</root-step>${rootAlt ? `<root-alter>${rootAlt}</root-alter>` : ''}</root><kind text="${esc(head.replace(/^[A-G][#b]?/, ''))}">${kind}</kind>`
+              + (slash ? `<bass><bass-step>${slash[0]}</bass-step>${slash[1] === '#' ? '<bass-alter>1</bass-alter>' : slash[1] === 'b' ? '<bass-alter>-1</bass-alter>' : ''}</bass>` : '') + '</harmony>';
+          }
+          m += `<note><pitch><step>${sp.step}</step>${sp.alter ? `<alter>${sp.alter}</alter>` : ''}<octave>${sp.octave}</octave></pitch><duration>${bt * DIV}</duration>${ties}<voice>${vi + 1}</voice><type>${type}</type>${dot ? '<dot/>' : ''}${v.stem ? `<stem>${v.stem}</stem>` : ''}${v.staff > 0 ? `<staff>${v.staff}</staff>` : ''}${tied ? `<notations>${tied}</notations>` : ''}${n.lyric && k === 0 && !tiedIn ? `<lyric number="1"><syllabic>single</syllabic><text>${esc(n.lyric)}</text></lyric>` : ''}</note>`;
         });
         pos = en;
       }

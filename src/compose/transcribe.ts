@@ -7,7 +7,7 @@ export interface PitchFrame { t: number; midi: number | null; rms: number }
 /** One sung note: equal-tempered pitch, start/end in ms, and how sharp (+) or flat (-) it was. */
 export interface SungNote { midi: number; start: number; end: number; cents: number }
 /** A written note or rest: start and length in beats from the first downbeat. */
-export interface MelodyNote { midi: number | null; beat: number; beats: number }
+export interface MelodyNote { midi: number | null; beat: number; beats: number; /** sung syllable, for arranged parts ("Ooh") */ lyric?: string }
 export interface KeyInfo { tonic: number; mode: 'major' | 'minor'; fifths: number; name: string }
 export interface Melody { notes: MelodyNote[]; bpm: number; timeSig: [number, number]; key: KeyInfo; bars: number }
 
@@ -302,17 +302,59 @@ export function bestDownbeat(sung: SungNote[], bpm: number, timeSig: [number, nu
   return best;
 }
 
+/**
+ * How strongly the long notes gather on the first beat of each bar for a given bar length (beats). A
+ * waltz puts its weight every 3 beats, a march every 4 (or 2). Higher is a better fit.
+ */
+export function meterFit(sung: SungNote[], bpm: number, barBeats: number): number {
+  const beatMs = 60000 / bpm;
+  const t0 = sung[0].start;
+  const w = sung.map((n) => Math.min(4, (n.end - n.start) / beatMs) + 0.25);
+  const tot = w.reduce((a, b) => a + b, 0);
+  let best = -Infinity;
+  for (let k = 0; k < barBeats * 2; k++) {
+    const o = t0 - k * beatMs / 2;
+    let on = 0, cross = 0;
+    sung.forEach((n, i) => {
+      const b = (n.start - o) / beatMs;
+      if (Math.abs(b - Math.round(b)) < 0.2 && ((Math.round(b) % barBeats) + barBeats) % barBeats === 0) on += w[i];
+      const e = (n.end - o) / beatMs;
+      if (Math.floor(e / barBeats - 0.1) > Math.floor(b / barBeats + 1e-9) && (n.end - n.start) / beatMs >= 1.5) cross += w[i] * 0.5;
+    });
+    best = Math.max(best, ((on - cross) / tot) * barBeats - k * 0.02);
+  }
+  return best;
+}
+
+/** 4/4, 3/4 or 2/4 from where the long notes fall (4/4 unless the tune clearly swings in threes). */
+export function detectMeter(sung: SungNote[], bpm: number): [number, number] {
+  if (sung.length < 6) return [4, 4];
+  const f4 = meterFit(sung, bpm, 4), f3 = meterFit(sung, bpm, 3);
+  if (f3 > f4 * 1.12 + 0.05) return [3, 4];
+  return [4, 4];
+}
+
+/** Eighths unless many notes clearly fall between them (quick runs), then sixteenths. */
+export function detectGrid(sung: SungNote[], bpm: number, origin: number): number {
+  const beatMs = 60000 / bpm;
+  let off = 0;
+  for (const n of sung) { const x = (n.start - origin) / beatMs * 2; if (Math.abs(x - Math.round(x)) > 0.32 && n.end - n.start < beatMs * 0.5) off++; }
+  return off / sung.length > 0.18 ? 0.25 : 0.5;
+}
+
 /** Everything in one go: readings -> melody. Without a fixed tempo, the tempo comes from the singing. */
 export function transcribe(frames: PitchFrame[], opts: { bpm?: number; origin?: number; timeSig?: [number, number]; grid?: number } = {}): Melody | null {
   const sung = tidy(segment(cleanFrames(frames)));
   if (!sung.length) return null;
-  const timeSig = opts.timeSig ?? [4, 4];
   snapToKey(sung, detectKey(sung));
   const bpm = opts.bpm ?? estimateTempo(sung);
+  // time signature and shortest note: found from the singing unless given
+  const timeSig = opts.timeSig ?? detectMeter(sung, bpm);
   let origin = opts.origin ?? sung[0].start;
   // free tempo: line the bar lines up with the strongest notes (a short first note may be a pickup)
   if (opts.origin === undefined) origin = bestDownbeat(sung, bpm, timeSig);
-  const notes = quantize(sung, bpm, origin, timeSig, opts.grid ?? 0.5);
+  const grid = opts.grid ?? detectGrid(sung, bpm, origin);
+  const notes = quantize(sung, bpm, origin, timeSig, grid);
   const barBeats = timeSig[0] * (4 / timeSig[1]);
   const total = notes.reduce((a, n) => Math.max(a, n.beat + n.beats), 0);
   return { notes, bpm, timeSig, key: detectKey(notes), bars: Math.round(total / barBeats) };
