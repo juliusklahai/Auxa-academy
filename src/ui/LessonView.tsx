@@ -18,6 +18,7 @@ import { bumpProgress, progress, setSettings, useProgressVersion, useSettings } 
 import { Staff } from './Staff';
 import { EarDrill } from './EarDrill';
 import { coachOn, say, stopSpeaking } from './voice';
+import { NARRATION } from '../curriculum/narration';
 import { PitchRoll } from './PitchRoll';
 import { isPhone, useFocusMode } from './focus';
 import { DockFab, FocusBar, FloatHead, RotateHint } from './FocusBar';
@@ -182,7 +183,7 @@ function TeachPanel({ lesson, step, setStep, onDone, chips }: { lesson: Lesson; 
   useEffect(() => {
     let live = true;
     if (voiceOn) {
-      const text = [s.title, s.body.replace(/\n+/g, ' '), ...(s.tips ?? [])].join('. ');
+      const text = NARRATION[`${lesson.id}#${step}`] ?? [s.title, s.body.replace(/\n+/g, ' ')].join('. ');
       void say(text).then(() => { if (live && (seq || s.play)) window.setTimeout(() => { if (live) play(); }, 250); });
     }
     return () => { live = false; stopSpeaking(); };
@@ -271,7 +272,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
   const [report, setReport] = useState<AssessmentReport | null>(null);
   // voice coach: what this exercise asks, and how it went
   useEffect(() => {
-    void say(`${base.title}. ${base.objective}. ${base.byEar ? 'Press listen first.' : 'Press start when you are ready.'}`);
+    void say(`Let's try: ${base.title}. ${base.objective} ${base.byEar ? 'Press listen first.' : 'Press start when you are ready.'}`);
     return () => stopSpeaking();
   }, [base.id]); // eslint-disable-line
   useEffect(() => {

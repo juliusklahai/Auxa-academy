@@ -5,7 +5,7 @@ import { audio } from '../audio/engine';
 import { metronome } from '../audio/metronome';
 import { freqToMidiFloat, midiToName } from '../core/music';
 import { chordLabel, harmonize, STYLES, type ArrStyle } from '../compose/harmony';
-import { melodyXml, playbackNotes, satbXml } from '../compose/score';
+import { asSoprano, melodyXml, playbackNotes, satbXml } from '../compose/score';
 import { keyInfo, transcribe, type Melody, type PitchFrame } from '../compose/transcribe';
 import { framesFromFile, framesFromSamples } from '../compose/audioFile';
 import { mic, type MicFrame } from '../input/mic';
@@ -25,6 +25,8 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
   const [meter, setMeter] = useState<'auto' | '4/4' | '3/4' | '2/4' | '6/8'>('auto');
   const [grid, setGrid] = useState<'auto' | '1' | '0.5' | '0.25'>('auto');
   const [style, setStyle] = useState<ArrStyle>('hymn');
+  /** a sung tune is the melody line: written for soprano unless asked to keep the real octave */
+  const [asSung, setAsSung] = useState(false);
   /** how to read the rhythm: as heard, or every note twice as long / half as long */
   const [feel, setFeel] = useState<'1' | '0.5' | '2'>('1');
   const [take, setTake] = useState<string | null>(null); // the recording itself, to compare with the score
@@ -185,13 +187,13 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
     return { ...mel, key: keyInfo(+pc, mode as 'major' | 'minor') };
   }, [mel, keyOverride]);
   const harmony = useMemo(() => (melody ? harmonize(melody, style) : null), [melody, style]);
-  const xml = useMemo(() => (!melody ? '' : view === 'satb' ? satbXml(melody, title, harmony!) : melodyXml(melody, title)), [melody, view, title, harmony]);
+  const xml = useMemo(() => (!melody ? '' : view === 'satb' ? satbXml(melody, title, harmony!) : melodyXml(melody, title, undefined, asSung)), [melody, view, title, harmony, asSung]);
   const noteCount = melody?.notes.filter((n) => n.midi !== null).length ?? 0;
 
   const play = () => {
     if (!melody) return;
     if (playing) { audio.stopAll(); setPlaying(false); return; }
-    const voices = view === 'satb' && harmony ? harmony.voices : [{ notes: melody.notes }];
+    const voices = view === 'satb' && harmony ? harmony.voices : [{ notes: (asSung ? melody : asSoprano(melody).melody).notes }];
     const notes = playbackNotes(voices, melody.bpm);
     audio.playNotes(notes, view === 'satb' ? 0.55 : 0.75);
     setPlaying(true);
@@ -273,6 +275,11 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
             <Select value={grid} aria-label="Shortest note" onChange={(e) => reread(feel, meter, e.target.value as '0.5')}>
               <option value="auto">Detail: auto</option><option value="1">Quarters</option><option value="0.5">Eighths</option><option value="0.25">Sixteenths</option>
             </Select>
+            {view === 'melody' && (
+              <Select value={asSung ? 'sung' : 'sop'} aria-label="Octave" onChange={(e) => setAsSung(e.target.value === 'sung')}>
+                <option value="sop">Soprano line (treble)</option><option value="sung">As sung (my octave)</option>
+              </Select>
+            )}
             <input className="s2s-name" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Song title" />
             <span className="muted small s2s-stats">{noteCount} notes · {melody.bars} bars · {melody.bpm} bpm{view === 'satb' && harmony?.melodyShift ? ` · tune written ${harmony.melodyShift > 0 ? 'an octave up' : 'an octave down'} for soprano` : ''}</span>
           </div>

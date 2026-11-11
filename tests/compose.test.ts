@@ -245,3 +245,15 @@ describe('Sing to score: one note per sung syllable', () => {
     expect(m.notes.filter((n) => n.midi === 64).length).toBe(3);
   });
 });
+
+describe('Sing to score: a sung tune is written as the soprano line', () => {
+  it('moves a low (male) take up to the treble staff, or keeps it as sung', async () => {
+    const { melodyXml } = await import('../src/compose/score');
+    const { keyInfo } = await import('../src/compose/transcribe');
+    const low = { notes: [{ midi: 48, beat: 0, beats: 2 }, { midi: 52, beat: 2, beats: 2 }], bpm: 80, timeSig: [4, 4] as [number, number], key: keyInfo(0, 'major'), bars: 1 };
+    const mids = (x: string) => parse(x).notes.map((n) => n.midi);
+    expect(mids(melodyXml(low, 't'))).toEqual([60, 64]);
+    expect(melodyXml(low, 't')).toContain('<sign>G</sign>');
+    expect(mids(melodyXml(low, 't', undefined, true))).toEqual([48, 52]);
+  });
+});

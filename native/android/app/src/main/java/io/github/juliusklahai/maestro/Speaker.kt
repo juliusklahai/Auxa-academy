@@ -14,12 +14,14 @@ import java.util.Locale
 class Speaker(private val a: MainActivity) : TextToSpeech.OnInitListener {
     private val main = Handler(Looper.getMainLooper())
     private var ready = false
+    private var english = false
     private var pending: Pair<String, String>? = null
     private val tts = TextToSpeech(a, this)
 
     override fun onInit(status: Int) {
         if (status != TextToSpeech.SUCCESS) return
         val loc = if (tts.isLanguageAvailable(Locale.getDefault()) >= TextToSpeech.LANG_AVAILABLE && Locale.getDefault().language == "en") Locale.getDefault() else Locale.US
+        english = tts.isLanguageAvailable(loc) >= TextToSpeech.LANG_AVAILABLE
         tts.language = loc
         // prefer a natural, offline-capable voice for the language
         tts.voices?.filter { it.locale.language == "en" && !it.isNetworkConnectionRequired }
@@ -37,6 +39,8 @@ class Speaker(private val a: MainActivity) : TextToSpeech.OnInitListener {
 
     fun speak(text: String, id: String, rate: Float) {
         if (!ready) { pending = text to id; return }
+        // no English voice installed: stay quiet rather than read English in another language
+        if (!english) { done(id); return }
         tts.setSpeechRate(rate.coerceIn(0.6f, 1.4f))
         tts.speak(text, TextToSpeech.QUEUE_FLUSH, Bundle(), id)
     }

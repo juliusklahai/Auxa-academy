@@ -66,3 +66,12 @@ describe('ear, jazz and arranging levels', () => {
     for (const l of fresh) expect(lessonTier(l)).toBe('plus');
   });
 });
+
+describe('voice coach', () => {
+  it('has a simple spoken explanation for every lesson step', async () => {
+    const { NARRATION } = await import('../src/curriculum/narration');
+    const missing = LESSONS.flatMap((l) => l.teach.map((_, i) => `${l.id}#${i}`)).filter((k) => !NARRATION[k]);
+    expect(missing).toEqual([]);
+    for (const t of Object.values(NARRATION)) { expect(t.split(/\s+/).length).toBeLessThan(70); expect(t).not.toMatch(/[–—]/); }
+  });
+});
