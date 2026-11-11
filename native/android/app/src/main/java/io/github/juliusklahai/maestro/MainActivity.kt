@@ -42,6 +42,7 @@ class MainActivity : Activity() {
 
     private lateinit var root: FrameLayout
     lateinit var web: WebView
+    val speaker by lazy { Speaker(this) }
         private set
     private var offlineView: View? = null
     private var practice = false
@@ -318,6 +319,7 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         midi.close()
+        speaker.close()
         root.removeView(web)
         web.destroy()
         super.onDestroy()

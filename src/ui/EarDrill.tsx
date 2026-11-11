@@ -8,6 +8,7 @@ import { setExpected } from '../input/expect';
 import { Icon } from './Icon';
 import { Piano, type KeyMark } from './Piano';
 import { bumpProgress, progress, useSettings } from './settings';
+import { say, stopSpeaking } from './voice';
 
 type Mark = 'right' | 'wrong';
 
@@ -35,7 +36,12 @@ export function EarDrill({ exercise, onNext }: { exercise: Exercise; onNext?: ()
     return () => { audio.onAppNote = null; audio.stopAll(); };
   }, []);
   // every new round starts by playing the question
-  useEffect(() => { const id = window.setTimeout(() => play(q.sound), 350); return () => clearTimeout(id); }, [q]);
+  useEffect(() => {
+    let live = true;
+    // the coach reads the task on the first round, then the sound plays
+    (round === 0 ? say(q.prompt) : Promise.resolve()).then(() => { if (live) window.setTimeout(() => { if (live) play(q.sound); }, 300); });
+    return () => { live = false; stopSpeaking(); };
+  }, [q]); // eslint-disable-line
 
   const answer = (choice: string | null, ok: boolean) => {
     if (answered || done) return;

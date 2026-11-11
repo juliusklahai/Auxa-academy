@@ -481,6 +481,7 @@ export function SettingsView() {
           <div className="card-head"><b>Learning aids</b></div>
           <label className="field">Key labels<Select value={st.labels} onChange={(e) => setSettings({ labels: e.target.value as 'letters' })}><option value="letters">Letters (C D E)</option><option value="solfege">Solfège (Do Re Mi)</option><option value="none">None</option></Select></label>
           <label className="check"><input type="checkbox" checked={st.hands} onChange={(e) => setSettings({ hands: e.target.checked })} /> Show guide hands on the keyboard</label>
+          <label className="check"><input type="checkbox" checked={st.coachVoice !== false} onChange={(e) => setSettings({ coachVoice: e.target.checked })} /> Voice coach: read each lesson step aloud</label>
           <label className="check"><input type="checkbox" checked={st.autoFocus} onChange={(e) => setSettings({ autoFocus: e.target.checked })} /> Full-screen practice when I press Start (Esc returns)</label>
           <label className="check"><input type="checkbox" checked={st.keyHints} onChange={(e) => setSettings({ keyHints: e.target.checked })} /> Show computer-keyboard letters on keys</label>
           <label className="field">Mistake policy<Select value={st.mistakePolicy} onChange={(e) => setSettings({ mistakePolicy: e.target.value as 'restart' })}><option value="restart">Challenge: 3 in a row restarts (earns mastery)</option><option value="pause">Supported: never restart (practice only)</option></Select></label>

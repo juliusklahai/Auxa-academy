@@ -8,6 +8,7 @@ import type { Clef, DrillSpec, Exercise, Hand, ScoreEvent, SkillId, TeachStep } 
 import { hands, seqOf, type LessonDef } from './levels';
 
 /** "C3+G3+E4+C5 F3+A3+F4+C5" -> chords for listening */
+const N2 = (s: string) => s.trim().split(/\s+/).map(nameToMidi);
 const C = (s: string) => s.trim().split(/\s+/).map((ch) => (ch === 'R' ? [] : ch.split('+').map(nameToMidi)));
 
 interface StepOpts { tips?: string[]; seq?: number[][]; seqBeats?: number; compare?: { label: string; seq: number[][] }[]; show?: number[] }
@@ -49,6 +50,75 @@ const KEYS_EASY = [60, 65, 67, 62, 57];
 const KEYS_ALL = [60, 62, 64, 65, 67, 57, 59, 58, 63, 56, 61, 54];
 
 export const ADVANCED_LESSONS: LessonDef[] = [
+
+  // =====================================================================================
+  // LEVEL 3 · TWO NOTES IN ONE HAND (double notes)
+  // =====================================================================================
+  {
+    id: 'D3-1', level: 3, title: 'Right hand in thirds: soprano and alto', prerequisites: ['L1-5', 'L2-2'],
+    summary: 'Play two notes at once in the right hand, the way a pianist plays the soprano and alto parts.',
+    teach: [
+      step('Two voices, one hand', 'In hymns and choir music the right hand often plays two parts at once: the melody (soprano) on top and a harmony part (alto) below it. The most common distance between them is a third: skip one white key.', {
+        seq: C('C4+E4 D4+F4 E4+G4 F4+A4 G4+B4'), seqBeats: 1,
+      }),
+      step('Fingering for thirds', 'Use fingers 1 and 3, then 2 and 4, then 3 and 5 as you climb. Keep the hand still and let the fingers do the work. Both notes must go down at exactly the same moment.', {
+        tips: ['C+E: 1 and 3', 'D+F: 2 and 4', 'E+G: 3 and 5', 'Press from the knuckles, wrist relaxed and level.'],
+        show: N2('C4 E4'),
+      }),
+      step('Make the top note sing', 'The melody is on top. Lean slightly more weight into the upper finger (3, 4 or 5) so the soprano is a little louder than the alto. Pianists call this voicing.', {
+        compare: [{ label: 'Both equal', seq: C('C4+E4 D4+F4 E4+G4') }, { label: 'Melody on top sings', seq: C('C4+E4 D4+F4 E4+G4') }], seqBeats: 1,
+      }),
+      step('Listen for one sound', 'If you hear two clicks instead of one, the notes are not together. Go slowly; play each pair, stop, check, then move on.'),
+    ],
+    exercises: [
+      ex('D3-1-a', 'Thirds up and down', 'C+E to G+B and back, fingers 1-3, 2-4, 3-5.', 'treble', 'wait', seqOf('C4+E4 D4+F4 E4+G4 D4+F4 C4+E4:4', 'RH'), ['fingerTechnique', 'noteReadingTreble']),
+      ex('D3-1-b', 'Thirds through the scale', 'Thirds from C up to C and back.', 'treble', 'wait', seqOf('C4+E4 D4+F4 E4+G4 F4+A4 G4+B4 A4+C5 B4+D5 C5+E5 B4+D5 A4+C5 G4+B4 F4+A4 E4+G4 D4+F4 C4+E4:2', 'RH'), ['fingerTechnique']),
+      ex('D3-1-c', 'Ode to Joy with an alto', 'The melody on top, the alto a third below.', 'treble', 'timed', seqOf('C4+E4 C4+E4 D4+F4 E4+G4 E4+G4 D4+F4 C4+E4 B3+D4 A3+C4 A3+C4 B3+D4 C4+E4 C4+E4:1.5 B3+D4:0.5 B3+D4:2', 'RH'), ['fingerTechnique', 'rhythm'], { tempo: 66 }),
+    ],
+  },
+  {
+    id: 'D3-2', level: 3, title: 'Right hand in sixths and mixed intervals', prerequisites: ['D3-1'],
+    summary: 'Wider pairs, and moving between 3rds, 4ths and 6ths as real harmony parts do.',
+    teach: [
+      step('Sixths', 'A sixth spans six letter names: C up to A. Use fingers 1 and 5 (or 1 and 4 on black keys). Sixths sound warm and open: string quartets and duets love them.', { seq: C('C4+A4 D4+B4 E4+C5 F4+D5 G4+E5'), seqBeats: 1 }),
+      step('Real alto parts change interval', 'An alto line does not stay a fixed distance under the melody. It moves to the nearest chord note, so the gap changes: a third, then a fourth, then a sixth. Look at both notes of each pair, not just the top one.', {
+        seq: C('E4+G4 C4+F4 D4+B4 E4+C5'), seqBeats: 1,
+      }),
+      step('Keep the thumb light', 'In sixths the thumb plays the lower voice. Let it rest lightly and keep the 4th and 5th fingers curved so the melody stays legato on top.'),
+    ],
+    exercises: [
+      ex('D3-2-a', 'Sixths up and down', 'C+A to G+E and back, fingers 1 and 5.', 'treble', 'wait', seqOf('C4+A4 D4+B4 E4+C5 F4+D5 G4+E5 F4+D5 E4+C5 D4+B4 C4+A4:4', 'RH'), ['fingerTechnique']),
+      ex('D3-2-b', '3rds to 6ths', 'Alternate a third and a sixth on each step.', 'treble', 'wait', seqOf('C4+E4 C4+A4 D4+F4 D4+B4 E4+G4 E4+C5 F4+A4 F4+D5 E4+G4:4', 'RH'), ['fingerTechnique']),
+      ex('D3-2-c', 'A two-part hymn line', 'Soprano and alto from a hymn: the gap changes as the harmony moves.', 'treble', 'wait', seqOf('E4+G4:2 E4+C5:2 F4+A4:2 E4+G4:2 D4+F4:2 C4+E4:2 B3+D4:2 C4+E4:2', 'RH'), ['fingerTechnique', 'noteReadingTreble']),
+    ],
+  },
+  {
+    id: 'D3-3', level: 3, title: 'Left hand in two notes: fifths, sixths and the shuffle', prerequisites: ['L2-6'],
+    summary: 'Two notes at once in the left hand: power fifths, sixths, and the rock and roll shuffle.',
+    teach: [
+      step('Fifths', 'Root and fifth: C+G, F+C, G+D. Fingers 5 and 1. It is the backbone of rock, folk and many accompaniments.', { seq: C('C3+G3 F2+C3 G2+D3 C3+G3'), seqBeats: 2 }),
+      step('Sixths and the shuffle', 'Rock the top finger between the fifth and the sixth: C+G, C+A, C+G, C+A. Keep the little finger on C. This is the left hand of countless blues and early rock songs.', { seq: C('C3+G3 C3+A3 C3+G3 C3+A3 F2+C3 F2+D3 F2+C3 F2+D3'), seqBeats: 1 }),
+      step('Tenor and bass', 'In four-part music the left hand plays the tenor and bass parts together. Read both notes on the bass staff and press them as one.', { seq: C('C3+G3 F2+A3 G2+G3 C3+G3'), seqBeats: 2 }),
+    ],
+    exercises: [
+      ex('D3-3-a', 'LH fifths', 'C, F, G, C: root and fifth together.', 'bass', 'wait', seqOf('C3+G3:2 F2+C3:2 G2+D3:2 C3+G3:2', 'LH'), ['fingerTechnique', 'noteReadingBass']),
+      ex('D3-3-b', 'The shuffle', 'Fifth to sixth and back on C, F and G.', 'bass', 'timed', seqOf('C3+G3 C3+A3 C3+G3 C3+A3 F2+C3 F2+D3 F2+C3 F2+D3 G2+D3 G2+E3 G2+D3 G2+E3 C3+G3:4', 'LH'), ['fingerTechnique', 'rhythm'], { tempo: 80 }),
+      ex('D3-3-c', 'Tenor and bass', 'Two parts in the left hand, read from the bass staff.', 'bass', 'wait', seqOf('C3+G3:2 A2+A3:2 F2+A3:2 G2+G3:2 C3+G3:4', 'LH'), ['noteReadingBass']),
+    ],
+  },
+  {
+    id: 'D3-4', level: 3, title: 'Four voices, two in each hand', prerequisites: ['D3-2', 'D3-3'],
+    summary: 'Soprano and alto in the right hand, tenor and bass in the left: play a hymn as written.',
+    teach: [
+      step('Reading a hymn', 'A hymn is written in four parts on two staves. Stems up on the treble staff are the soprano, stems down the alto. On the bass staff, stems up are the tenor, stems down the bass. Right hand takes the top two, left hand the bottom two.', { seq: C('C3+G3+E4+C5 F3+A3+F4+C5 G2+G3+D4+B4 C3+G3+E4+C5') }),
+      step('Read from the bottom up', 'Find the bass note first (it names the chord), then the soprano (the tune), then fill in the middle voices. Your hands will soon recognize common shapes.'),
+      step('Hold common notes', 'When a note is the same in the next chord, keep that finger down and only move the others. It keeps the sound smooth, the way a choir sings it.'),
+    ],
+    exercises: [
+      ex('D3-4-a', 'I – IV – V – I', 'Four voices, two per hand.', 'treble', 'wait', hands('E4+C5:4 F4+C5:4 D4+B4:4 E4+C5:4', 'C3+G3:4 F3+A3:4 G2+G3:4 C3+G3:4'), ['noteReadingTreble', 'noteReadingBass'], { grand: true }),
+      ex('D3-4-b', 'A hymn phrase', 'I – vi – ii – V – I in four parts.', 'treble', 'wait', hands('E4+C5:2 E4+C5:2 F4+D5:2 D4+B4:2 E4+C5:4', 'C3+G3:2 A2+A3:2 D3+A3:2 G2+G3:2 C3+G3:4'), ['noteReadingTreble', 'noteReadingBass'], { grand: true }),
+    ],
+  },
   // =====================================================================================
   // LEVEL 10 · PLAYING BY EAR
   // =====================================================================================

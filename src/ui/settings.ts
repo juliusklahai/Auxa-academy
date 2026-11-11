@@ -27,6 +27,8 @@ export interface AppSettings {
   micInstrument: 'piano' | 'epiano' | 'organ' | 'synth' | 'mono' | 'voice';
   /** go full screen automatically when practice starts */
   autoFocus: boolean;
+  /** voice coach reads lesson steps aloud */
+  coachVoice: boolean;
   /** guide hands: anatomical 3D model or the older line drawing */
   handStyle: '3d' | '2d';
   handOpacity: number;
@@ -46,7 +48,7 @@ export interface AppSettings {
 const KEY = 'maestro.settings.v1';
 const DEFAULTS: AppSettings = {
   labels: 'letters', fingers: true, keyHints: false, highContrast: false, a4: 440, volume: 0.8, metronomeVolume: 0.6,
-  latencyMs: 60, noiseGate: 0.002, micSensitivity: 0.85, wrongBeep: false, mistakePolicy: 'restart', hands: true, micMode: 'piano', voiceLow: 57, voiceHigh: 74, outputMode: 'headphones', latencyMode: 'smooth', micDeviceId: '', micInstrument: 'piano', autoFocus: true,
+  latencyMs: 60, noiseGate: 0.002, micSensitivity: 0.85, wrongBeep: false, mistakePolicy: 'restart', hands: true, micMode: 'piano', voiceLow: 57, voiceHigh: 74, outputMode: 'headphones', latencyMode: 'smooth', micDeviceId: '', micInstrument: 'piano', autoFocus: true, coachVoice: true,
   handStyle: '3d', handOpacity: 0.8, handColor: 'white', handStroke: 1, handsShow: 'both',
   handsListen: true, keyboard: true, kbScale: 1, kbKeys: 'auto', voiceLevel: 'easy',
 };
@@ -76,6 +78,8 @@ function apply(s: AppSettings) {
   document.documentElement.classList.toggle('hc', s.highContrast);
 }
 apply(state);
+
+export const getSettings = () => state;
 
 export function setSettings(p: Partial<AppSettings>) {
   state = { ...state, ...p };

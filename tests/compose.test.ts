@@ -219,3 +219,29 @@ describe('Sing to score: quick notes in between', () => {
     expect(notes.map((n) => n.midi)).toEqual([60, 62, 64, 65, 67]);
   });
 });
+
+describe('Sing to score: one note per sung syllable', () => {
+  const take = (gap: 'voiced' | 'consonant') => {
+    const frames: PitchFrame[] = [];
+    for (let s = 0; s < 200; s += 10) frames.push({ t: s, midi: null, rms: 0.001 });
+    let t = 200;
+    for (let k = 0; k < 3; k++) {
+      for (let x = 0; x < 420; x += 10) {
+        const env = Math.min(1, x / 40) * Math.min(1, (420 - x) / 60);
+        const consonant = gap === 'consonant' && x >= 390;
+        frames.push({ t: t + x, midi: consonant ? null : 64 + Math.sin(x / 30) * 0.1, rms: 0.01 + 0.07 * (gap === 'voiced' ? 0.35 + 0.65 * env : env) });
+      }
+      t += 420;
+    }
+    for (let x = 0; x < 300; x += 10) frames.push({ t: t + x, midi: null, rms: 0.001 });
+    return frames;
+  };
+  it('"la la la" on one pitch (voiced consonant) gives three notes', () => {
+    const m = transcribe(take('voiced'), { bpm: 143, origin: 200, timeSig: [4, 4], grid: 0.5 })!;
+    expect(m.notes.filter((n) => n.midi === 64).length).toBe(3);
+  });
+  it('"ta ta ta" (short silent consonants) gives three notes', () => {
+    const m = transcribe(take('consonant'), { bpm: 143, origin: 200, timeSig: [4, 4], grid: 0.5 })!;
+    expect(m.notes.filter((n) => n.midi === 64).length).toBe(3);
+  });
+});

@@ -3,7 +3,7 @@
 // onsets and lengths onto a beat grid.
 
 /** One pitch reading (every ~23 ms). midi is fractional (cents), null when nothing clear is sung. */
-export interface PitchFrame { t: number; midi: number | null; rms: number }
+export interface PitchFrame { t: number; midi: number | null; rms: number; /** a less certain pitch reading, used only to rescue a syllable that has no clear pitch */ soft?: number | null }
 /** One sung note: equal-tempered pitch, start/end in ms, and how sharp (+) or flat (-) it was. */
 export interface SungNote { midi: number; start: number; end: number; cents: number; /** how steady the pitch was (semitones, middle half of the readings) */ spread?: number }
 /** A written note or rest: start and length in beats from the first downbeat. */
@@ -20,29 +20,35 @@ const median = (a: number[]) => { const s = [...a].sort((x, y) => x - y); const 
  */
 export function segment(frames: PitchFrame[], opts: { minMs?: number; gapMs?: number; jump?: number } = {}): SungNote[] {
   const minMs = opts.minMs ?? 75, gapMs = opts.gapMs ?? 70, jump = opts.jump ?? 0.6;
-  // smooth the pitch with a 5-reading median (removes single wild readings and octave blips)
+  // smooth the pitch with a median over ~90 ms (removes single wild readings and octave blips); works the
+  // same whether readings come every 10 ms (a full take) or every 23 ms (live)
   const sm = frames.map((f, i) => {
     if (f.midi === null) return null;
     const w: number[] = [];
-    for (let k = Math.max(0, i - 2); k <= Math.min(frames.length - 1, i + 2); k++) { const m = frames[k].midi; if (m !== null) w.push(m); }
+    for (let k = i; k >= 0 && f.t - frames[k].t <= 45; k--) { const m = frames[k].midi; if (m !== null) w.push(m); }
+    for (let k = i + 1; k < frames.length && frames[k].t - f.t <= 45; k++) { const m = frames[k].midi; if (m !== null) w.push(m); }
     return w.length >= 2 ? median(w) : f.midi;
   });
+  // the level just before a reading (for syllable starts): highest level over the last 300 ms of the note
+  const recentPeak = (c: { lv: [number, number][] }, t: number) => { let m = 0; for (const [tt, r] of c.lv) if (t - tt <= 300 && r > m) m = r; return m; };
   const notes: SungNote[] = [];
   const attackAt = new Set<number>();
-  type Cur = { start: number; last: number; ps: number[]; peak: number; dip: number; dipT: number };
+  type Cur = { start: number; last: number; ps: number[]; peak: number; dip: number; dipT: number; lv: [number, number][] };
   let cur: Cur | null = null;
   let pend: { t: number; ps: number[] } | null = null; // a possible change of note, waiting to be confirmed
   let gapStart = -1;
   const close = (end: number) => {
     const c0 = cur as Cur | null;
     if (c0 && end - c0.start >= minMs) {
-      const m = median(c0.ps);
+      // the pitch of a syllable: skip the scoop at its start when there is enough to go on
+      const body = c0.ps.length >= 6 ? c0.ps.slice(Math.floor(c0.ps.length * 0.2)) : c0.ps;
+      const m = median(body);
       const sorted = [...c0.ps].sort((a, b) => a - b), q = (k: number) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * k))];
       notes.push({ midi: Math.round(m), start: c0.start, end, cents: Math.round((m - Math.round(m)) * 100), spread: q(0.75) - q(0.25) });
     }
     cur = null;
   };
-  const open = (t: number, ps: number[], rms: number) => { cur = { start: t, last: t, ps: [...ps], peak: rms, dip: rms, dipT: t }; };
+  const open = (t: number, ps: number[], rms: number) => { cur = { start: t, last: t, ps: [...ps], peak: rms, dip: rms, dipT: t, lv: [[t, rms]] }; };
 
   for (let i = 0; i < frames.length; i++) {
     const f = frames[i], p = sm[i];
@@ -56,28 +62,40 @@ export function segment(frames: PitchFrame[], opts: { minMs?: number; gapMs?: nu
       else if (cg && f.rms < cg.dip) { cg.dip = f.rms; cg.dipT = f.t; } // a short breath counts as a dip in level
       continue;
     }
+    // back from a short silence inside a note: a consonant (t, k, s, p...) starts a new syllable
+    const cr = cur as Cur | null;
+    if (cr && gapStart >= 0) {
+      const gap = f.t - gapStart;
+      if (gap >= 18 && f.t - cr.start >= 90 && (cr.dip < recentPeak(cr, gapStart) * 0.6 || gap >= 40)) {
+        close(gapStart); open(f.t, [p], f.rms); attackAt.add(f.t); gapStart = -1; pend = null; continue;
+      }
+    }
     gapStart = -1;
     if (!cur) { open(f.t, [p], f.rms); continue; }
     const c: Cur = cur;
+    c.lv.push([f.t, f.rms]);
+    if (c.lv.length > 64) c.lv.shift();
     const ref = median(c.ps.slice(-10));
     if (Math.abs(p - ref) > jump) {
       // different pitch: confirm only if it holds for ~3 readings and agrees with itself
       if (pend && Math.abs(p - median(pend.ps)) <= jump) pend.ps.push(p);
       else pend = { t: f.t, ps: [p] };
-      if (pend.ps.length >= 3) { close(pend.t); open(pend.t, pend.ps, f.rms); pend = null; }
+      if (pend.ps.length >= 2 && f.t - pend.t >= 50) { close(pend.t); open(pend.t, pend.ps, f.rms); pend = null; }
       continue;
     }
     pend = null;
     // same pitch sung again: the level dips clearly and comes back
     if (f.rms > c.peak) c.peak = f.rms;
     if (f.rms < c.dip) { c.dip = f.rms; c.dipT = f.t; }
-    if (c.dip < c.peak * 0.45 && f.rms > c.dip * 1.8 && c.dipT - c.start > 120 && f.t - c.dipT < 140) {
+    // a voiced consonant (m, n, l, w) keeps the pitch but the level dips and comes back: a new syllable
+    const lp = recentPeak(c, c.dipT);
+    if (c.dip < lp * 0.6 && f.rms > c.dip * 1.45 && c.dipT - c.start > 100 && f.t - c.dipT < 160) {
       close(c.dipT);
       open(c.dipT, [p], f.rms);
       attackAt.add(c.dipT);
       continue;
     }
-    if (f.rms > c.dip * 1.8) { c.dip = f.rms; c.dipT = f.t; }
+    if (f.rms > c.dip * 1.45) { c.dip = f.rms; c.dipT = f.t; }
     c.ps.push(p); c.last = f.t;
   }
   const fin = cur as Cur | null;
@@ -152,37 +170,132 @@ export function tidy(notes: SungNote[], opts: { minMs?: number; breathMs?: numbe
 }
 
 /**
+ * Syllables from the loudness curve: every vowel is a bump in level, consonants and breaths are the dips
+ * between. Returns [start, peak, end] times of each syllable (ms).
+ */
+export function syllables(frames: PitchFrame[]): [number, number, number][] {
+  if (frames.length < 5) return [];
+  const db = frames.map((f) => 20 * Math.log10(Math.max(f.rms, 1e-5)));
+  const sm = db.map((_, i) => { let a = 0, n = 0; for (let k = i; k >= 0 && frames[i].t - frames[k].t <= 20; k--) { a += db[k]; n++; } for (let k = i + 1; k < db.length && frames[k].t - frames[i].t <= 20; k++) { a += db[k]; n++; } return a / n; });
+  const loud = [...sm].sort((a, b) => a - b)[Math.floor(sm.length * 0.95)];
+  const floor = loud - 30;
+  // 1. local maxima (over +-50 ms) above the floor
+  let peaks: number[] = [];
+  for (let i = 0; i < sm.length; i++) {
+    if (sm[i] < floor) continue;
+    let top = true;
+    for (let k = i - 1; k >= 0 && frames[i].t - frames[k].t <= 50; k--) if (sm[k] > sm[i]) { top = false; break; }
+    if (top) for (let k = i + 1; k < sm.length && frames[k].t - frames[i].t <= 50; k++) if (sm[k] >= sm[i]) { top = false; break; }
+    if (top) peaks.push(i);
+  }
+  // 2. neighbors without a real dip (6 dB under the lower peak) between them are one syllable
+  const valley = (a: number, b: number) => { let v = a; for (let k = a; k <= b; k++) if (sm[k] < sm[v]) v = k; return v; };
+  for (let changed = true; changed;) {
+    changed = false;
+    for (let k = 0; k + 1 < peaks.length; k++) {
+      const a = peaks[k], b = peaks[k + 1], v = valley(a, b);
+      if (Math.min(sm[a], sm[b]) - sm[v] < 6) { peaks.splice(sm[a] >= sm[b] ? k + 1 : k, 1); changed = true; break; }
+    }
+  }
+  // 3. each syllable runs from the dip before its peak to the dip after (or to where it fades out)
+  const out: [number, number, number][] = [];
+  peaks.forEach((pk, k) => {
+    let a = k > 0 ? valley(peaks[k - 1], pk) : pk;
+    if (k === 0) while (a > 0 && sm[a - 1] > sm[pk] - 20) a--;
+    let b = k + 1 < peaks.length ? valley(pk, peaks[k + 1]) : pk;
+    if (k + 1 === peaks.length) while (b + 1 < sm.length && sm[b + 1] > sm[pk] - 20) b++;
+    // a long silence between syllables: trim each side to where it fades
+    while (a < pk && sm[a] < floor - 6) a++;
+    while (b > pk && sm[b] < floor - 6) b--;
+    out.push([frames[a].t, frames[pk].t, frames[b].t]);
+  });
+  return out;
+}
+
+/**
+ * Line the notes up with the syllables that were sung:
+ * - a note that runs through two syllables on the same pitch is split at the dip between them;
+ * - a clearly sung syllable with no note (its pitch was unsure) gets one from the softer readings.
+ */
+export function alignSyllables(notes: SungNote[], frames: PitchFrame[]): SungNote[] {
+  const syl = syllables(frames);
+  if (!syl.length) return notes;
+  let out: SungNote[] = [];
+  for (const n of notes) {
+    const cuts = syl.map((x) => x[0]).filter((t) => t > n.start + 110 && t < n.end - 110);
+    if (!cuts.length) { out.push(n); continue; }
+    let st = n.start;
+    for (const c of cuts) { out.push({ ...n, start: st, end: c }); st = c; }
+    out.push({ ...n, start: st });
+  }
+  const loudest = Math.max(...frames.map((f) => f.rms));
+  for (const [a, pk, b] of syl) {
+    if (b - a < 140) continue;
+    const pr = frames.find((f) => f.t >= pk)?.rms ?? 0;
+    if (pr < loudest * 0.25) continue; // only clearly sung syllables
+    const cover = out.reduce((acc, n) => acc + Math.max(0, Math.min(b, n.end) - Math.max(a, n.start)), 0);
+    if (cover > (b - a) * 0.3) continue;
+    const ps = frames.filter((f) => f.t >= a && f.t <= b).map((f) => f.midi ?? f.soft ?? null).filter((m): m is number => m !== null);
+    if (ps.length < 4) continue;
+    const m = median(ps);
+    if (ps.filter((x) => Math.abs(x - m) < 0.8).length < ps.length * 0.6) continue;
+    const ctx = out.filter((n) => Math.abs(n.start - a) < 4000).map((n) => n.midi);
+    let mm = Math.round(m);
+    if (ctx.length) { const c = median(ctx); while (mm - c > 9.5) mm -= 12; while (c - mm > 8) mm += 12; }
+    out.push({ midi: mm, start: a, end: b, cents: Math.round((m - Math.round(m)) * 100), spread: 0.3 });
+  }
+  out = out.sort((x, y) => x.start - y.start);
+  return out;
+}
+
+/**
  * The tempo that best explains the note starts. Every tempo from 56 to 150 is tried: starts should land
  * on an eighth-note grid, and the typical note should be about one beat long (so held notes read as
  * quarters and halves, not a page of eighths).
  */
-export function estimateTempo(notes: SungNote[]): number {
+export function estimateTempo(all: SungNote[]): number {
+  // quick ornaments and blips say little about the beat
+  const notes = all.filter((n) => n.end - n.start >= 120);
   if (notes.length < 3) return 80;
-  // the typical gap between note starts, counting long notes more (short ones are often ornaments)
+  // the typical gap between note starts, counting long notes more
   const pairs: [number, number][] = [];
   for (let i = 1; i < notes.length; i++) pairs.push([notes[i].start - notes[i - 1].start, Math.min(2, (notes[i - 1].end - notes[i - 1].start) / 250)]);
   pairs.sort((a, b) => a[0] - b[0]);
   const half = pairs.reduce((a, p) => a + p[1], 0) / 2;
   let acc = 0, typical = pairs[pairs.length - 1][0];
   for (const [g, w] of pairs) { acc += w; if (acc >= half) { typical = g; break; } }
-  const wt = notes.map((n) => Math.min(2, Math.max(0.3, (n.end - n.start) / 250)));
+  const wt = notes.map((n) => Math.min(2.5, Math.max(0.4, (n.end - n.start) / 250)));
   const wsum = wt.reduce((a, b) => a + b, 0);
   const t0 = notes[0].start;
-  let best = 80, bestErr = Infinity;
-  for (let bpm = 56; bpm <= 150; bpm++) {
-    const beat = 60000 / bpm, grid = beat / 2;
-    // best phase: the first note may be a pickup
-    let fitErr = Infinity;
-    for (let ph = 0; ph < 1; ph += 0.125) {
-      let e = 0;
-      notes.forEach((n, i) => { const x = (n.start - t0) / grid + ph; e += wt[i] * Math.abs(x - Math.round(x)); });
-      fitErr = Math.min(fitErr, e / wsum);
+  // how well the starts sit on a beat grid: soft (singers breathe and lean), long notes should be on beats
+  const fit = (bpm: number) => {
+    const beat = 60000 / bpm;
+    let best = 0;
+    for (let ph = 0; ph < 1; ph += 1 / 16) {
+      let sc = 0;
+      notes.forEach((n, i) => {
+        const x = (n.start - t0) / beat + ph;
+        const dOn = Math.abs(x - Math.round(x)), dHalf = Math.abs(x * 2 - Math.round(x * 2)) / 2;
+        const on = Math.exp(-(dOn * dOn) / (2 * 0.1 * 0.1)), off = Math.exp(-(dHalf * dHalf) / (2 * 0.08 * 0.08));
+        const longish = Math.min(1, (n.end - n.start) / beat);
+        sc += wt[i] * Math.max(on, off * (0.75 - 0.35 * longish));
+      });
+      best = Math.max(best, sc / wsum);
     }
-    // prior: the typical note near one beat, tempos near 70-110 a little more likely
-    const lenErr = Math.abs(Math.log2(typical / beat));
+    return best;
+  };
+  const raw: number[] = [];
+  for (let bpm = 50; bpm <= 156; bpm++) raw.push(fit(bpm));
+  let best = 80, bestV = -Infinity;
+  for (let bpm = 56; bpm <= 150; bpm++) {
+    // smooth over neighbors so one lucky tempo does not win
+    let v = 0, n = 0;
+    for (let d = -3; d <= 3; d++) { v += raw[bpm + d - 50] * (4 - Math.abs(d)); n += 4 - Math.abs(d); }
+    v /= n;
+    const lenErr = Math.abs(Math.log2(typical / (60000 / bpm)));
     const prior = bpm < 66 ? (66 - bpm) / 60 : bpm > 120 ? (bpm - 120) / 90 : 0;
-    const err = fitErr + 0.22 * lenErr + 0.25 * prior;
-    if (err < bestErr) { bestErr = err; best = bpm; }
+    const score = v - 0.18 * lenErr - 0.2 * prior;
+    if (score > bestV) { bestV = score; best = bpm; }
   }
   return best;
 }
@@ -349,7 +462,8 @@ export function detectGrid(sung: SungNote[], bpm: number, origin: number): numbe
 
 /** Everything in one go: readings -> melody. Without a fixed tempo, the tempo comes from the singing. */
 export function transcribe(frames: PitchFrame[], opts: { bpm?: number; origin?: number; timeSig?: [number, number]; grid?: number } = {}): Melody | null {
-  const sung = tidy(segment(cleanFrames(frames)));
+  const clean = cleanFrames(frames);
+  const sung = tidy(alignSyllables(tidy(segment(clean)), frames));
   if (!sung.length) return null;
   snapToKey(sung, detectKey(sung));
   const bpm = opts.bpm ?? estimateTempo(sung);

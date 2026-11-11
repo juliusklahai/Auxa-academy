@@ -19,7 +19,7 @@ export function downsample(x: Float32Array, sr: number, target = 16000): { x: Fl
 
 export function framesFromSamples(input: Float32Array, inputRate: number, a4 = 440): PitchFrame[] {
   const { x, sr: sampleRate } = downsample(input, inputRate);
-  const hop = Math.round(sampleRate * 0.023), win = Math.round(sampleRate * 0.0427) & ~1;
+  const hop = Math.round(sampleRate * 0.01), win = Math.round(sampleRate * 0.0427) & ~1;
   // level of the whole file, so quiet recordings work as well as loud ones
   let peak = 0;
   for (let i = 0; i < x.length; i += 16) peak = Math.max(peak, Math.abs(x[i]));
@@ -30,7 +30,8 @@ export function framesFromSamples(input: Float32Array, inputRate: number, a4 = 4
     const e = yin(w, sampleRate, 70, 1100);
     if (e.freq > 0) e.freq = fixOctave(w, sampleRate, e.freq);
     const clear = e.freq > 0 && e.confidence >= 0.75 && e.rms > floor;
-    out.push({ t: (i / sampleRate) * 1000, midi: clear ? 69 + 12 * Math.log2(e.freq / a4) : null, rms: e.rms });
+    const soft = !clear && e.freq > 0 && e.confidence >= 0.5 && e.rms > floor ? 69 + 12 * Math.log2(e.freq / a4) : null;
+    out.push({ t: (i / sampleRate) * 1000, midi: clear ? 69 + 12 * Math.log2(e.freq / a4) : null, rms: e.rms, soft });
   }
   return out;
 }

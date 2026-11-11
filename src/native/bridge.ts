@@ -14,6 +14,9 @@ interface NativeApi {
   /** status/navigation bar icons: dark on light pages */
   setBars?(lightBackground: boolean): void;
   appVersion?(): string;
+  /** voice coach (Android text-to-speech) */
+  speak?(text: string, id: string, rate: number): void;
+  stopSpeaking?(): void;
 }
 
 declare global {
@@ -24,6 +27,7 @@ declare global {
       onMidiDevices?: (names: string[]) => void;
       /** Android back button; return true when the app handled it */
       back?: () => boolean;
+      onSpeechDone?: (id: string) => void;
     };
   }
 }

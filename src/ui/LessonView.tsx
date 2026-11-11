@@ -17,6 +17,7 @@ import { Piano, type KeyMark } from './Piano';
 import { bumpProgress, progress, setSettings, useProgressVersion, useSettings } from './settings';
 import { Staff } from './Staff';
 import { EarDrill } from './EarDrill';
+import { coachOn, say, stopSpeaking } from './voice';
 import { PitchRoll } from './PitchRoll';
 import { isPhone, useFocusMode } from './focus';
 import { DockFab, FocusBar, FloatHead, RotateHint } from './FocusBar';
@@ -31,39 +32,110 @@ export function Metric({ label, value, unit, big }: { label: string; value: Reac
   return <div className={`metric ${big ? 'big' : ''}`}><small>{label}</small><b>{value}{unit && <span className="unit">{unit}</span>}</b></div>;
 }
 
+const LEARN_KEY = 'maestro.learnSeen.v1';
+const learnSeen = (id: string) => { try { return (JSON.parse(localStorage.getItem(LEARN_KEY) || '[]') as string[]).includes(id); } catch { return false; } };
+const markLearn = (id: string) => { try { const a = JSON.parse(localStorage.getItem(LEARN_KEY) || '[]') as string[]; if (!a.includes(id)) localStorage.setItem(LEARN_KEY, JSON.stringify([...a, id])); } catch { /* storage off */ } };
+
+/** Circle with a progress ring (0..1). */
+function Ring({ value, done, size = 112, children }: { value: number; done?: boolean; size?: number; children?: React.ReactNode }) {
+  const r = size / 2 - 6, c = 2 * Math.PI * r;
+  return (
+    <span className={`ring ${done ? 'done' : ''}`} style={{ width: size, height: size }}>
+      <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} aria-hidden>
+        <circle cx={size / 2} cy={size / 2} r={r} className="ring-track" />
+        {value > 0.001 && <circle cx={size / 2} cy={size / 2} r={r} className="ring-bar" strokeDasharray={`${c * Math.max(0, Math.min(1, value))} ${c}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />}
+      </svg>
+      <span className="ring-in">{children}</span>
+    </span>
+  );
+}
+
+const exIcon = (e: Exercise): string => (e.drill ? 'ear' : e.backing ? 'wave' : e.mode === 'timed' ? 'metro' : e.events.some((v) => v.pitches.length > 1) ? 'chord' : 'note');
+const exProgress = (e: Exercise) => { const p = progress.ex(e.id); return { p, done: p.passes >= e.requiredPasses, value: p.passes >= e.requiredPasses ? 1 : Math.min(0.95, p.best / Math.max(1, e.passScore)) }; };
+
+/** The lesson at a glance: one circle per step, the ring shows how far you are. */
+function LessonHub({ lesson, onLearn, onExercise }: { lesson: Lesson; onLearn: () => void; onExercise: (i: number) => void }) {
+  useProgressVersion();
+  const seen = learnSeen(lesson.id);
+  const nodes = [{ key: 'learn', title: 'Learn', sub: `${lesson.teach.length} short steps`, icon: 'play' as string, value: seen ? 1 : 0, done: seen, go: onLearn },
+    ...lesson.exercises.map((e, i) => { const x = exProgress(e); return { key: e.id, title: e.title, sub: x.done ? 'Passed' : x.p.best ? `Best ${Math.round(x.p.best)}%` : 'Not started', icon: exIcon(e), value: x.value, done: x.done, go: () => onExercise(i) }; })];
+  const next = nodes.findIndex((n) => !n.done);
+  useEffect(() => { void say(`${lesson.title}. ${lesson.summary}`); return () => stopSpeaking(); }, [lesson.id]); // eslint-disable-line
+  const passed = lesson.exercises.filter((e) => exProgress(e).done).length;
+  return (
+    <section className="hub">
+      <div className="hub-head">
+        <small>Level {lesson.level} · {passed}/{lesson.exercises.length} passed</small>
+        <h1>{lesson.title}</h1>
+        <p>{lesson.summary}</p>
+        <button className="btn lime hub-go" onClick={nodes[next >= 0 ? next : 0].go}><Icon name="play" size={16} />{next <= 0 ? (seen ? 'Start again' : 'Start') : 'Continue'}</button>
+      </div>
+      <div className="hub-path" role="list">
+        {nodes.map((n, i) => (
+          <button key={n.key} role="listitem" className={`hub-node ${i === next ? 'next' : ''}`} onClick={n.go}>
+            <Ring value={n.value} done={n.done}>
+              <span className="hub-title">{n.title}</span>
+              <span className="hub-icon"><Icon name={n.done ? 'check' : n.icon} size={22} /></span>
+            </Ring>
+            <span className={`hub-badge ${n.done ? 'done' : ''}`}><Icon name={n.done ? 'check' : n.icon} size={16} /></span>
+            <span className="hub-label"><b>{n.title}</b><small className="hub-sub">{n.sub}</small></span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function LessonView({ lesson, onNextLesson, initialExercise }: { lesson: Lesson; onNextLesson?: () => void; initialExercise?: number }) {
-  const [phase, setPhase] = useState<'teach' | 'practice'>(initialExercise !== undefined ? 'practice' : 'teach');
+  const [phase, setPhase] = useState<'hub' | 'teach' | 'practice'>(initialExercise !== undefined ? 'practice' : 'hub');
   const [step, setStep] = useState(0);
   const [exIdx, setExIdx] = useState(initialExercise ?? 0);
   const ex = lesson.exercises[exIdx];
   useProgressVersion();
+  useEffect(() => { setPhase(initialExercise !== undefined ? 'practice' : 'hub'); setExIdx(initialExercise ?? 0); setStep(0); }, [lesson.id]); // eslint-disable-line
+  useEffect(() => { window.scrollTo({ top: 0 }); }, [phase, exIdx]);
 
+  // compact step strip: back to the lesson, then a small ring per step
   const chips = (
-    <div className="chip-row">
-      <button className={`chip ${phase === 'teach' ? 'on' : ''}`} onClick={() => setPhase('teach')}><Icon name="eye" size={14} /> Learn</button>
-      <button className={`chip ${phase === 'practice' ? 'on' : ''}`} onClick={() => setPhase('practice')}><Icon name="play" size={14} /> Practice &amp; assess</button>
-      <span className="chip-sep" />
+    <div className="step-strip">
+      <button className="strip-back" onClick={() => setPhase('hub')}><Icon name="back" size={15} />Lesson</button>
+      <button className={`strip-node ${phase === 'teach' ? 'on' : ''}`} onClick={() => setPhase('teach')} title="Learn">
+        <Ring value={learnSeen(lesson.id) ? 1 : 0} done={learnSeen(lesson.id)} size={34}><Icon name="play" size={13} /></Ring>
+      </button>
       {lesson.exercises.map((e, i) => {
-        const p = progress.ex(e.id);
-        const done = p.passes >= e.requiredPasses;
+        const x = exProgress(e);
         return (
-          <button key={e.id} className={`chip ex ${phase === 'practice' && i === exIdx ? 'on' : ''} ${done ? 'done' : ''}`} onClick={() => { setExIdx(i); setPhase('practice'); }}>
-            {done ? <Icon name="check" size={13} /> : <span className="num">{i + 1}</span>} {e.title}
-            <span className="badge">{p.passes}/{e.requiredPasses}</span>
+          <button key={e.id} className={`strip-node ${phase === 'practice' && i === exIdx ? 'on' : ''}`} onClick={() => { setExIdx(i); setPhase('practice'); }} title={e.title}>
+            <Ring value={x.value} done={x.done} size={34}>{x.done ? <Icon name="check" size={13} /> : <span className="num">{i + 1}</span>}</Ring>
           </button>
         );
       })}
     </div>
   );
 
+  const nextEx = exIdx < lesson.exercises.length - 1 ? () => setExIdx(exIdx + 1) : onNextLesson;
   return (
     <div className="page lesson">
-      {phase === 'teach'
-        ? <TeachPanel lesson={lesson} step={step} setStep={setStep} onDone={() => setPhase('practice')} chips={chips} />
-        : ex.drill
-          ? <DrillPanel key={ex.id} lesson={lesson} exercise={ex} index={exIdx} chips={chips} onNext={exIdx < lesson.exercises.length - 1 ? () => setExIdx(exIdx + 1) : onNextLesson} />
-          : <PracticePanel key={ex.id} lesson={lesson} exercise={ex} index={exIdx} chips={chips} onNext={exIdx < lesson.exercises.length - 1 ? () => setExIdx(exIdx + 1) : onNextLesson} />}
+      {phase === 'hub'
+        ? <LessonHub lesson={lesson} onLearn={() => { setStep(0); setPhase('teach'); }} onExercise={(i) => { setExIdx(i); setPhase('practice'); }} />
+        : phase === 'teach'
+          ? <TeachPanel lesson={lesson} step={step} setStep={setStep} onDone={() => { markLearn(lesson.id); setPhase('practice'); }} chips={chips} />
+          : ex.drill
+            ? <DrillPanel key={ex.id} lesson={lesson} exercise={ex} index={exIdx} chips={chips} onNext={nextEx} />
+            : <PracticePanel key={ex.id} lesson={lesson} exercise={ex} index={exIdx} chips={chips} onNext={nextEx} />}
     </div>
+  );
+}
+
+/** A tidy heading: what this is, its goal and a few small numbers. */
+function ExHead({ kicker, title, goal, stats }: { kicker: string; title: string; goal?: string; stats?: [string, string][] }) {
+  return (
+    <section className="ex-head">
+      <small>{kicker}</small>
+      <h2>{title}</h2>
+      {goal && <p>{goal}</p>}
+      {stats && <div className="ex-stats">{stats.map(([k, v]) => <span key={k}><i>{k}</i>{v}</span>)}</div>}
+    </section>
   );
 }
 
@@ -72,18 +144,8 @@ function DrillPanel({ lesson, exercise, index, chips, onNext }: { lesson: Lesson
   const p = progress.ex(exercise.id);
   return (
     <>
-      <section className="head-row">
-        <div className="id-card">
-          <span className="avatar"><Icon name="ear" size={22} /></span>
-          <div><small>Exercise {index + 1} of {lesson.exercises.length}</small><b>{exercise.title}</b></div>
-        </div>
-        <div className="metrics">
-          <Metric label="Goal" value={exercise.objective} big />
-          <Metric label="Best" value={p.best} unit="%" />
-          <Metric label="Pass mark" value={exercise.passScore} unit="%" />
-        </div>
-      </section>
       {chips}
+      <ExHead kicker={`Exercise ${index + 1} of ${lesson.exercises.length}`} title={exercise.title} goal={exercise.objective} stats={[['Best', `${Math.round(p.best)}%`], ['Pass', `${exercise.passScore}%`]]} />
       <EarDrill exercise={exercise} onNext={onNext} />
     </>
   );
@@ -115,6 +177,16 @@ function TeachPanel({ lesson, step, setStep, onDone, chips }: { lesson: Lesson; 
     audio.stopAll();
     audio.playNotes(s.play.map((m, i) => ({ midi: m, startMs: s.sequential ? i * 550 : 0, durMs: s.sequential ? 500 : 1500 })));
   };
+  // voice coach: read the step, then play its example, every time a step opens
+  const [voiceOn, setVoiceOn] = useState(coachOn());
+  useEffect(() => {
+    let live = true;
+    if (voiceOn) {
+      const text = [s.title, s.body.replace(/\n+/g, ' '), ...(s.tips ?? [])].join('. ');
+      void say(text).then(() => { if (live && (seq || s.play)) window.setTimeout(() => { if (live) play(); }, 250); });
+    }
+    return () => { live = false; stopSpeaking(); };
+  }, [step, voiceOn]); // eslint-disable-line
   const seqShow = s.sequential ? (s.play ?? show) : show;
   const staffEvents = useMemo(() => {
     if (seq) { const b = beatsOf(seq); return seq.slice(0, 8).map((c, i) => ({ pitches: c, beat: i * b, beats: b })); }
@@ -127,23 +199,14 @@ function TeachPanel({ lesson, step, setStep, onDone, chips }: { lesson: Lesson; 
   const paras = s.body.split(/\n\n+/);
   return (
     <>
-      <section className="head-row">
-        <div className="id-card">
-          <span className="avatar"><Icon name="note" size={22} /></span>
-          <div><small>Step {step + 1} of {lesson.teach.length}</small><b>{lesson.title}</b></div>
-        </div>
-        <div className="metrics">
-          <Metric label="Learning" value={s.title} big />
-          <Metric label="Level" value={lesson.level} />
-          <Metric label="Exercises" value={lesson.exercises.length} />
-          <Metric label="Pass mark" value="80" unit="%" />
-        </div>
-      </section>
       {chips}
+      <ExHead kicker={`Learn · step ${step + 1} of ${lesson.teach.length}`} title={s.title} />
       <section className="teach-grid">
         <div className="card teach-card">
           <div className="stage-row"><span>See it</span><span>Hear it</span><span>Understand it</span></div>
-          <h2>{s.title}</h2>
+          <div className="teach-title"><h2>{s.title}</h2>
+            <button className={`coach-btn ${voiceOn ? 'on' : ''}`} onClick={() => { const v = !voiceOn; setVoiceOn(v); setSettings({ coachVoice: v }); if (!v) stopSpeaking(); }} aria-label={voiceOn ? 'Voice coach on' : 'Voice coach off'} title={voiceOn ? 'Voice coach is reading this aloud. Tap to mute.' : 'Turn on the voice coach'}><Icon name={voiceOn ? 'speaker' : 'mute'} size={17} /></button>
+          </div>
           {paras.map((p, i) => <p key={i}>{p}</p>)}
           {s.tips && <ul className="teach-tips">{s.tips.map((t, i) => <li key={i}>{t}</li>)}</ul>}
           {s.compare && (
@@ -206,6 +269,16 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
   const [fix, setFix] = useState(false);
   const fixTimer = useRef(0);
   const [report, setReport] = useState<AssessmentReport | null>(null);
+  // voice coach: what this exercise asks, and how it went
+  useEffect(() => {
+    void say(`${base.title}. ${base.objective}. ${base.byEar ? 'Press listen first.' : 'Press start when you are ready.'}`);
+    return () => stopSpeaking();
+  }, [base.id]); // eslint-disable-line
+  useEffect(() => {
+    if (!report) return;
+    const sc = Math.round(report.score);
+    void say(report.passed ? `Well done. ${sc} out of 100. ${onNext ? 'On to the next one when you are ready.' : ''}` : `${sc} out of 100. ${report.advice?.[0] ?? 'Slow down a little and try again.'}`);
+  }, [report]); // eslint-disable-line
   const [beatFlash, setBeatFlash] = useState(-1);
   const [nice, setNice] = useState<{ id: number; text: string } | null>(null);
   const streak = useRef(0);
@@ -435,20 +508,9 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
       {fm.focus && <DockFab open={fm.dockOpen} onToggle={fm.toggleDock} primary={
         <button className={`fab lime ${listening ? 'live' : ''}`} onClick={() => start(true)} aria-label={listening ? 'Restart' : 'Start'}><Icon name={listening || s.state === 'COMPLETED' || s.state === 'RESTART' ? 'restart' : 'play'} size={22} /></button>
       } />}
-      <section className="head-row">
-        <div className="id-card">
-          <span className="avatar"><Icon name={exercise.events.some((e) => e.pitches.length > 1) ? 'chord' : 'note'} size={22} /></span>
-          <div><small>Exercise {index + 1} of {lesson.exercises.length}</small><b>{exercise.title}</b></div>
-        </div>
-        <div className="metrics">
-          <Metric label="Goal" value={exercise.objective} big />
-          <Metric label="Tempo" value={Math.round(bpm)} unit="bpm" />
-          <Metric label="Best" value={Math.round(best)} unit="%" />
-          <Metric label="Attempt" value={s.attempt} />
-          <Metric label="Mistakes in a row" value={<span className={s.consecutive >= 2 ? 'warn' : ''}>{s.consecutive}</span>} unit={`/${exercise.maxConsecutiveMistakes > 10 ? '∞' : exercise.maxConsecutiveMistakes}`} />
-        </div>
-      </section>
       {chips}
+      <ExHead kicker={`Exercise ${index + 1} of ${lesson.exercises.length}`} title={exercise.title} goal={exercise.objective}
+        stats={[['Tempo', `${Math.round(bpm)} bpm`], ['Best', `${Math.round(best)}%`], ['Try', `${s.attempt}`], ['Slips', `${s.consecutive}/${exercise.maxConsecutiveMistakes > 10 ? '∞' : exercise.maxConsecutiveMistakes}`]]} />
       <section className="play-grid">
         <div className="stage">
           <div className="card score-card">

@@ -14,4 +14,7 @@ class NativeBridge(private val a: MainActivity) {
     }
     @JavascriptInterface fun midiStart() = a.midi.start()
     @JavascriptInterface fun setBars(lightBackground: Boolean) = a.setBars(lightBackground)
+    /** voice coach: read a line aloud; onSpeechDone(id) is called when it ends */
+    @JavascriptInterface fun speak(text: String, id: String, rate: Float) = a.speaker.speak(text.take(4000), id, rate)
+    @JavascriptInterface fun stopSpeaking() = a.speaker.stop()
 }
