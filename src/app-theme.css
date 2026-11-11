@@ -467,3 +467,86 @@ html.theme-light .hub-badge { background: #2b2b2b; border-color: #f4f4f2; }
 .song-about { font-size: 13px; color: var(--ink2); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 4px; }
 .song-with { font-size: 12px; color: var(--muted); margin-top: 6px; }
 @media (max-width: 700px) { .card-head { flex-direction: column; align-items: flex-start; gap: 4px; } .card-head .muted.small { text-align: left; } }
+
+/* ---------- the phone app's own start: onboarding, sign up, plans ---------- */
+.ob { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; background: radial-gradient(120% 70% at 80% 0%, rgba(215, 242, 92, .14), transparent 60%), var(--bg, #141414); color: var(--ink, #f2f2ef);
+  padding: calc(var(--sat, 0px) + 18px) calc(var(--sar, 0px) + 22px) calc(var(--sab, 0px) + 18px) calc(var(--sal, 0px) + 22px); overflow-y: auto; }
+html.theme-light .ob { background: radial-gradient(120% 70% at 80% 0%, rgba(160, 190, 30, .18), transparent 60%), #f6f6f3; color: #141414; }
+.ob-top { display: flex; align-items: center; justify-content: space-between; min-height: 40px; }
+.ob .lp-logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: 19px; }
+.ob-skip, .ob-close, .ob-guest, .pw-fine button { background: none; border: 0; color: var(--muted); font: inherit; cursor: pointer; padding: 8px; }
+.ob-close { width: 40px; height: 40px; border-radius: 50%; background: var(--pillbg); display: grid; place-items: center; color: inherit; }
+.ob-slide { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 14px; max-width: 520px; width: 100%; margin: 0 auto; animation: obIn .45s ease; }
+@keyframes obIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.ob-slide h1 { margin: 0; font-size: clamp(28px, 7.5vw, 40px); line-height: 1.1; letter-spacing: -.025em; white-space: pre-line; }
+.ob-slide p { margin: 0; color: var(--ink2); font-size: 16.5px; line-height: 1.5; }
+.ob-foot { display: flex; align-items: center; justify-content: space-between; gap: 14px; max-width: 520px; width: 100%; margin: 18px auto 0; }
+.ob-foot.col { flex-direction: column; align-items: stretch; }
+.ob-dots { display: flex; gap: 7px; }
+.ob-dots i { width: 7px; height: 7px; border-radius: 99px; background: var(--hair); transition: width .25s, background .25s; }
+.ob-dots i.on { width: 22px; background: var(--lime, #d7f25c); }
+.ob-next { min-width: 150px; justify-content: center; height: 52px; font-size: 16px; }
+/* onboarding art */
+.ob-art { position: relative; height: 210px; border-radius: 26px; background: var(--glass, rgba(255,255,255,.05)); border: 1px solid var(--hair); margin-bottom: 18px; overflow: hidden; }
+.ob-art.keys { display: flex; padding: 40px 22px 0; gap: 4px; }
+.ob-art.keys .wk { flex: 1; background: #f4f4f0; border-radius: 0 0 10px 10px; height: 150px; }
+.ob-art.keys .wk.lit { background: var(--lime, #d7f25c); box-shadow: 0 0 30px rgba(215, 242, 92, .6); animation: obPulse 1.6s ease-in-out infinite; }
+@keyframes obPulse { 50% { filter: brightness(.85); } }
+.ob-art.keys .bk { position: absolute; top: 40px; width: 7%; height: 92px; background: #1c1c1b; border-radius: 0 0 6px 6px; margin-left: 22px; }
+.ob-art.check { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.ob-art.check .dot { width: 22px; height: 22px; border-radius: 50%; background: #2f9e5b; }
+.ob-art.check .dot.late { background: #f5b83d; }
+.ob-art.check .dot.now { background: transparent; border: 3px solid var(--lime, #d7f25c); animation: obPulse 1.2s infinite; }
+.ob-art.check b { font-size: 54px; margin-left: 18px; letter-spacing: -.03em; }
+.ob-art.check small { color: var(--muted); align-self: flex-end; margin-bottom: 70px; }
+.ob-art.score .line { position: absolute; left: 8%; right: 8%; height: 1.5px; background: rgba(150, 150, 140, .5); }
+.ob-art.score .note { position: absolute; width: 18px; height: 13px; border-radius: 50%; background: var(--lime, #d7f25c); transform: rotate(-20deg); animation: obIn .5s both; }
+.ob-art.score .note:nth-child(7) { animation-delay: .1s } .ob-art.score .note:nth-child(8) { animation-delay: .2s } .ob-art.score .note:nth-child(9) { animation-delay: .3s } .ob-art.score .note:nth-child(10) { animation-delay: .4s } .ob-art.score .note:nth-child(11) { animation-delay: .5s }
+.ob-art.score .mic { position: absolute; right: 16px; bottom: 14px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--lime, #d7f25c); color: #141414; }
+/* goal */
+.ob-choices { display: grid; gap: 10px; margin-top: 10px; }
+.ob-choice { display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 18px; border: 1px solid var(--hair); background: var(--glass, rgba(255,255,255,.04)); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.ob-choice > span:nth-child(2) { flex: 1; display: grid; gap: 2px; }
+.ob-choice small { color: var(--muted); font-size: 13.5px; }
+.ob-ic { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: var(--pillbg); }
+.ob-radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--hair); }
+.ob-choice.on { border-color: var(--lime, #d7f25c); }
+.ob-choice.on .ob-radio { border: 7px solid var(--lime, #d7f25c); }
+.ob-form { margin-top: 6px; }
+.ob-guest { margin-top: 6px; align-self: center; text-decoration: underline; }
+/* plans */
+.pw { justify-content: flex-start; padding-top: 10px; }
+.pw-kicker { color: var(--lime, #d7f25c); font-weight: 600; font-size: 14px; }
+html.theme-light .pw-kicker { color: #5f7a00; }
+.pw-tiers { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 5px; border-radius: 16px; background: var(--pillbg); margin: 6px 0 4px; }
+.pw-tiers button { height: 44px; border-radius: 12px; border: 0; background: none; color: inherit; font: inherit; font-weight: 600; font-size: 15.5px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.pw-tiers button.on { background: var(--lime, #d7f25c); color: #141414; }
+.pw-best { font-size: 10.5px; padding: 2px 7px; border-radius: 99px; background: #141414; color: var(--lime, #d7f25c); }
+.pw-tiers button:not(.on) .pw-best { background: var(--lime, #d7f25c); color: #141414; }
+.pw-perks { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 12px; }
+.pw-perks li { display: flex; gap: 12px; align-items: flex-start; font-size: 15.5px; line-height: 1.4; }
+.pw-perks li span { flex: 0 0 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: rgba(215, 242, 92, .18); color: var(--lime, #d7f25c); }
+html.theme-light .pw-perks li span { color: #5f7a00; }
+.pw-buy { display: grid; gap: 10px; margin-top: 8px; }
+.pw-plan { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-radius: 18px; border: 1px solid var(--hair); background: var(--glass, rgba(255,255,255,.04)); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.pw-plan span { display: grid; gap: 3px; }
+.pw-plan small { color: var(--muted); font-size: 12.5px; }
+.pw-plan strong { font-size: 18px; white-space: nowrap; }
+.pw-plan.main { background: var(--lime, #d7f25c); color: #141414; border-color: transparent; }
+.pw-plan.main small { color: rgba(20, 20, 20, .65); }
+.pw-plan:disabled { opacity: .6; }
+.pw-have { display: flex; gap: 8px; align-items: center; color: var(--lime, #d7f25c); font-weight: 600; }
+.ob-free { height: 50px; justify-content: center; border: 1px solid var(--hair); }
+.pw-fine { margin: 6px 0 0; text-align: center; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.pw-fine button { padding: 0; text-decoration: underline; font-size: 12px; }
+.pw-layer .ob { z-index: 80; }
+.ob .lp-mark { width: 30px; height: 30px; border-radius: 9px; background: #f4f4f0; display: inline-flex; gap: 2px; align-items: flex-start; justify-content: center; padding-top: 7px; box-sizing: border-box; }
+.ob .lp-mark i { width: 4px; height: 15px; border-radius: 2px; background: #141414; }
+.ob .lp-mark i:nth-child(3) { background: #9cbf00; }
+html.theme-light .ob .lp-mark { background: #141414; }
+html.theme-light .ob .lp-mark i { background: #f4f4f0; }
+html.theme-light .ob .lp-mark i:nth-child(3) { background: var(--lime, #d7f25c); }
+.pw-layer { position: fixed; inset: 0; z-index: 300; }
+.pw-layer .ob { z-index: 300; }
+.ob { z-index: 250; }
+.pw-signin { height: 48px; justify-content: center; white-space: normal; }

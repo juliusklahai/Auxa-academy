@@ -1,4 +1,5 @@
 // Account UI: sign in, plan status, upgrade (Stripe subscriptions or Monime passes), and the admin page.
+import { isNativeApp } from '../native/bridge';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Select } from './Select';
 import { ACCOUNTS_ENABLED, MONIME_ENABLED, PLANS, type PlanOption } from '../account/config';
@@ -162,9 +163,9 @@ export function AccountSheet({ onClose }: { onClose: () => void }) {
   );
 }
 
-const PERKS: Record<'pro' | 'plus', string[]> = {
-  pro: ['Levels 3 to 6: hands together, rhythm, keys and scales, chords', 'The whole song library', 'Standard singing coach', 'Progress saved on all your devices'],
-  plus: ['Everything in Pro', 'Levels 7 to 9: sight-reading, advanced technique, performance', 'Strict and Pro coach singing', 'Your own MusicXML and choir (SATB) scores'],
+export const PERKS: Record<'pro' | 'plus', string[]> = {
+  pro: ['Levels 3 to 6: two hands, rhythm, keys and scales, chords', 'The whole song library', 'Standard singing coach', 'Progress saved on all your devices'],
+  plus: ['Everything in Pro', 'Levels 7 to 12: sight-reading, play by ear, jazz, arranging', 'Strict and Pro singing coach, Sing to score in four parts', 'Your own MusicXML and choir (SATB) scores'],
 };
 
 /** The paywall: Pro and Plus, each by card (Stripe, renews monthly) or mobile money (Monime, 1-month pass). */
@@ -267,7 +268,7 @@ export function UserMenu({ onAccount, onSetup, onAdmin, onHome, current }: { onA
             <Icon name={theme === 'dark' ? 'eye' : 'eye'} size={16} />{theme === 'dark' ? 'Light mode' : 'Dark mode'}
             <span className={`lp-toggle ${theme === 'dark' ? 'on' : ''}`}><i /></span>
           </button>
-          {ACCOUNTS_ENABLED && <button className="umenu-item" role="menuitem" onClick={pick(onHome)}><Icon name="home" size={16} />Maestro home page</button>}
+          {ACCOUNTS_ENABLED && !isNativeApp && <button className="umenu-item" role="menuitem" onClick={pick(onHome)}><Icon name="home" size={16} />Maestro home page</button>}
           {ACCOUNTS_ENABLED && a.user && (<><div className="umenu-sep" /><button className="umenu-item quiet" role="menuitem" onClick={pick(() => void signOut())}><Icon name="back" size={16} />Sign out</button></>)}
         </div>
       )}

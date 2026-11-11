@@ -12,11 +12,12 @@ import { MyMusic } from './ui/MyMusic';
 import { VoiceStudio } from './ui/VoiceStudio';
 import { AccountSheet, AdminView, ResetPasswordSheet, UpgradeSheet, UserMenu } from './ui/Account';
 import { isGuest, Landing, Splash } from './ui/Landing';
+import { appGoal, AppUpgrade, AuthScreen, markPaywallSeen, onboarded, Onboarding, Paywall, paywallSeen } from './ui/AppFlow';
 import { goHome, onGoHome } from './ui/nav';
 import { isNativeApp, onBack } from './native/bridge';
 import { InstallBanner } from './ui/InstallBanner';
 import { ACCOUNTS_ENABLED } from './account/config';
-import { getAccount, initAccount, openUpgrade, useAccount } from './account/store';
+import { getAccount, initAccount, openUpgrade, useAccount, useUpgrade } from './account/store';
 import { allowLesson, lessonTier, TIER_NAME } from './account/gate';
 
 type Tab = 'home' | 'learn' | 'music' | 'voice' | 'studio' | 'settings' | 'admin';
@@ -51,7 +52,8 @@ function InputPills({ openSetup }: { openSetup: () => void }) {
 }
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>('home');
+  // the phone app opens on the lessons (or the voice studio for singers); the website on the overview
+  const [tab, setTab] = useState<Tab>(() => (isNativeApp ? (appGoal() === 'voice' ? 'voice' : 'learn') : 'home'));
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [exStart, setExStart] = useState<number | undefined>(undefined);
   const [singPart, setSingPart] = useState<'S' | 'A' | 'T' | 'B' | null>(null);
@@ -72,7 +74,7 @@ export default function App() {
   const [acctOpen, setAcctOpen] = useState(false);
   useEffect(() => onGoHome(() => {
     setLesson(null); setSongId(null); setTab('home');
-    if (ACCOUNTS_ENABLED) setLanding(true);
+    if (ACCOUNTS_ENABLED && !isNativeApp) setLanding(true); // the app has no web home page
     window.scrollTo({ top: 0 });
   }), []);
   useEffect(() => (landing ? onBack(() => { setLanding(false); return true; }, 20) : undefined), [landing]);
@@ -87,7 +89,19 @@ export default function App() {
   const title = lesson ? lesson.title : MENU_TITLES[tab] ?? tabs.find((t) => t.id === tab)?.title ?? '';
   const go = (t: Tab) => { setTab(t); setLesson(null); window.scrollTo({ top: 0 }); };
 
-  if (ACCOUNTS_ENABLED && (landing || (!account.user && !isGuest()))) {
+  const upgradeReason = useUpgrade();
+  // The phone app: onboarding, then sign up / sign in, then the plans page once, then the lessons.
+  if (isNativeApp) {
+    if (!onboarded()) return <Onboarding onDone={() => bump((x) => x + 1)} />;
+    if (ACCOUNTS_ENABLED && !account.user && !isGuest()) {
+      if (!account.ready) return <Splash />;
+      return <AuthScreen onGuest={() => bump((x) => x + 1)} />;
+    }
+    if (ACCOUNTS_ENABLED && account.user && !paywallSeen() && !account.ent.pro) {
+      return <Paywall reason="Welcome! Pick a plan or start free" onClose={() => { markPaywallSeen(); bump((x) => x + 1); }} />;
+    }
+  }
+  if (ACCOUNTS_ENABLED && !isNativeApp && (landing || (!account.user && !isGuest()))) {
     if (!account.ready && !landing) return <Splash />;
     return <Landing returning={!!account.user || isGuest()} onStart={() => { setLanding(false); bump((x) => x + 1); window.scrollTo({ top: 0 }); }} />;
   }
@@ -141,7 +155,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <UpgradeSheet /><ResetPasswordSheet />{acctOpen && <AccountSheet onClose={() => setAcctOpen(false)} />}
+        {isNativeApp ? <AppUpgrade reason={upgradeReason} /> : <UpgradeSheet />}<ResetPasswordSheet />{acctOpen && <AccountSheet onClose={() => setAcctOpen(false)} />}
       </div>
     </div>
   );
