@@ -1,4 +1,5 @@
 // Voice Studio: pitch matching, range finder, vocal lessons, and a shortcut to sing a choir part.
+import { PageHead } from './PageHead';
 import { useEffect, useRef, useState } from 'react';
 import { audio } from '../audio/engine';
 import { freqToMidiFloat, midiToName } from '../core/music';
@@ -6,7 +7,7 @@ import type { Lesson } from '../core/types';
 import { VOICE_LESSONS } from '../curriculum/lessons';
 import { mic, type MicFrame, micHelp } from '../input/mic';
 import { Icon } from './Icon';
-import { Metric } from './LessonView';
+
 import { PitchRoll } from './PitchRoll';
 import { SingToScore } from './SingToScore';
 import { progress, setSettings, useProgressVersion, useSettings } from './settings';
@@ -105,15 +106,12 @@ export function VoiceStudio({ openLesson, singChoir, openScore }: { openLesson: 
   const nextLesson = VOICE_LESSONS.find((l) => !progress.lessonComplete(l));
   return (
     <div className="page">
-      <section className="head-row">
-        <div className="id-card"><span className="avatar"><Icon name="mic" size={22} /></span><div><small>Singing and sight-singing</small><b>Voice Studio</b></div></div>
-        <div className="metrics">
-          <Metric label="You are singing" value={clear ? `${midiToName(Math.round(sungFloat!))}` : on ? 'listening…' : 'microphone off'} big />
-          <Metric label="Comfortable range" value={`${midiToName(lo)}–${midiToName(hi)}`} />
-          <Metric label="Suggested choir part" value={vt.part === 'S' ? 'Soprano' : vt.part === 'A' ? 'Alto' : vt.part === 'T' ? 'Tenor' : 'Bass'} />
-          <Metric label="Matched" value={score.hits} />
-        </div>
-      </section>
+      <PageHead title="Voice Studio" sub="Sing to score, match notes, and find your range." stats={[
+        ['Now', clear ? midiToName(Math.round(sungFloat!)) : on ? 'listening' : 'mic off'],
+        ['Range', `${midiToName(lo)}–${midiToName(hi)}`],
+        ['Matched', score.hits],
+        ['Your part', vt.part === 'S' ? 'Soprano' : vt.part === 'A' ? 'Alto' : vt.part === 'T' ? 'Tenor' : 'Bass'],
+      ]} />
       {!on && <div className="card call stacked"><div><b>Turn on the microphone to sing.</b><p className="muted small">Your voice is analyzed on this device only. Headphones help when the app plays notes.</p>{err && <p className="small tip">{err}</p>}</div><button className="btn dark" onClick={start}><Icon name="mic" size={15} /> Start microphone</button></div>}
       <SingToScore micOn={on} startMic={async () => { await mic.start(); mic.settings.mode = 'voice'; setOn(true); setErr(''); }} openScore={openScore} onRecording={setS2sRec} />
       <section className="voice-grid">

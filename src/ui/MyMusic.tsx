@@ -2,6 +2,7 @@
 // Choose the part(s) you play or sing; the cursor waits for you (or follows the beat in timed mode),
 // listens through MIDI / microphone / touch, colors every note, and the other parts accompany you.
 
+import { PageHead } from './PageHead';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Select } from './Select';
 import { AssessmentSession, type Feedback } from '../assessment/session';
@@ -25,7 +26,7 @@ import { KeyboardArea } from './KeyboardArea';
 import { allowFeature, allowSong } from '../account/gate';
 import { getAccount, openUpgrade, useAccount } from '../account/store';
 import { Icon } from './Icon';
-import { icon, Metric, ReportCard } from './LessonView';
+import { icon, ReportCard } from './LessonView';
 import type { KeyMark } from './Piano';
 import { PitchRoll } from './PitchRoll';
 import { ScoreView, noteKey, type ScoreViewHandle } from './ScoreView';
@@ -448,10 +449,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
   if (!score) {
     return (
       <div className="page">
-        <section className="head-row">
-          <div className="id-card"><span className="avatar"><Icon name="doc" size={22} /></span><div><small>MusicXML practice</small><b>My Music</b></div></div>
-          <div className="metrics"><Metric label="Open a score to begin" value="Play it, sing it, get every note checked" big /></div>
-        </section>
+        <PageHead title="My Music" sub="Open a score, play it or sing it, and every note is checked." />
         <div className="drop card" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) onFile(f); }}>
           <Icon name="doc" size={40} stroke={1.4} />
           <h2>Open your sheet music</h2>
@@ -486,16 +484,13 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
       {fm.focus && <DockFab open={fm.dockOpen} onToggle={fm.toggleDock} primary={
         <button className={`fab lime ${run !== 'idle' ? 'live' : ''}`} onClick={run !== 'idle' ? stop : () => void practice()} disabled={!targets.size} aria-label={run !== 'idle' ? 'Stop' : 'Practice'}><Icon name={run !== 'idle' ? 'pause' : 'play'} size={22} /></button>
       } />}
-      <section className="head-row">
-        <div className="id-card"><span className="avatar"><Icon name="doc" size={22} /></span><div><small>{score.composer || 'Imported score'}</small><b>{score.title}</b></div></div>
-        <div className="metrics">
-          <Metric label="Parts / voices" value={`${score.parts.length} / ${score.tracks.length}`} />
-          <Metric label="Measures" value={score.measures.length} />
-          <Metric label="Tempo" value={tempos.length > 1 ? `${Math.round(Math.min(...tempos) * tempoPct / 100)}–${Math.round(Math.max(...tempos) * tempoPct / 100)}` : Math.round(bpm)} unit={tempos.length > 1 ? 'bpm, changes' : 'bpm'} />
-          <Metric label="Time" value={`${score.timeSig[0]}/${score.timeSig[1]}`} />
-          <Metric label={tr ? `Key (written ${keyName(score.keyFifths)})` : 'Key'} value={tr ? transposedKey(score.keyFifths, tr) : keyName(score.keyFifths)} />
-        </div>
-      </section>
+      <PageHead kicker={score.composer || 'Imported score'} title={score.title} stats={[
+        ['Tempo', `${tempos.length > 1 ? `${Math.round(Math.min(...tempos) * tempoPct / 100)}–${Math.round(Math.max(...tempos) * tempoPct / 100)}` : Math.round(bpm)} bpm`],
+        ['Time', `${score.timeSig[0]}/${score.timeSig[1]}`],
+        ['Key', tr ? transposedKey(score.keyFifths, tr) : keyName(score.keyFifths)],
+        ['Bars', score.measures.length],
+        ['Parts', score.parts.length],
+      ]} />
       <div className="chip-row">
         <button className="chip" onClick={() => pickFile()}><Icon name="plus" size={13} /> Open another</button>
         <button className="chip" onClick={() => load(demoChoraleXml(), false)}>Demo chorale</button>
@@ -670,7 +665,7 @@ export function SongShelf({ onOpen }: { onOpen: (id: string) => void }) {
   return (
     <div className="card">
       <div className="shelf-top">
-        <div className="shelf-title"><b>Song library</b><small className="muted">{list.length} of {SONGS.length} pieces · easiest first</small></div>
+        <div className="shelf-title"><b>Song library</b><small className="muted">{list.length} pieces, easiest first</small></div>
         <div className="shelf-filters">
           <Select value={lvl} aria-label="Level" onChange={(e) => setLvl(e.target.value as typeof lvl)}>
             {(['All', ...SONG_LEVELS] as const).map((l) => <option key={l} value={l}>{l === 'All' ? 'All levels' : l} ({l === 'All' ? SONGS.length : SONGS.filter((x) => x.level === l).length})</option>)}
@@ -685,15 +680,12 @@ export function SongShelf({ onOpen }: { onOpen: (id: string) => void }) {
           <div className="shelf-head"><span className={`lvl ${l.toLowerCase()}`}>{l}</span><small className="muted">{LEVEL_HINT[l]}</small></div>
           <div className="song-grid">
             {list.filter((x) => x.level === l).map((sg) => (
-              <button key={sg.id} className="song-card" onClick={() => onOpen(sg.id)}>
+              <button key={sg.id} className="song-card clean" onClick={() => onOpen(sg.id)}>
                 {!allowSong(ent, sg) && <span className="pro-tag">Pro</span>}
-                <span className={`lvl ${sg.level.toLowerCase()}`}>{sg.level}{sg.original ? ' · Original' : ''}</span>
                 <b>{sg.title}</b>
-                <small className="muted">{sg.composer}</small>
-                <span className="small">{sg.about}</span>
-                <span className="inst-tags">
-                  <i>Piano RH + LH</i>{Object.values(sg.colors).map((c) => <i key={c}>{INST_ICON[c!] ?? c}</i>)}{sg.groove !== 'none' && <i>Groove</i>}
-                </span>
+                <small className="muted">{sg.original ? 'Maestro original' : sg.composer}</small>
+                <span className="song-about">{sg.about}</span>
+                <span className="song-with">With {[...new Set(Object.values(sg.colors).map((c) => INST_ICON[c!] ?? c))].slice(0, 3).join(', ') || 'piano'}{sg.groove !== 'none' ? ' and a beat' : ''}</span>
               </button>
             ))}
           </div>

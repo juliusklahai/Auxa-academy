@@ -12,8 +12,13 @@ export const isPhone = () => window.matchMedia?.('(pointer: coarse)').matches &&
 const isPortrait = () => window.innerHeight > window.innerWidth;
 type OrientationLock = { lock?: (o: string) => Promise<void>; unlock?: () => void };
 
+/** Set just before moving to the next exercise from full screen: the next practice view opens full screen
+ *  straight away and the screen is not released in between. */
+let carry = false;
+export function carryFocus() { carry = true; }
+
 export function useFocusMode() {
-  const [focus, setFocus] = useState(false);
+  const [focus, setFocus] = useState(() => carry);
   const [panel, setPanel] = useState<'info' | 'settings' | null>(null);
   /** practice controls folded into a floating button while practicing */
   const [dockOpen, setDockOpen] = useState(false);
@@ -60,6 +65,7 @@ export function useFocusMode() {
   };
 
   useEffect(() => {
+    if (carry) { carry = false; usingFs.current = !!document.fullscreenElement; }
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && focusRef.current) exit(); };
     const onFs = () => { if (!document.fullscreenElement && usingFs.current) { usingFs.current = false; setFocus(false); setPanel(null); } };
     const onTurn = () => { if (!isPortrait()) setRotateHint(false); };
@@ -76,6 +82,8 @@ export function useFocusMode() {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('resize', onTurn);
       offBack();
+      document.removeEventListener('fullscreenchange', onFs);
+      if (carry) return; // the next exercise keeps the full screen
       if (native && focusRef.current) native.setPractice(false);
       try { (screen.orientation as unknown as OrientationLock | undefined)?.unlock?.(); } catch { /* fine */ }
       document.removeEventListener('fullscreenchange', onFs);

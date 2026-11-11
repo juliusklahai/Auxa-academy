@@ -1,3 +1,5 @@
+import { PageHead } from './PageHead';
+import { VoiceHelp } from './VoiceHelp';
 import { useEffect, useRef, useState } from 'react';
 import { Select } from './Select';
 import { audio } from '../audio/engine';
@@ -13,7 +15,7 @@ import { mic, type MicFrame, micHelp } from '../input/mic';
 import { midiIn } from '../input/midi';
 import { dayKey } from '../progress/store';
 import { Icon } from './Icon';
-import { Metric } from './LessonView';
+
 import { SongShelf } from './MyMusic';
 import { Piano, type KeyMark } from './Piano';
 import { DockFab, FloatHead, FocusBar, RotateHint } from './FocusBar';
@@ -27,55 +29,45 @@ const SKILL_LABEL: Record<SkillId, string> = {
 const LEVEL_NAME = LEVEL_NAMES;
 
 /** Lime area sparkline of attempt scores, with a dark marker on the best attempt. */
-function Spark({ values }: { values: number[] }) {
-  const W = 200, H = 64;
-  if (values.length === 0) return <div className="spark empty"><span>No attempts yet</span></div>;
-  const v = values.length === 1 ? [values[0], values[0]] : values;
-  const x = (i: number) => (i / (v.length - 1)) * W;
-  const y = (s: number) => H - 6 - (s / 100) * (H - 14);
-  let d = `M0 ${y(v[0])}`;
-  for (let i = 1; i < v.length; i++) { const cx = (x(i - 1) + x(i)) / 2; d += ` C${cx} ${y(v[i - 1])}, ${cx} ${y(v[i])}, ${x(i)} ${y(v[i])}`; }
-  const bi = v.indexOf(Math.max(...v));
+/** How far a lesson is: exercises passed out of all. */
+const lessonFrac = (l: Lesson) => l.exercises.length ? l.exercises.filter((e) => progress.ex(e.id).passes >= e.requiredPasses).length / l.exercises.length : 0;
+
+/** Small circle with a progress ring. */
+function Ring({ value, done, size = 56, children }: { value: number; done?: boolean; size?: number; children?: React.ReactNode }) {
+  const r = size / 2 - 4, c = 2 * Math.PI * r;
   return (
-    <div className="spark">
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="lime" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#e3f53a" stopOpacity="0.95" /><stop offset="1" stopColor="#e3f53a" stopOpacity="0.08" /></linearGradient>
-          <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line x1="0" y1="0" x2="0" y2="6" stroke="#1f1f1d" strokeOpacity="0.12" strokeWidth="1.2" /></pattern>
-        </defs>
-        <path d={`${d} L${W} ${H} L0 ${H} Z`} fill="url(#lime)" />
-        <path d={`${d} L${W} ${H} L0 ${H} Z`} fill="url(#hatch)" />
-        <path d={d} fill="none" stroke="#1f1f1d" strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
-        <line x1="0" x2={W} y1={y(80)} y2={y(80)} stroke="#1f1f1d" strokeOpacity=".25" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
+    <span className={`ring ${done ? 'done' : ''}`} style={{ width: size, height: size }}>
+      <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} aria-hidden>
+        <circle cx={size / 2} cy={size / 2} r={r} className="ring-track" style={{ strokeWidth: 4 }} />
+        {value > 0.001 && <circle cx={size / 2} cy={size / 2} r={r} className="ring-bar" style={{ strokeWidth: 4 }} strokeDasharray={`${c * Math.min(1, value)} ${c}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />}
       </svg>
-      <span className="spark-pin" style={{ left: `${Math.min(80, Math.max(20, (x(bi) / W) * 100))}%`, top: `${(y(v[bi]) / H) * 100}%` }}>{Math.round(v[bi])}<small>/100</small></span>
-    </div>
+      <span className="ring-in">{children}</span>
+    </span>
   );
 }
 
-function LessonCard({ l, onOpen }: { l: Lesson; onOpen: () => void }) {
+/** One lesson as a tidy row: ring, title, one line of summary, lock or plan tag. */
+function LessonTile({ l, onOpen, n }: { l: Lesson; onOpen: () => void; n: number }) {
   useAccount();
-  const pro = !allowLesson(getAccount().ent, l);
+  const plan = !allowLesson(getAccount().ent, l);
   const unlocked = progress.lessonUnlocked(l, LESSONS);
   const done = progress.lessonComplete(l);
-  const scores = l.exercises.flatMap((e) => progress.ex(e.id).attempts).sort((a, b) => a.at - b.at).map((a) => a.score).slice(-12);
-  const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
-  const delta = scores.length >= 2 ? Math.round(scores[scores.length - 1] - scores[0]) : null;
+  const f = lessonFrac(l);
   return (
-    <button className={`lcard ${done ? 'done' : ''} ${unlocked ? '' : 'locked'}`} disabled={!unlocked && !pro} onClick={onOpen}>
-      <div className="lcard-head"><b>{l.title}</b><span className="circle sm">{done ? <Icon name="check" size={14} /> : unlocked ? <Icon name="play" size={12} /> : <Icon name="lock" size={13} />}</span></div>
-      {unlocked ? <Spark values={scores} /> : <p className="muted small">{l.summary}</p>}
-      <div className="lcard-foot">
-        <span>Average: <b>{avg ?? '-'}</b><small>/100</small></span>
-        {pro && <span className={`pro-tag inline ${lessonTier(l)}`}>{TIER_NAME[lessonTier(l)]}</span>}
-        {delta !== null && <span className={`delta ${delta >= 0 ? 'up' : 'down'}`}>{delta >= 0 ? '+' : ''}{delta}</span>}
-        {!unlocked && !pro && <span className="muted small">Locked</span>}
-      </div>
+    <button className={`ltile ${done ? 'done' : ''} ${unlocked ? '' : 'locked'}`} disabled={!unlocked && !plan} onClick={onOpen}>
+      <Ring value={f} done={done}>{done ? <Icon name="check" size={16} /> : !unlocked || plan ? <Icon name="lock" size={14} /> : <b>{n}</b>}</Ring>
+      <span className="ltile-text">
+        <b>{l.title}</b>
+        <small>{l.summary}</small>
+      </span>
+      {plan && <span className={`pro-tag inline ${lessonTier(l)}`}>{TIER_NAME[lessonTier(l)]}</span>}
     </button>
   );
 }
 
+/** The current stage of the course as a row of rings; tap one to open its lesson. */
 function PathTimeline({ lessons: all, openLesson }: { lessons: Lesson[]; openLesson: (l: Lesson, ex?: number) => void }) {
+  useAccount();
   const ref = useRef<HTMLDivElement>(null);
   const nextAll = all.find((l) => !progress.lessonComplete(l) && progress.lessonUnlocked(l, LESSONS));
   const groups = [...new Set(all.map((l) => LEVEL_GROUP[l.level] ?? 'More'))];
@@ -84,50 +76,32 @@ function PathTimeline({ lessons: all, openLesson }: { lessons: Lesson[]; openLes
   const next = lessons.findIndex((l) => !progress.lessonComplete(l) && progress.lessonUnlocked(l, LESSONS));
   useEffect(() => {
     const el = ref.current;
-    const col = el?.querySelectorAll<HTMLElement>('.path-col')[next];
-    if (el && col && next > 0) el.scrollTo({ left: Math.max(0, col.offsetLeft - 8), behavior: 'smooth' });
+    const col = el?.querySelectorAll<HTMLElement>('.pnode')[next];
+    if (el && col && next > 1) el.scrollTo({ left: Math.max(0, col.offsetLeft - 40), behavior: 'smooth' });
     else el?.scrollTo({ left: 0 });
   }, [next, group]);
   return (
-    <>
-    <Select className="only-phone path-select" value={group} aria-label="Lesson stage" onChange={(e) => setGroup(e.target.value)}>
-      {groups.map((g) => <option key={g} value={g}>{g} · Level{[...new Set(all.filter((l) => LEVEL_GROUP[l.level] === g).map((l) => l.level))].length > 1 ? "s" : ""} {[...new Set(all.filter((l) => LEVEL_GROUP[l.level] === g).map((l) => l.level))].join(', ')}</option>)}
-    </Select>
-    <div className="path-groups seg only-wide">{groups.map((g) => <button key={g} className={g === group ? 'on' : ''} onClick={() => setGroup(g)}>{g}<small> · Level{[...new Set(all.filter((l) => LEVEL_GROUP[l.level] === g).map((l) => l.level))].length > 1 ? "s" : ""} {[...new Set(all.filter((l) => LEVEL_GROUP[l.level] === g).map((l) => l.level))].join(', ')}</small></button>)}</div>
-    <div className="path" ref={ref}>
-      <div className="path-track">
-        <div className="path-line" />
+    <section className="card stage-card">
+      <div className="stage-top">
+        <b>Your path</b>
+        <Select value={group} aria-label="Lesson stage" onChange={(e) => setGroup(e.target.value)}>
+          {groups.map((g) => <option key={g} value={g}>{g}</option>)}
+        </Select>
+      </div>
+      <div className="pnodes" ref={ref}>
         {lessons.map((l, i) => {
           const done = progress.lessonComplete(l);
           const open = progress.lessonUnlocked(l, LESSONS);
+          const plan = !allowLesson(getAccount().ent, l);
           return (
-            <div className={`path-col ${i === next ? 'current' : ''}`} key={l.id}>
-              <span className={`node ${done ? 'done' : open ? 'open' : 'locked'}`}><Icon name={done ? 'check' : open ? 'doc' : 'lock'} size={15} /></span>
-              <div className="path-body">
-                <div className="when"><b>{l.id.replace('L', 'Level ').replace('-', ' · ')}</b><small>{LEVEL_NAME[l.level]}</small></div>
-                <div className="path-row">
-                  <div className="ex-pills">
-                    {l.exercises.map((e, ei) => {
-                      const p = progress.ex(e.id);
-                      const ok = p.passes >= e.requiredPasses;
-                      return (
-                        <button key={e.id} className={`ex-pill ${ok ? 'ok' : ''}`} disabled={!open} onClick={() => openLesson(l, ei)} title={`Practice: ${e.title}`}>
-                          <span className="dotc"><Icon name={ok ? 'check' : e.backing ? 'wave' : e.events.some((x) => x.pitches.length > 1) ? 'chord' : e.mode === 'timed' ? 'metro' : 'note'} size={12} /></span>
-                          <span className="t">{e.backing ? e.title.replace("Play along: ", "♪ ") : e.title}</span>
-                          <span className="x">{p.passes}/{e.requiredPasses}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <LessonCard l={l} onOpen={() => openLesson(l)} />
-                </div>
-              </div>
-            </div>
+            <button key={l.id} className={`pnode ${i === next ? 'next' : ''} ${open ? '' : 'locked'}`} disabled={!open && !plan} onClick={() => openLesson(l)} title={l.title}>
+              <Ring value={lessonFrac(l)} done={done} size={72}>{done ? <Icon name="check" size={18} /> : !open || plan ? <Icon name="lock" size={16} /> : <b>{l.level}·{lessons.filter((x) => x.level === l.level).indexOf(l) + 1}</b>}</Ring>
+              <span>{l.title}</span>
+            </button>
           );
         })}
       </div>
-    </div>
-    </>
+    </section>
   );
 }
 
@@ -156,50 +130,38 @@ function PracticeLog() {
 
 export function Dashboard({ openLesson }: { openLesson: (l: Lesson, ex?: number) => void }) {
   useProgressVersion();
-  const [filter, setFilter] = useState<'all' | 0 | 1 | 'done'>('all');
   const comps = progress.competencies(LESSONS);
-  const completed = PIANO_LESSONS.filter((l) => progress.lessonComplete(l));
   const next = PIANO_LESSONS.find((l) => !progress.lessonComplete(l) && progress.lessonUnlocked(l, LESSONS));
   const due = progress.dueReviews();
   const today = progress.data.practiceLog[dayKey(Date.now())] ?? 0;
   const weakest = Object.entries(comps).sort((a, b) => a[1]! - b[1]!)[0];
-  const level = next?.level ?? 1;
-  const shown = PIANO_LESSONS.filter((l) => filter === 'all' || (filter === 'done' ? progress.lessonComplete(l) : l.level === filter));
   return (
     <div className="page">
-      <section className="head-row">
-        <div className="id-card">
-          <span className="avatar you">You</span>
-          <div><small>Level {level} · {LEVEL_NAME[level]}</small><b>My practice</b></div>
-        </div>
-        <div className="metrics">
-          <Metric label="Current focus" value={next ? next.title : 'All Phase 1 mastered'} big />
-          <Metric label="Pitch" value={comps.pitchAccuracy ?? '-'} unit={comps.pitchAccuracy !== undefined ? '%' : ''} />
-          <Metric label="Rhythm" value={comps.rhythm ?? '-'} unit={comps.rhythm !== undefined ? '%' : ''} />
-          <Metric label="Streak" value={progress.streak()} unit="days" />
-          <Metric label="Today" value={Math.round(today / 60)} unit="min" />
-        </div>
-      </section>
-      <div className="chip-row lesson-filter">
-        <Select className="only-phone" value={String(filter)} aria-label="Show lessons" onChange={(e) => { const v = e.target.value; setFilter(v === 'all' || v === 'done' ? v : (+v as 0 | 1)); }}>
-          <option value="all">All lessons</option><option value="0">Level 0</option><option value="1">Level 1</option><option value="done">Mastered ({completed.length})</option>
-        </Select>
-        {(['all', 0, 1, 'done'] as const).map((f) => (
-          <button key={String(f)} className={`chip only-wide ${filter === f ? 'on' : ''}`} onClick={() => setFilter(f)}>
-            {f === 'all' ? 'All lessons' : f === 'done' ? `Mastered (${completed.length})` : `Level ${f}`}
-          </button>
-        ))}
-        {due.length > 0 && <button className="chip" onClick={() => { const l = LESSONS.find((x) => x.exercises.some((e) => e.id === due[0]))!; openLesson(l, l.exercises.findIndex((e) => e.id === due[0])); }}><Icon name="restart" size={13} /> Review due ({due.length})</button>}
-        {next && <button className="chip dark" onClick={() => openLesson(next)}><Icon name="play" size={12} /> Continue</button>}
-      </div>
-      <PathTimeline lessons={shown} openLesson={openLesson} />
+      {next ? (
+        <section className="card up-next">
+          <Ring value={lessonFrac(next)} size={96}><Icon name="play" size={26} /></Ring>
+          <div className="up-text">
+            <small>Up next · Level {next.level} · {LEVEL_NAME[next.level]}</small>
+            <h1>{next.title}</h1>
+            <p>{next.summary}</p>
+            <div className="up-actions">
+              <button className="btn lime" onClick={() => openLesson(next)}><Icon name="play" size={15} />Continue</button>
+              {due.length > 0 && <button className="btn" onClick={() => { const l = LESSONS.find((x) => x.exercises.some((e) => e.id === due[0]))!; openLesson(l, l.exercises.findIndex((e) => e.id === due[0])); }}><Icon name="restart" size={14} />Review ({due.length})</button>}
+            </div>
+          </div>
+          <div className="up-stats">
+            <span><b>{progress.streak()}</b><i>day streak</i></span>
+            <span><b>{Math.round(today / 60)}</b><i>min today</i></span>
+          </div>
+        </section>
+      ) : <section className="card up-next"><div className="up-text"><h1>Every lesson mastered</h1><p>Play songs in My Music or free play in the Piano Studio.</p></div></section>}
+      <PathTimeline lessons={PIANO_LESSONS} openLesson={openLesson} />
       <section className="grid2">
         <div className="card">
           <div className="card-head"><b>Skill profile</b></div>
           {(Object.keys(SKILL_LABEL) as SkillId[]).map((k) => (
             <div className="bar" key={k}><span>{SKILL_LABEL[k]}</span><div className="track"><div className={`fill ${(comps[k] ?? 0) >= 80 ? 'ok' : ''}`} style={{ width: `${comps[k] ?? 0}%` }} /></div><b>{comps[k] !== undefined ? comps[k] : '-'}</b></div>
           ))}
-          <p className="muted small">Separate measures, never one overall number. Latest 5 attempts per exercise.</p>
         </div>
         <div className="card">
           <div className="card-head"><b>Today's 20 minutes</b></div>
@@ -209,7 +171,6 @@ export function Dashboard({ openLesson }: { openLesson: (l: Lesson, ex?: number)
             <li><span>9 min</span>{next ? next.title : 'Free play in Piano Studio'}</li>
             <li><span>3 min</span>{due.length ? `${due.length} review${due.length > 1 ? 's' : ''} due` : 'One clean run of something you know'}</li>
           </ol>
-          {due.length > 0 && <div className="review-list">{due.slice(0, 4).map((id) => { const l = LESSONS.find((x) => x.exercises.some((e) => e.id === id))!; return <button key={id} className="chip" onClick={() => openLesson(l)}>{l.exercises.find((e) => e.id === id)!.title}</button>; })}</div>}
         </div>
       </section>
       <PracticeLog />
@@ -219,32 +180,36 @@ export function Dashboard({ openLesson }: { openLesson: (l: Lesson, ex?: number)
 
 export function LearnList({ openLesson, openSong }: { openLesson: (l: Lesson, ex?: number) => void; openSong?: (id: string) => void }) {
   useProgressVersion();
-  const levels = [...new Set(PIANO_LESSONS.map((l) => l.level))];
+  const groups = [...new Set(PIANO_LESSONS.map((l) => LEVEL_GROUP[l.level] ?? 'More'))];
+  const nextAll = PIANO_LESSONS.find((l) => !progress.lessonComplete(l) && progress.lessonUnlocked(l, LESSONS));
+  const tabs = [...groups, ...(openSong ? ['Songs'] : []), 'Singing'];
+  const [tab, setTab] = useState(() => { try { const t = sessionStorage.getItem('maestro.lessonsTab'); if (t && tabs.includes(t)) return t; } catch { /* */ } return LEVEL_GROUP[nextAll?.level ?? 0] ?? groups[0]; });
+  const pick = (t: string) => { setTab(t); try { sessionStorage.setItem('maestro.lessonsTab', t); } catch { /* */ } };
   const done = LESSONS.filter((l) => progress.lessonComplete(l)).length;
+  const levels = [...new Set(PIANO_LESSONS.filter((l) => (LEVEL_GROUP[l.level] ?? 'More') === tab).map((l) => l.level))];
   return (
     <div className="page">
-      <section className="head-row">
-        <div className="id-card"><span className="avatar"><Icon name="path" size={22} /></span><div><small>Piano and Voice Academy</small><b>All lessons</b></div></div>
-        <div className="metrics">
-          <Metric label="Rule" value="80% to unlock the next lesson" big />
-          <Metric label="Lessons" value={LESSONS.length} />
-          <Metric label="Mastered" value={done} />
-          <Metric label="Exercises" value={LESSONS.reduce((a, l) => a + l.exercises.length, 0)} />
-        </div>
+      <section className="ex-head">
+        <small>{done} of {LESSONS.length} lessons mastered · pass with 80% to unlock the next one</small>
+        <h2>Lessons</h2>
       </section>
+      <Select className="only-phone tab-select" value={tab} aria-label="Section" onChange={(e) => pick(e.target.value)}>{tabs.map((t) => <option key={t} value={t}>{t}</option>)}</Select>
+      <div className="seg tab-seg only-wide">{tabs.map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => pick(t)}>{t}</button>)}</div>
       {levels.map((lv) => (
         <section key={lv} className="level">
-          <div className="level-head"><span className="node open"><Icon name="piano" size={14} /></span><b>Piano · Level {lv}</b><span className="muted">{LEVEL_NAME[lv]}</span><span className="grp-tag">{LEVEL_GROUP[lv]}</span></div>
-          <div className="lesson-grid">
-            {PIANO_LESSONS.filter((l) => l.level === lv).map((l) => <LessonCard key={l.id} l={l} onOpen={() => openLesson(l)} />)}
+          <div className="level-head"><b>Level {lv}</b><span className="muted">{LEVEL_NAME[lv]}</span></div>
+          <div className="tile-grid">
+            {PIANO_LESSONS.filter((l) => l.level === lv).map((l, i) => <LessonTile key={l.id} n={i + 1} l={l} onOpen={() => openLesson(l)} />)}
           </div>
         </section>
       ))}
-      {openSong && <section className="level"><div className="level-head"><span className="node open"><Icon name="note" size={14} /></span><b>Songs</b><span className="muted">Right hand, left hand or both, with violin, cello, flute and strings playing along</span></div><SongShelf onOpen={openSong} /></section>}
-      <section className="level">
-        <div className="level-head"><span className="node open"><Icon name="mic" size={14} /></span><b>Voice · Sight-singing</b><span className="muted">Sing with the microphone. Any octave counts.</span></div>
-        <div className="lesson-grid">{VOICE_LESSONS.map((l) => <LessonCard key={l.id} l={l} onOpen={() => openLesson(l)} />)}</div>
-      </section>
+      {tab === 'Songs' && openSong && <section className="level"><div className="level-head"><b>Songs</b><span className="muted">Right hand, left hand or both, with instruments playing along</span></div><SongShelf onOpen={openSong} /></section>}
+      {tab === 'Singing' && (
+        <section className="level">
+          <div className="level-head"><b>Sight-singing</b><span className="muted">Sing with the microphone. Any octave counts.</span></div>
+          <div className="tile-grid">{VOICE_LESSONS.map((l, i) => <LessonTile key={l.id} n={i + 1} l={l} onOpen={() => openLesson(l)} />)}</div>
+        </section>
+      )}
     </div>
   );
 }
@@ -301,15 +266,7 @@ export function PianoStudio() {
         <button className={`fab lime ${running ? 'live' : ''}`} onClick={toggle} aria-label="Metronome start or stop"><Icon name={running ? 'pause' : 'metro'} size={22} /></button>
       } />}
       {fm.focus && <div className="side"><div className="card panel-info"><FloatHead title="Keyboard" onClose={fm.closePanel} /><div className="chip-row">{options}</div></div></div>}
-      <section className="head-row">
-        <div className="id-card"><span className="avatar"><Icon name="piano" size={22} /></span><div><small>Free play · not scored</small><b>Piano Studio</b></div></div>
-        <div className="metrics">
-          <Metric label="You played" value={last} big />
-          <Metric label="Tempo" value={bpm} unit="bpm" />
-          <Metric label="Meter" value={`${beats}/4`} />
-          <Metric label="Keys" value={size} />
-        </div>
-      </section>
+      <PageHead kicker="Free play, not scored" title="Piano Studio" stats={[['You played', last], ['Tempo', `${bpm} bpm`], ['Meter', `${beats}/4`]]} />
       <div className="chip-row">{options}</div>
       {fm.focus && <div className="studio-now"><small>You played</small><b>{last}</b><span className="beats" aria-hidden>{running && Array.from({ length: beats }, (_, i) => <span key={i} className={flash === i ? (i === 0 ? 'on accent' : 'on') : ''} />)}</span></div>}
       <section className="card keys-card tall">
@@ -482,6 +439,7 @@ export function SettingsView() {
           <label className="field">Key labels<Select value={st.labels} onChange={(e) => setSettings({ labels: e.target.value as 'letters' })}><option value="letters">Letters (C D E)</option><option value="solfege">Solfège (Do Re Mi)</option><option value="none">None</option></Select></label>
           <label className="check"><input type="checkbox" checked={st.hands} onChange={(e) => setSettings({ hands: e.target.checked })} /> Show guide hands on the keyboard</label>
           <label className="check"><input type="checkbox" checked={st.coachVoice !== false} onChange={(e) => setSettings({ coachVoice: e.target.checked })} /> Voice coach: read each lesson step aloud</label>
+          <VoiceHelp />
           <label className="check"><input type="checkbox" checked={st.autoFocus} onChange={(e) => setSettings({ autoFocus: e.target.checked })} /> Full-screen practice when I press Start (Esc returns)</label>
           <label className="check"><input type="checkbox" checked={st.keyHints} onChange={(e) => setSettings({ keyHints: e.target.checked })} /> Show computer-keyboard letters on keys</label>
           <label className="field">Mistake policy<Select value={st.mistakePolicy} onChange={(e) => setSettings({ mistakePolicy: e.target.value as 'restart' })}><option value="restart">Challenge: 3 in a row restarts (earns mastery)</option><option value="pause">Supported: never restart (practice only)</option></Select></label>

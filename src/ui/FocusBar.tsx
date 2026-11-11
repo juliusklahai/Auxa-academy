@@ -4,8 +4,10 @@ import { goHome } from './nav';
 import { InstallHint } from './InstallBanner';
 
 /** Floating controls shown in full-screen practice: open/close the floating panels, leave (Esc). */
-export function FocusBar({ title, panel, onPanel, onExit, infoLabel = 'Info', settingsLabel }: {
+export function FocusBar({ title, panel, onPanel, onExit, infoLabel = 'Info', settingsLabel, onNext, nextLocked, nextLabel = 'Next' }: {
   title: string; panel: 'info' | 'settings' | null; onPanel: (p: 'info' | 'settings') => void; onExit: () => void; infoLabel?: string; settingsLabel?: string;
+  /** go straight on to the next exercise (or lesson) without leaving full screen */
+  onNext?: () => void; nextLocked?: boolean; nextLabel?: string;
 }) {
   return (
     <div className="focus-bar" role="toolbar" aria-label="Practice view controls">
@@ -14,6 +16,7 @@ export function FocusBar({ title, panel, onPanel, onExit, infoLabel = 'Info', se
       <div className="focus-actions">
       {settingsLabel && <button className={`fbtn ${panel === 'settings' ? 'on' : ''}`} onClick={() => onPanel('settings')}><Icon name="sliders" size={15} /> {settingsLabel}</button>}
       <button className={`fbtn ${panel === 'info' ? 'on' : ''}`} onClick={() => onPanel('info')}><Icon name="doc" size={15} /> {infoLabel}</button>
+      {onNext && <button className="fbtn next" onClick={onNext} title={nextLocked ? 'The next lesson is part of a higher plan' : 'Go to the next exercise'}>{nextLocked ? <Icon name="lock" size={14} /> : null}{nextLabel}<Icon name="next" size={15} /></button>}
       <button className="fbtn exit" onClick={onExit} title="Leave full screen (Esc)"><Icon name="close" size={15} /> Exit <kbd>Esc</kbd></button>
       </div>
     </div>

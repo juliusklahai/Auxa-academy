@@ -120,7 +120,7 @@ export default function App() {
         </header>
         <main className="panel">
           {lesson
-            ? <LessonView key={`${lesson.id}-${exStart ?? ''}`} lesson={lesson} initialExercise={exStart} onNextLesson={nextLesson ? () => open(nextLesson) : undefined} />
+            ? <LessonView key={`${lesson.id}-${exStart ?? ''}`} lesson={lesson} initialExercise={exStart} onNextLesson={nextLesson ? () => open(nextLesson) : undefined} nextLocked={!!nextLesson && !allowLesson(getAccount().ent, nextLesson)} />
             : <>
                 {tab === 'home' && <><InstallBanner /><Dashboard openLesson={open} /></>}
                 {tab === 'learn' && <LearnList openLesson={open} openSong={(id) => { setSongId(id); setTab('music'); }} />}

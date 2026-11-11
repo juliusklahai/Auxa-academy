@@ -19,8 +19,9 @@ import { Staff } from './Staff';
 import { EarDrill } from './EarDrill';
 import { coachOn, say, stopSpeaking } from './voice';
 import { NARRATION } from '../curriculum/narration';
+import { VoiceHelp } from './VoiceHelp';
 import { PitchRoll } from './PitchRoll';
-import { isPhone, useFocusMode } from './focus';
+import { carryFocus, isPhone, useFocusMode } from './focus';
 import { DockFab, FocusBar, FloatHead, RotateHint } from './FocusBar';
 
 function rangeFor(pitches: number[]): [number, number] {
@@ -87,7 +88,7 @@ function LessonHub({ lesson, onLearn, onExercise }: { lesson: Lesson; onLearn: (
   );
 }
 
-export function LessonView({ lesson, onNextLesson, initialExercise }: { lesson: Lesson; onNextLesson?: () => void; initialExercise?: number }) {
+export function LessonView({ lesson, onNextLesson, nextLocked, initialExercise }: { lesson: Lesson; onNextLesson?: () => void; nextLocked?: boolean; initialExercise?: number }) {
   const [phase, setPhase] = useState<'hub' | 'teach' | 'practice'>(initialExercise !== undefined ? 'practice' : 'hub');
   const [step, setStep] = useState(0);
   const [exIdx, setExIdx] = useState(initialExercise ?? 0);
@@ -123,7 +124,7 @@ export function LessonView({ lesson, onNextLesson, initialExercise }: { lesson: 
           ? <TeachPanel lesson={lesson} step={step} setStep={setStep} onDone={() => { markLearn(lesson.id); setPhase('practice'); }} chips={chips} />
           : ex.drill
             ? <DrillPanel key={ex.id} lesson={lesson} exercise={ex} index={exIdx} chips={chips} onNext={nextEx} />
-            : <PracticePanel key={ex.id} lesson={lesson} exercise={ex} index={exIdx} chips={chips} onNext={nextEx} />}
+            : <PracticePanel key={ex.id} lesson={lesson} exercise={ex} index={exIdx} chips={chips} onNext={nextEx} nextLocked={exIdx === lesson.exercises.length - 1 && !!nextLocked} />}
     </div>
   );
 }
@@ -208,6 +209,7 @@ function TeachPanel({ lesson, step, setStep, onDone, chips }: { lesson: Lesson; 
           <div className="teach-title"><h2>{s.title}</h2>
             <button className={`coach-btn ${voiceOn ? 'on' : ''}`} onClick={() => { const v = !voiceOn; setVoiceOn(v); setSettings({ coachVoice: v }); if (!v) stopSpeaking(); }} aria-label={voiceOn ? 'Voice coach on' : 'Voice coach off'} title={voiceOn ? 'Voice coach is reading this aloud. Tap to mute.' : 'Turn on the voice coach'}><Icon name={voiceOn ? 'speaker' : 'mute'} size={17} /></button>
           </div>
+          {voiceOn && <VoiceHelp />}
           {paras.map((p, i) => <p key={i}>{p}</p>)}
           {s.tips && <ul className="teach-tips">{s.tips.map((t, i) => <li key={i}>{t}</li>)}</ul>}
           {s.compare && (
@@ -245,7 +247,7 @@ function TeachPanel({ lesson, step, setStep, onDone, chips }: { lesson: Lesson; 
 
 interface FeedItem { kind: Feedback['kind']; text: string; id: number }
 
-function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesson: Lesson; exercise: Exercise; index: number; chips: React.ReactNode; onNext?: () => void }) {
+function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocked }: { lesson: Lesson; exercise: Exercise; index: number; chips: React.ReactNode; onNext?: () => void; nextLocked?: boolean }) {
   const settings = useSettings();
   const fm = useFocusMode();
   // phones: lessons open full screen and sideways (Android turns the screen only in full screen)
@@ -504,7 +506,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext }: { lesso
 
   return (
     <div className={`practice-root ${fm.focus ? 'focus' : ''} ${fm.panel ? 'show-' + fm.panel : ''} ${fm.dockOpen ? 'dock-open' : ''}`}>
-      {fm.focus && <FocusBar title={exercise.title} panel={fm.panel} onPanel={fm.togglePanel} onExit={fm.exit} infoLabel="Teacher" />}
+      {fm.focus && <FocusBar title={exercise.title} panel={fm.panel} onPanel={fm.togglePanel} onExit={fm.exit} infoLabel="Teacher" onNext={onNext ? () => { if (index < lesson.exercises.length - 1) carryFocus(); onNext(); } : undefined} nextLocked={nextLocked} nextLabel={index < lesson.exercises.length - 1 ? 'Next' : 'Next lesson'} />}
       {fm.focus && fm.rotateHint && <RotateHint onDismiss={fm.dismissRotate} />}
       {fm.focus && <DockFab open={fm.dockOpen} onToggle={fm.toggleDock} primary={
         <button className={`fab lime ${listening ? 'live' : ''}`} onClick={() => start(true)} aria-label={listening ? 'Restart' : 'Start'}><Icon name={listening || s.state === 'COMPLETED' || s.state === 'RESTART' ? 'restart' : 'play'} size={22} /></button>
