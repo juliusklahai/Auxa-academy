@@ -42,8 +42,8 @@ class MainActivity : Activity() {
 
     private lateinit var root: FrameLayout
     lateinit var web: WebView
-    val speaker by lazy { Speaker(this) }
         private set
+    val speaker by lazy { Speaker(this) }
     private var offlineView: View? = null
     private var practice = false
 

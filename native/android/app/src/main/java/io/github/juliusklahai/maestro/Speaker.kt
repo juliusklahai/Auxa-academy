@@ -26,9 +26,9 @@ class Speaker(private val a: MainActivity) : TextToSpeech.OnInitListener {
             ?.maxByOrNull { it.quality }?.let { tts.voice = it }
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(id: String) {}
-            override fun onDone(id: String) = done(id)
-            @Deprecated("old API") override fun onError(id: String) = done(id)
-            override fun onError(id: String, code: Int) = done(id)
+            override fun onDone(id: String) { done(id) }
+            @Deprecated("old API") override fun onError(id: String) { done(id) }
+            override fun onError(id: String, code: Int) { done(id) }
         })
         ready = true
         pending?.let { (t, id) -> speak(t, id, 1f) }
@@ -43,10 +43,10 @@ class Speaker(private val a: MainActivity) : TextToSpeech.OnInitListener {
 
     fun stop() { pending = null; if (ready) tts.stop() }
 
-    private fun done(id: String) = main.post {
+    private fun done(id: String) { main.post {
         val safe = id.replace(Regex("[^A-Za-z0-9_-]"), "")
         a.web.evaluateJavascript("window.__maestroNative&&window.__maestroNative.onSpeechDone&&window.__maestroNative.onSpeechDone('$safe')", null)
-    }
+    } }
 
     fun close() { tts.stop(); tts.shutdown() }
 }
