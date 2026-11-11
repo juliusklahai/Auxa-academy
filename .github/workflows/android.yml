@@ -6,6 +6,11 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  actions: write
+# one build at a time: two builds replacing the same download at once can break it mid-download
+concurrency:
+  group: android-apk
+  cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -40,6 +45,7 @@ jobs:
           name: Maestro-android
           path: native/android/Maestro.apk
       - name: Publish a download link (test build)
+        if: github.ref_name == 'native' || github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -47,3 +53,8 @@ jobs:
           gh release view $TAG >/dev/null 2>&1 || gh release create $TAG --prerelease --title "Maestro for Android (test build)" --notes "Test build of the Maestro Android app. Download Maestro.apk on your phone and open it to install."
           gh release upload $TAG Maestro.apk --clobber
           gh release edit $TAG --notes "Test build $VERSION_NAME of the Maestro Android app (opens $START_URL). Download Maestro.apk on your phone and open it to install."
+      - name: Refresh the site copy of the APK (…/preview/Maestro.apk)
+        if: github.ref_name == 'native' || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml -R ${{ github.repository }} --ref main || true

@@ -16,6 +16,9 @@ const save = (req, res) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  // other sites and downloads (the Android app) go straight to the network, untouched
+  if (url.origin !== self.location.origin || /\.(apk|mxl|musicxml)$/.test(url.pathname)) return;
   const page = req.mode === 'navigate' || req.destination === 'document' || /\.(webmanifest|json)$/.test(new URL(req.url).pathname);
   if (page) {
     e.respondWith(fetch(req).then((res) => save(req, res)).catch(() => caches.match(req).then((hit) => hit || caches.match('./'))));
