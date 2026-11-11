@@ -7,7 +7,7 @@ import { freqToMidiFloat, midiToName } from '../core/music';
 import { chordLabel, harmonize, STYLES, type ArrStyle } from '../compose/harmony';
 import { melodyXml, playbackNotes, satbXml } from '../compose/score';
 import { keyInfo, transcribe, type Melody, type PitchFrame } from '../compose/transcribe';
-import { framesFromFile } from '../compose/audioFile';
+import { framesFromFile, framesFromSamples } from '../compose/audioFile';
 import { mic, type MicFrame } from '../input/mic';
 import { Icon } from './Icon';
 import { ScoreView } from './ScoreView';
@@ -66,7 +66,7 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
     return () => { mic.frameListeners.delete(l); };
   }, [phase]);
 
-  useEffect(() => () => { timers.current.forEach(clearTimeout); metronome.stop(); audio.stopAll(); mic.singing = false; if (rec.current && rec.current.state !== 'inactive') rec.current.stop(); onRecording?.(false); }, []); // eslint-disable-line
+  useEffect(() => () => { timers.current.forEach(clearTimeout); metronome.stop(); audio.stopAll(); mic.singing = false; if (capturing.current) mic.stopCapture(); if (rec.current && rec.current.state !== 'inactive') rec.current.stop(); onRecording?.(false); }, []); // eslint-disable-line
   useEffect(() => { onRecording?.(phase === 'rec' || phase === 'countin'); }, [phase]); // eslint-disable-line
 
   const record = async () => {
@@ -84,9 +84,13 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
     timers.current.push(window.setTimeout(() => { setPhase('rec'); setCount(0); if (!click) metronome.stop(); }, 80 + ts[0] * beatMs));
   };
 
+  const capturing = useRef(false);
   const startTake = () => {
     if (take) URL.revokeObjectURL(take);
     setTake(null);
+    // every sample of the take is kept, so it can be listened to again in full after singing
+    capturing.current = mic.startCapture();
+    if (capturing.current) return;
     const st = mic.mediaStream;
     if (!st || typeof MediaRecorder === 'undefined') return;
     try {
@@ -114,10 +118,29 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
     mic.singing = false;
     if (rec.current && rec.current.state !== 'inactive') rec.current.stop();
     rec.current = null;
-    (window as unknown as { __s2s?: PitchFrame[] }).__s2s = frames.current; // for troubleshooting
     heard.current = free ? { free: true, bpm } : { free: false, bpm, origin: origin.current };
+    const cap = capturing.current ? mic.stopCapture() : null;
+    capturing.current = false;
+    setLive(null);
+    if (cap && cap.samples.length > cap.sampleRate * 0.6) {
+      // Listen to the whole take again, sample by sample, before writing: the live readings are snapshots
+      // and can skip quick notes when the phone is busy. The full recording does not.
+      setBusy(true); setPhase('done');
+      window.setTimeout(() => {
+        const full = framesFromSamples(cap.samples, cap.sampleRate, audio.a4).map((f) => ({ ...f, t: f.t + cap.startPerf }));
+        frames.current = full.length ? full : frames.current;
+        (window as unknown as { __s2s?: PitchFrame[] }).__s2s = frames.current; // for troubleshooting
+        if (take) URL.revokeObjectURL(take);
+        setTake(URL.createObjectURL(toWav(cap.samples, cap.sampleRate)));
+        const m = write(frames.current, heard.current!, '1', {});
+        setMel(m); setBusy(false);
+        if (m && free) setBpm(m.bpm);
+      }, 30);
+      return;
+    }
+    (window as unknown as { __s2s?: PitchFrame[] }).__s2s = frames.current;
     const m = write(frames.current, heard.current, '1', {});
-    setMel(m); setPhase('done'); setLive(null);
+    setMel(m); setPhase('done');
     if (m && free) setBpm(m.bpm);
   };
 
@@ -227,7 +250,8 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
         </div>
       )}
 
-      {phase === 'done' && !melody && <p className="tip small">No clear notes heard. Sing a little louder, closer to the microphone, on “la” or “loo”.</p>}
+      {phase === 'done' && busy && <p className="s2s-busy"><span className="s2s-spin" />Listening back to your take and writing every note…</p>}
+      {phase === 'done' && !melody && !busy && <p className="tip small">No clear notes heard. Sing a little louder, closer to the microphone, on “la” or “loo”.</p>}
 
       {phase === 'done' && melody && (
         <>
@@ -274,4 +298,17 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
       )}
     </section>
   );
+}
+
+/** 16-bit mono WAV, so the take can be played back next to the score. */
+function toWav(x: Float32Array, sr: number): Blob {
+  const buf = new ArrayBuffer(44 + x.length * 2), v = new DataView(buf);
+  const w = (o: number, t: string) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + x.length * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true);
+  v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, x.length * 2, true);
+  let peak = 0; for (let i = 0; i < x.length; i++) peak = Math.max(peak, Math.abs(x[i]));
+  const g = peak > 0 ? Math.min(8, 0.9 / peak) : 1; // bring quiet takes up to a comfortable level
+  for (let i = 0; i < x.length; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, x[i] * g)) * 0x7fff, true);
+  return new Blob([buf], { type: 'audio/wav' });
 }

@@ -350,3 +350,6 @@ html.theme-dark .dock-text.light { background: #f4f4f2; color: #141414; }
   .s2s-actions .btn { justify-content: center; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13.5px; padding: 0 10px; gap: 6px; }
   .s2s-score { overflow-x: auto; }
 }
+.s2s-busy { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--ink2); }
+.s2s-spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--hair); border-top-color: var(--lime, #d7f25c); animation: s2sspin .8s linear infinite; }
+@keyframes s2sspin { to { transform: rotate(360deg); } }

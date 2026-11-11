@@ -22,6 +22,8 @@ export interface MicSettings {
 export class MicListener {
   private stream: MediaStream | null = null;
   private analyser: AnalyserNode | null = null;
+  private src: MediaStreamAudioSourceNode | null = null;
+  private cap: { node: ScriptProcessorNode; chunks: Float32Array[]; startPerf: number | null; sink: GainNode } | null = null;
   private buf = new Float32Array(4096);
   private poly: PolyTracker | null = null;
   private timer = 0;
@@ -62,14 +64,55 @@ export class MicListener {
     // echo gate: what the app played near this onset (as heard at the mic) is not the learner
     this.poly = new PolyTracker(ctx.sampleRate, getExpected, (t) => audio.appOnsetsNear(t + this.settings.latencyMs * 0, 130));
     src.connect(this.analyser);
+    this.src = src;
     this.timer = window.setInterval(() => this.process(), 23);
   }
 
+  /**
+   * Record every sample from the microphone (not just the snapshots the live display reads every 23 ms),
+   * so a take can be analysed again in full after singing. Returns false if capture is not possible.
+   */
+  startCapture(): boolean {
+    const ctx = audio.ctx;
+    if (!ctx || !this.src) return false;
+    this.stopCapture();
+    const node = ctx.createScriptProcessor(4096, 1, 1);
+    const sink = ctx.createGain(); sink.gain.value = 0;
+    const cap = { node, chunks: [] as Float32Array[], startPerf: null as number | null, sink };
+    node.onaudioprocess = (e) => {
+      const d = e.inputBuffer.getChannelData(0);
+      if (cap.startPerf === null) {
+        // when the first sample of this block was captured, on the performance.now() clock
+        cap.startPerf = performance.now() - (d.length / ctx.sampleRate) * 1000 - ((ctx.baseLatency || 0) * 1000);
+      }
+      cap.chunks.push(new Float32Array(d));
+    };
+    this.src.connect(node); node.connect(sink); sink.connect(ctx.destination);
+    this.cap = cap;
+    return true;
+  }
+
+  /** Stop recording; the samples, their rate and when the first one was heard (performance.now ms). */
+  stopCapture(): { samples: Float32Array; sampleRate: number; startPerf: number } | null {
+    const cap = this.cap;
+    if (!cap) return null;
+    this.cap = null;
+    try { this.src?.disconnect(cap.node); } catch { /* already gone */ }
+    cap.node.disconnect(); cap.sink.disconnect(); cap.node.onaudioprocess = null;
+    const n = cap.chunks.reduce((a, c) => a + c.length, 0);
+    const samples = new Float32Array(n);
+    let o = 0;
+    for (const c of cap.chunks) { samples.set(c, o); o += c.length; }
+    return { samples, sampleRate: audio.ctx?.sampleRate ?? 48000, startPerf: cap.startPerf ?? performance.now() };
+  }
+
   stop() {
+    this.stopCapture();
     clearInterval(this.timer);
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;
     this.analyser = null;
+    this.src = null;
     this.tracker.reset();
   }
 

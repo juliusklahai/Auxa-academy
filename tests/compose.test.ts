@@ -1,5 +1,5 @@
 import { DOMParser } from '@xmldom/xmldom';
-import { segment, estimateTempo, quantize, detectKey, transcribe, type PitchFrame } from '../src/compose/transcribe';
+import { segment, estimateTempo, quantize, detectKey, transcribe, type PitchFrame, tidy, cleanFrames } from '../src/compose/transcribe';
 import { harmonize, chordPcs, RANGE } from '../src/compose/harmony';
 import { melodyXml, satbXml } from '../src/compose/score';
 import { parseMusicXml } from '../src/musicxml/parse';
@@ -203,5 +203,19 @@ describe('Sing to score: arrangement styles', () => {
     const t = h.voices[2].notes.filter((n) => n.midi !== null).map((n) => n.midi!);
     expect(t.map((x) => x - h.melodyShift)).toEqual(ODE.map(([x]) => x));
     expect(Math.max(...t)).toBeLessThanOrEqual(67);
+  });
+});
+
+describe('Sing to score: quick notes in between', () => {
+  it('keeps short passing notes sung legato instead of swallowing them', () => {
+    // C (long) D E F (quick, 140 ms each, no breaths) G (long)
+    const frames: PitchFrame[] = [];
+    const tune: [number, number][] = [[60, 600], [62, 140], [64, 140], [65, 140], [67, 700]];
+    let t = 200;
+    for (let s = 0; s < 200; s += 23) frames.push({ t: s, midi: null, rms: 0.002 });
+    for (const [m, d] of tune) { for (let x = t; x < t + d; x += 23) frames.push({ t: x, midi: m + Math.sin(x / 40) * 0.12, rms: 0.08 }); t += d; }
+    for (let x = t; x < t + 300; x += 23) frames.push({ t: x, midi: null, rms: 0.002 });
+    const notes = tidy(segment(cleanFrames(frames)));
+    expect(notes.map((n) => n.midi)).toEqual([60, 62, 64, 65, 67]);
   });
 });

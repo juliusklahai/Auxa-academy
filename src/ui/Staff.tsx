@@ -168,11 +168,29 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
     if (strip.current) strip.current.style.width = `${total}px`;
   }, [events, clef, timeSig, statuses, highContrast, measureWidth, height, bpb, showTime, backing, grand, hidePending, flats]);
 
+  // fit the staff to the space it gets: shrink it when the view is shorter (phones in landscape) and
+  // center it when the view is taller
+  const [fit, setFit] = useState({ s: 1, top: 0 });
+  const fitRef = useRef(1);
+  useEffect(() => {
+    const v = view.current;
+    if (!v || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => {
+      const h = v.clientHeight;
+      if (!h) return;
+      const sc = h < height - 1 ? Math.max(0.45, h / height) : 1;
+      fitRef.current = sc;
+      setFit({ s: sc, top: Math.max(0, (h - height * sc) / 2) });
+    });
+    ro.observe(v);
+    return () => ro.disconnect();
+  }, [height]);
+
   // page turning
   const ensureVisible = (beat: number) => {
     const v = view.current, L = layout.current;
     if (!v || !L.mx.length) return;
-    const vw = v.clientWidth;
+    const vw = v.clientWidth / fitRef.current;
     const m = Math.max(0, Math.min(L.mx.length - 1, Math.floor(beat / bpb + 1e-9)));
     const [x0, x1] = L.mx[m];
     let off = offsetRef.current;
@@ -229,7 +247,7 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
 
   return (
     <div className="staff-view" ref={view} aria-label={`${clef} clef notation`}>
-      <div className="staff-strip" ref={strip} style={{ transform: `translateX(${-offset}px)`, height }}>
+      <div className="staff-strip" ref={strip} style={{ transform: `translate(${-offset * fit.s}px, ${fit.top}px) scale(${fit.s})`, transformOrigin: '0 0', height }}>
         {glow !== null && <div className="note-glow" style={{ left: glow }} />}
         <div ref={svgHost} className="staff-svg" />
         {playhead && <div className="playhead" ref={head} />}

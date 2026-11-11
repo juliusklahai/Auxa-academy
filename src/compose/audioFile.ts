@@ -4,7 +4,21 @@ import { fixOctave, yin } from '../input/pitch';
 import type { PitchFrame } from './transcribe';
 
 /** Pitch readings every ~23 ms from mono samples. a4 = tuning reference. */
-export function framesFromSamples(x: Float32Array, sampleRate: number, a4 = 440): PitchFrame[] {
+/** Down to ~16 kHz for speed (a voice needs nothing above ~2 kHz for pitch): low-pass, then resample. */
+export function downsample(x: Float32Array, sr: number, target = 16000): { x: Float32Array; sr: number } {
+  if (sr <= target * 1.25) return { x, sr };
+  const ratio = sr / target, w = Math.max(2, Math.round(ratio));
+  // moving average as a simple low-pass
+  const lp = new Float32Array(x.length);
+  let acc = 0;
+  for (let i = 0; i < x.length; i++) { acc += x[i]; if (i >= w) acc -= x[i - w]; lp[i] = acc / Math.min(i + 1, w); }
+  const n = Math.floor(x.length / ratio), y = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const p = i * ratio + (w - 1) / 2, k = Math.floor(p), f = p - k; y[i] = (lp[Math.min(k, lp.length - 1)] ?? 0) * (1 - f) + (lp[Math.min(k + 1, lp.length - 1)] ?? 0) * f; }
+  return { x: y, sr: sr / ratio };
+}
+
+export function framesFromSamples(input: Float32Array, inputRate: number, a4 = 440): PitchFrame[] {
+  const { x, sr: sampleRate } = downsample(input, inputRate);
   const hop = Math.round(sampleRate * 0.023), win = Math.round(sampleRate * 0.0427) & ~1;
   // level of the whole file, so quiet recordings work as well as loud ones
   let peak = 0;

@@ -5,7 +5,7 @@
 /** One pitch reading (every ~23 ms). midi is fractional (cents), null when nothing clear is sung. */
 export interface PitchFrame { t: number; midi: number | null; rms: number }
 /** One sung note: equal-tempered pitch, start/end in ms, and how sharp (+) or flat (-) it was. */
-export interface SungNote { midi: number; start: number; end: number; cents: number }
+export interface SungNote { midi: number; start: number; end: number; cents: number; /** how steady the pitch was (semitones, middle half of the readings) */ spread?: number }
 /** A written note or rest: start and length in beats from the first downbeat. */
 export interface MelodyNote { midi: number | null; beat: number; beats: number; /** sung syllable, for arranged parts ("Ooh") */ lyric?: string }
 export interface KeyInfo { tonic: number; mode: 'major' | 'minor'; fifths: number; name: string }
@@ -19,7 +19,7 @@ const median = (a: number[]) => { const s = [...a].sort((x, y) => x - y); const 
  * (the voice gets quieter and then louder: a new syllable).
  */
 export function segment(frames: PitchFrame[], opts: { minMs?: number; gapMs?: number; jump?: number } = {}): SungNote[] {
-  const minMs = opts.minMs ?? 90, gapMs = opts.gapMs ?? 70, jump = opts.jump ?? 0.6;
+  const minMs = opts.minMs ?? 75, gapMs = opts.gapMs ?? 70, jump = opts.jump ?? 0.6;
   // smooth the pitch with a 5-reading median (removes single wild readings and octave blips)
   const sm = frames.map((f, i) => {
     if (f.midi === null) return null;
@@ -37,7 +37,8 @@ export function segment(frames: PitchFrame[], opts: { minMs?: number; gapMs?: nu
     const c0 = cur as Cur | null;
     if (c0 && end - c0.start >= minMs) {
       const m = median(c0.ps);
-      notes.push({ midi: Math.round(m), start: c0.start, end, cents: Math.round((m - Math.round(m)) * 100) });
+      const sorted = [...c0.ps].sort((a, b) => a - b), q = (k: number) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * k))];
+      notes.push({ midi: Math.round(m), start: c0.start, end, cents: Math.round((m - Math.round(m)) * 100), spread: q(0.75) - q(0.25) });
     }
     cur = null;
   };
@@ -125,7 +126,7 @@ export function cleanFrames(frames: PitchFrame[]): PitchFrame[] {
  * them, and a note is held until the next one starts when the gap is only a breath (legato).
  */
 export function tidy(notes: SungNote[], opts: { minMs?: number; breathMs?: number } = {}): SungNote[] {
-  const minMs = opts.minMs ?? 130, breathMs = opts.breathMs ?? 260;
+  const minMs = opts.minMs ?? 130, breathMs = opts.breathMs ?? 260, keepMs = 75;
   const ns = notes.map((n) => ({ ...n }));
   // fold blips into a touching neighbor (the longer one), or drop them when isolated
   for (let changed = true; changed;) {
@@ -134,6 +135,10 @@ export function tidy(notes: SungNote[], opts: { minMs?: number; breathMs?: numbe
       const n = ns[i];
       if (n.end - n.start >= minMs) continue;
       const prev = ns[i - 1], next = ns[i + 1];
+      // a quick note sung on purpose: steady pitch, not just a slide between its neighbors. Keep it.
+      const glide = prev && next && ((prev.midi < n.midi && n.midi < next.midi) || (prev.midi > n.midi && n.midi > next.midi)) && n.end - n.start < 110;
+      const crack = (prev && Math.abs(n.midi - prev.midi) >= 10) || (next && Math.abs(n.midi - next.midi) >= 10);
+      if (n.end - n.start >= keepMs && (n.spread ?? 1) <= 0.45 && !glide && !crack) continue;
       const touchP = prev && n.start - prev.end < 90, touchN = next && next.start - n.end < 90;
       if (touchP && touchN && prev.midi === next.midi) { prev.end = next.end; ns.splice(i, 2); changed = true; break; } // a crack inside one held note
       if (touchP && (!touchN || prev.end - prev.start >= next.end - next.start)) prev.end = Math.max(prev.end, n.end);
