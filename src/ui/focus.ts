@@ -17,7 +17,8 @@ type OrientationLock = { lock?: (o: string) => Promise<void>; unlock?: () => voi
 let carry = false;
 export function carryFocus() { carry = true; }
 
-export function useFocusMode() {
+/** onExit: where to go after leaving full screen with Exit, Esc or the back button. */
+export function useFocusMode(onExit?: () => void) {
   const [focus, setFocus] = useState(() => carry);
   const [panel, setPanel] = useState<'info' | 'settings' | null>(null);
   /** practice controls folded into a floating button while practicing */
@@ -53,11 +54,15 @@ export function useFocusMode() {
       else { el.webkitRequestFullscreen?.(); landscape(); }
     } catch { landscape(); /* not available (e.g. iPhone): the app still fills the page */ }
   };
+  const exitCb = useRef(onExit);
+  exitCb.current = onExit;
   const exit = () => {
+    const wasFocus = focusRef.current;
     setFocus(false);
     setPanel(null);
     setDockOpen(false);
     setRotateHint(false);
+    if (wasFocus && exitCb.current) window.setTimeout(() => exitCb.current?.(), 0);
     if (native) { native.setPractice(false); return; }
     try { (screen.orientation as unknown as OrientationLock | undefined)?.unlock?.(); } catch { /* fine */ }
     usingFs.current = false;
@@ -67,7 +72,7 @@ export function useFocusMode() {
   useEffect(() => {
     if (carry) { carry = false; usingFs.current = !!document.fullscreenElement; }
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && focusRef.current) exit(); };
-    const onFs = () => { if (!document.fullscreenElement && usingFs.current) { usingFs.current = false; setFocus(false); setPanel(null); } };
+    const onFs = () => { if (!document.fullscreenElement && usingFs.current) { usingFs.current = false; const was = focusRef.current; setFocus(false); setPanel(null); if (was && exitCb.current && !carry) window.setTimeout(() => exitCb.current?.(), 0); } };
     const onTurn = () => { if (!isPortrait()) setRotateHint(false); };
     window.addEventListener('resize', onTurn);
     window.addEventListener('keydown', onKey);

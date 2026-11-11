@@ -124,7 +124,7 @@ export function LessonView({ lesson, onNextLesson, nextLocked, initialExercise }
           ? <TeachPanel lesson={lesson} step={step} setStep={setStep} onDone={() => { markLearn(lesson.id); setPhase('practice'); }} chips={chips} />
           : ex.drill
             ? <DrillPanel key={ex.id} lesson={lesson} exercise={ex} index={exIdx} chips={chips} onNext={nextEx} />
-            : <PracticePanel key={ex.id} lesson={lesson} exercise={ex} index={exIdx} chips={chips} onNext={nextEx} nextLocked={exIdx === lesson.exercises.length - 1 && !!nextLocked} />}
+            : <PracticePanel key={ex.id} lesson={lesson} exercise={ex} index={exIdx} chips={chips} onExit={() => setPhase('hub')} onNext={nextEx} nextLocked={exIdx === lesson.exercises.length - 1 && !!nextLocked} />}
     </div>
   );
 }
@@ -247,9 +247,9 @@ function TeachPanel({ lesson, step, setStep, onDone, chips }: { lesson: Lesson; 
 
 interface FeedItem { kind: Feedback['kind']; text: string; id: number }
 
-function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocked }: { lesson: Lesson; exercise: Exercise; index: number; chips: React.ReactNode; onNext?: () => void; nextLocked?: boolean }) {
+function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocked, onExit }: { lesson: Lesson; exercise: Exercise; index: number; chips: React.ReactNode; onNext?: () => void; nextLocked?: boolean; onExit?: () => void }) {
   const settings = useSettings();
-  const fm = useFocusMode();
+  const fm = useFocusMode(onExit);
   // phones: lessons open full screen and sideways (Android turns the screen only in full screen)
   useEffect(() => { if (isPhone()) fm.enter(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [tempoPct, setTempoPct] = useState(100);
