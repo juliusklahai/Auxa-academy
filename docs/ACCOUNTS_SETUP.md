@@ -15,8 +15,11 @@ Without the `VITE_SUPABASE_*` variables the app runs exactly as before: no sign-
 2. Go to **SQL Editor**, paste in `supabase/migrations/0001_accounts.sql`, and run it.
 3. To change the admin email, edit the `insert into admin_emails` line first. That email gets the admin role on first sign-in, with every course unlocked.
 4. Go to **Authentication → URL Configuration**:
-   - Site URL: `https://juliusklahai.github.io/maestro-academy/`
-   - Also add it to the Redirect URLs.
+   - Site URL: `https://juliusklahai.github.io/maestro-academy/` (if this is left as `http://localhost:3000`, sign-in and reset-password emails open localhost)
+   - Redirect URLs, add all three (the `**` lets the reset link carry `?reset=1` and covers /preview/):
+     - `https://juliusklahai.github.io/maestro-academy/**`
+     - `io.github.juliusklahai.maestro://**` (the Android app)
+     - `http://localhost:5173/**` (only for local development)
 5. Go to **Authentication → Providers**:
    - Email is on by default (magic link).
    - Turn on Google if you want it. Google needs an OAuth client from Google Cloud Console.
