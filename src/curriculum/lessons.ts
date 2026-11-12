@@ -7,6 +7,7 @@ import { frac, MORE_LESSONS, type LessonDef } from './levels';
 import { ADVANCED_LESSONS } from './advanced';
 import { COUNT_LESSON, KEYSIG_LESSON, LANDMARK_LESSON, RHYTHM_LESSONS, SETUP_LESSON } from './basics';
 import { CHURCH_LESSONS } from './church';
+import { CRAFT_LESSONS, STYLE_LESSONS } from './styles';
 import { playAlongs, type PlayAlongSpec } from './playalong';
 
 /** Build events from "C4:1 D4:1 E4:2 R:1 C4+E4+G4:4" (name:beats, R = rest, + = chord). */
@@ -294,10 +295,11 @@ function after(list: Lesson[], id: string, add: Lesson[]): Lesson[] {
   const i = list.findIndex((l) => l.id === id);
   return i < 0 ? [...list, ...add] : [...list.slice(0, i + 1), ...add, ...list.slice(i + 1)];
 }
-let piano: Lesson[] = [pa(SETUP_LESSON), ...pianoBase, ...more, ...CHURCH_LESSONS.map(pa)];
+let piano: Lesson[] = [pa(SETUP_LESSON), ...pianoBase, ...more, ...CHURCH_LESSONS.map(pa), ...STYLE_LESSONS.map(pa)];
 piano = after(piano, 'L1-2', [pa(COUNT_LESSON)]);
 piano = after(piano, 'L1-3', [pa(LANDMARK_LESSON)]);
 piano = after(piano, 'L5-2', [pa(KEYSIG_LESSON)]);
+piano = after(piano, 'L9-4', CRAFT_LESSONS.map(pa));
 // from here on, key lessons show their key signature
 for (const l of piano) if (l.id === 'L5-3') l.exercises.forEach((e) => { if (!e.drill && e.fifths === undefined) e.fifths = 2; });
 piano = after(piano, 'L4-5', RHYTHM_LESSONS.map(pa));

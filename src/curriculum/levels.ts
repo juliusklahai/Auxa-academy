@@ -60,9 +60,9 @@ const RH_OCT = N('C4 D4 E4 F4 G4 A4 B4 C5');
 export const LEVEL_NAMES: Record<number, string> = {
   0: 'Foundations', 1: 'First notes and melodies', 2: 'Right and left hand technique', 3: 'Grand staff and both hands',
   4: 'Rhythm', 5: 'Keys and scales', 6: 'Chords and accompaniment', 7: 'Expression and touch', 8: 'Sight-reading and intervals', 9: 'Advanced technique',
-  10: 'Playing by ear', 11: 'Jazz piano', 12: 'Four-part writing and arranging', 13: 'Church musician',
+  10: 'Playing by ear', 11: 'Jazz piano', 12: 'Four-part writing and arranging', 13: 'Church musician', 14: 'Styles: pop, blues, Latin, gospel, highlife',
 };
-export const LEVEL_GROUP: Record<number, string> = { 0: 'Beginner', 1: 'Beginner', 2: 'Beginner', 3: 'Elementary', 4: 'Elementary', 5: 'Intermediate', 6: 'Intermediate', 7: 'Intermediate', 8: 'Advanced', 9: 'Advanced', 10: 'Play by ear', 11: 'Jazz', 12: 'Arranging', 13: 'Church' };
+export const LEVEL_GROUP: Record<number, string> = { 0: 'Beginner', 1: 'Beginner', 2: 'Beginner', 3: 'Elementary', 4: 'Elementary', 5: 'Intermediate', 6: 'Intermediate', 7: 'Intermediate', 8: 'Advanced', 9: 'Advanced', 10: 'Play by ear', 11: 'Jazz', 12: 'Arranging', 13: 'Church', 14: 'Styles' };
 
 export const MORE_LESSONS: LessonDef[] = [
   // ---------------- Level 3: grand staff and both hands ----------------

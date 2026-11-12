@@ -45,6 +45,8 @@ interface Props {
   flats?: boolean;
   /** key signature: sharps (+) or flats (-), drawn at the start; accidentals are then shown only against it */
   fifths?: number;
+  /** draw rests invisibly (drills that show only a key signature) */
+  hideRests?: boolean;
 }
 
 interface Layout { mx: [number, number][]; ex: number[]; total: number }
@@ -54,7 +56,7 @@ interface Layout { mx: [number, number][]; ex: number[]; total: number }
  * when you reach the last measure on screen, the strip slides so that measure moves to the left
  * and the next ones come into view. A playhead follows the beat in timed mode.
  */
-export function Staff({ events, clef, timeSig, statuses, current = -1, playhead, highContrast, measureWidth = 250, height = 168, showTime = true, backing, grand = false, hidePending = false, flats: flatsProp = false, fifths }: Props) {
+export function Staff({ events, clef, timeSig, statuses, current = -1, playhead, highContrast, measureWidth = 250, height = 168, showTime = true, backing, grand = false, hidePending = false, flats: flatsProp = false, fifths, hideRests = false }: Props) {
   const flats = fifths !== undefined ? fifths < 0 : flatsProp;
   const view = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLDivElement>(null);
@@ -158,7 +160,7 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
           const n = new StaveNote({ clef: c, keys, duration: d + (rest ? 'r' : ''), auto_stem: true });
           if (!rest) sorted.forEach((p, k) => {
             const vk = midiToVexKey(p, flats), [nm, oct] = vk.split('/');
-            const letter = nm[0], alter = nm.includes('#') ? 1 : nm.includes('b') ? -1 : 0;
+            const letter = nm[0], acc = nm.slice(1), alter = acc.includes('#') ? 1 : acc.includes('b') ? -1 : 0;
             const was = barAlter.get(letter + oct) ?? keyAlter(fifths ?? 0, letter);
             if (alter !== was) n.addModifier(new Accidental(alter === 1 ? '#' : alter === -1 ? 'b' : 'n'), k);
             barAlter.set(letter + oct, alter);
@@ -166,7 +168,7 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
           if (dots) Dot.buildAndAttach([n], { all: true });
           const st = it.idx !== null ? statuses?.[it.idx] ?? 'pending' : 'pending';
           const hide = hidePending && !it.ghost && !rest && st !== 'correct' && st !== 'partial';
-          const col = hide ? 'rgba(0,0,0,0)' : it.ghost ? (rest ? '#c9c7c0' : '#a9a7a0') : highContrast && st === 'pending' ? '#000' : COLORS[st];
+          const col = hide || (hideRests && rest) ? 'rgba(0,0,0,0)' : it.ghost ? (rest ? '#c9c7c0' : '#a9a7a0') : highContrast && st === 'pending' ? '#000' : COLORS[st];
           n.setStyle({ fillStyle: col, strokeStyle: col });
           if (hide) n.setLedgerLineStyle({ fillStyle: col, strokeStyle: col });
           // work-it-out notes inside a chord: invisible until found
@@ -204,7 +206,7 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
     });
     layout.current = { mx, ex, total };
     if (strip.current) strip.current.style.width = `${total}px`;
-  }, [events, clef, timeSig, statuses, highContrast, measureWidth, height, bpb, showTime, backing, grand, hidePending, flats, fifths]);
+  }, [events, clef, timeSig, statuses, highContrast, measureWidth, height, bpb, showTime, backing, grand, hidePending, flats, fifths, hideRests]);
 
   // fit the staff to the space it gets: shrink it when the view is shorter (phones in landscape) and
   // center it when the view is taller

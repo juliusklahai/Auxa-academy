@@ -68,3 +68,24 @@ describe('key signatures', () => {
     expect(lessonById('L5-3')!.exercises.filter((e) => !e.drill).every((e) => e.fifths === 2)).toBe(true);
   });
 });
+
+describe('styles and craft', () => {
+  const ids = ['S14-1', 'S14-2', 'S14-3', 'S14-4', 'S14-5', 'S14-6', 'S14-7', 'S14-8', 'S14-9', 'L9-5', 'L9-6', 'L9-7', 'L9-8'];
+  it('every exercise and its backing fill whole bars', () => {
+    for (const id of ids) for (const e of lessonById(id)!.exercises) {
+      const bar = e.timeSig[0] * (4 / e.timeSig[1]);
+      const end = Math.max(...e.events.map((v) => v.beat + v.beats));
+      expect(Math.abs(end / bar - Math.round(end / bar)), e.id).toBeLessThan(1e-9);
+      if (e.backing?.length) expect(Math.max(...e.backing.map((b) => b.beat + b.beats)), `${e.id} backing`).toBeLessThanOrEqual(end + 1e-9);
+    }
+  });
+  it('every step has narration', () => {
+    for (const id of ids) lessonById(id)!.teach.forEach((_, i) => expect(NARRATION[`${id}#${i}`], `${id}#${i}`).toBeTruthy());
+  });
+});
+
+describe('staff spelling', () => {
+  it('a plain B is not mistaken for a flat', () => {
+    expect(keyAlter(0, 'b')).toBe(0);
+  });
+});
