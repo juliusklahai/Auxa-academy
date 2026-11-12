@@ -806,3 +806,60 @@ html.theme-dark .people { --pc-bg: #1f1f21; --pc-ink: #f4f4f5; --pc-ink2: #c4c4c
 .link.danger { color: #c2410c; }
 .pe-actions .link { border: 0; background: none; padding: 6px 0; font: inherit; font-size: 14px; cursor: pointer; }
 .pe-form label .muted { font-weight: 400; font-size: 12.5px; margin-top: -4px; }
+
+/* ======================================================================
+   Practice layout: controls sit in the step row, keyboard spans the page
+   ====================================================================== */
+.ex-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.ex-toolbar > .step-strip { margin: 0; flex: none; }
+.ex-toolbar > .dock { position: static; margin: 0 !important; flex: 0 1 auto; min-width: 0; max-width: 100%; overflow-x: auto; scrollbar-width: none; box-shadow: none; padding: 6px 8px; gap: 7px; }
+.ex-toolbar > .dock .dock-fill { display: none; }
+.ex-toolbar > .dock .dock-btn { width: 38px; height: 38px; }
+.ex-toolbar > .dock .dock-chip { height: 32px; }
+.ex-toolbar > .dock .dock-range { width: 90px; }
+@media (max-width: 1240px) { .ex-toolbar > .dock .dock-status { display: none; } }
+.kb-full { margin-top: 16px; }
+.practice-root.focus .kb-full { margin: 0; flex: none; }
+/* teacher card is as tall as the score next to it and scrolls inside */
+@media (min-width: 1181px) {
+  .practice-root:not(.focus) .play-grid { align-items: stretch; }
+  .practice-root:not(.focus) .side { height: 0; min-height: 100%; overflow: hidden; }
+  .practice-root:not(.focus) .side > .card:last-child { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .practice-root:not(.focus) .side .feed .fb { display: flex !important; }
+}
+
+/* full screen: start, demo and options live in the top row; options opens the control panel under it */
+.focus-sep { width: 1px; height: 22px; background: var(--hair); margin: 0 2px; flex: none; }
+.fbtn.tool.lime { background: var(--lime); color: var(--on-lime); }
+.fbtn.tool.lime svg { stroke: var(--on-lime); }
+.fbtn.tool.live { animation: ring 1.6s ease-out infinite; }
+.practice-root.focus.dock-open > .dock { top: 58px; bottom: auto; right: 14px; left: 14px; margin: 0 auto; width: fit-content; }
+@media (orientation: landscape) and (max-height: 520px) { .practice-root.focus.dock-open > .dock { top: 48px; bottom: auto; } }
+@media (max-width: 760px) {
+  .practice-root.focus .focus-title { display: none; }
+  .practice-root.focus .focus-actions { margin: 0 0 0 auto; gap: 6px; }
+  .practice-root.focus .fbtn .fl, .practice-root.focus .fbtn kbd { display: none; }
+  .practice-root.focus .fbtn:not(.next) { width: 38px; padding: 0; justify-content: center; }
+  .practice-root.focus .fbtn.next { padding: 0 12px; }
+}
+@media (max-width: 420px) { .practice-root.focus .focus-home { display: none; } .practice-root.focus .focus-actions { margin: 0 auto; } }
+
+/* home: Up next card, everything on one left edge (icon + chip / title + tags / divider + numbers and button) */
+.card.up-next { display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 22px 24px 20px; text-align: left; }
+.un-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.un-chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--hair); background: var(--pillbg); color: var(--ink); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+.un-mid { margin-top: 18px; display: grid; gap: 6px; }
+.un-mid small { font-size: 13.5px; color: var(--ink2); font-weight: 500; }
+.un-mid small i { font-style: normal; color: var(--muted); font-weight: 400; font-size: 12.5px; }
+.un-mid h1 { margin: 0; font-size: clamp(21px, 2.6vw, 28px); line-height: 1.15; letter-spacing: -.02em; }
+.un-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.un-tags span { font-size: 12.5px; font-weight: 500; padding: 4px 11px; border-radius: 8px; background: var(--pillbg); color: var(--ink2); }
+.un-mid p { margin: 8px 0 0; color: var(--muted); font-size: 14px; line-height: 1.45; max-width: 60ch; }
+.un-foot { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--hair); }
+.un-stat { display: grid; gap: 2px; }
+.un-stat b { font-size: 17px; letter-spacing: -.01em; }
+.un-stat i { font-style: normal; font-size: 12.5px; color: var(--muted); }
+.un-foot .btn { flex: none; }
+/* start and demo are already in the top row in full screen, so the options panel holds only the settings */
+.practice-root.focus > .dock > .dock-btn.lime, .practice-root.focus > .dock > .dock-btn.lime + .dock-label,
+.practice-root.focus > .dock > .dock-demo, .practice-root.focus > .dock > .dock-demo + .dock-label, .practice-root.focus > .dock > .dock-demo + .dock-label + .dock-sep { display: none; }

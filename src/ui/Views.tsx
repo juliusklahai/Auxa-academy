@@ -139,19 +139,19 @@ export function Dashboard({ openLesson }: { openLesson: (l: Lesson, ex?: number)
     <div className="page">
       {next ? (
         <section className="card up-next">
-          <Ring value={lessonFrac(next)} size={96}><Icon name="play" size={26} /></Ring>
-          <div className="up-text">
-            <small>Up next · Level {next.level} · {LEVEL_NAME[next.level]}</small>
-            <h1>{next.title}</h1>
-            <p>{next.summary}</p>
-            <div className="up-actions">
-              <button className="btn lime" onClick={() => openLesson(next)}><Icon name="play" size={15} />Continue</button>
-              {due.length > 0 && <button className="btn" onClick={() => { const l = LESSONS.find((x) => x.exercises.some((e) => e.id === due[0]))!; openLesson(l, l.exercises.findIndex((e) => e.id === due[0])); }}><Icon name="restart" size={14} />Review ({due.length})</button>}
-            </div>
+          <div className="un-top">
+            <Ring value={lessonFrac(next)} size={58}><Icon name="play" size={18} /></Ring>
+            {due.length > 0 && <button className="un-chip" onClick={() => { const l = LESSONS.find((x) => x.exercises.some((e) => e.id === due[0]))!; openLesson(l, l.exercises.findIndex((e) => e.id === due[0])); }}>Review {due.length}<Icon name="restart" size={13} /></button>}
           </div>
-          <div className="up-stats">
-            <span><b>{progress.streak()}</b><i>day streak</i></span>
-            <span><b>{Math.round(today / 60)}</b><i>min today</i></span>
+          <div className="un-mid">
+            <small>Up next <i>· {Math.round(lessonFrac(next) * 100)}% done</i></small>
+            <h1>{next.title}</h1>
+            <div className="un-tags"><span>Level {next.level}</span><span>{LEVEL_NAME[next.level]}</span><span>{next.exercises.length} exercises</span></div>
+            <p>{next.summary}</p>
+          </div>
+          <div className="un-foot">
+            <div className="un-stat"><b>{progress.streak()} day streak</b><i>{Math.round(today / 60)} min today</i></div>
+            <button className="btn lime" onClick={() => openLesson(next)}><Icon name="play" size={15} />Continue</button>
           </div>
         </section>
       ) : <section className="card up-next"><div className="up-text"><h1>Every lesson mastered</h1><p>Play songs in My Music or free play in the Piano Studio.</p></div></section>}

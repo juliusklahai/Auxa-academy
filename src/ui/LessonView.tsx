@@ -22,7 +22,7 @@ import { exerciseLine, hubLine, RESULT_LINES, stepLine } from '../curriculum/spo
 import { VoiceHelp } from './VoiceHelp';
 import { PitchRoll } from './PitchRoll';
 import { carryFocus, isPhone, useFocusMode } from './focus';
-import { DockFab, FocusBar, FloatHead, RotateHint } from './FocusBar';
+import { FocusBar, FloatHead, RotateHint } from './FocusBar';
 
 function rangeFor(pitches: number[]): [number, number] {
   if (!pitches.length) return [48, 84];
@@ -56,13 +56,16 @@ const exIcon = (e: Exercise): string => (e.drill ? 'ear' : e.backing ? 'wave' : 
 const exProgress = (e: Exercise) => { const p = progress.ex(e.id); return { p, done: p.passes >= e.requiredPasses, value: p.passes >= e.requiredPasses ? 1 : Math.min(0.95, p.best / Math.max(1, e.passScore)) }; };
 
 /** The lesson at a glance: one circle per step, the ring shows how far you are. */
+const greeted = new Set<string>();
+
 function LessonHub({ lesson, onLearn, onExercise }: { lesson: Lesson; onLearn: () => void; onExercise: (i: number) => void }) {
   useProgressVersion();
   const seen = learnSeen(lesson.id);
   const nodes = [{ key: 'learn', title: 'Learn', sub: `${lesson.teach.length} short steps`, icon: 'play' as string, value: seen ? 1 : 0, done: seen, go: onLearn },
     ...lesson.exercises.map((e, i) => { const x = exProgress(e); return { key: e.id, title: e.title, sub: x.done ? 'Passed' : x.p.best ? `Best ${Math.round(x.p.best)}%` : 'Not started', icon: exIcon(e), value: x.value, done: x.done, go: () => onExercise(i) }; })];
   const next = nodes.findIndex((n) => !n.done);
-  useEffect(() => { void say(hubLine(lesson)); return () => stopSpeaking(); }, [lesson.id]); // eslint-disable-line
+  // greet once when the lesson opens; coming back from an exercise (Exit) stays quiet
+  useEffect(() => { if (greeted.has(lesson.id)) return; greeted.add(lesson.id); void say(hubLine(lesson)); return () => stopSpeaking(); }, [lesson.id]); // eslint-disable-line
   const passed = lesson.exercises.filter((e) => exProgress(e).done).length;
   return (
     <section className="hub">
@@ -503,14 +506,44 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocke
   const input = exercise.voice ? 'Voice' : midiIn.devices.length ? 'MIDI' : mic.active ? 'Microphone' : 'Touch / keys';
   const best = progress.ex(exercise.id).best;
 
+  const dock = (
+      <div className="dock">
+        <button className={`dock-btn lime ${listening ? 'live' : ''}`} onClick={() => { if (settings.autoFocus && !fm.focus) fm.enter(); start(true); }} aria-label={listening ? 'Restart' : 'Start'}>
+          <Icon name={listening || s.state === 'COMPLETED' || s.state === 'RESTART' ? 'restart' : 'play'} size={18} />
+        </button>
+        <span className="dock-label">{listening ? 'Restart' : s.state === 'RESTART' ? `Attempt ${s.attempt + 1}` : s.state === 'COMPLETED' ? 'Again' : 'Start'}</span>
+        <button className="dock-btn dock-demo" onClick={demo} aria-label={exercise.byEar ? 'Listen' : 'Demo'} title={exercise.byEar ? 'Listen to the phrase' : 'Watch a demo'}><Icon name={exercise.byEar ? 'ear' : 'eye'} size={17} /></button>
+        <span className="dock-label">{exercise.byEar ? 'Listen' : 'Demo'}</span>
+        <span className="dock-sep" />
+        <div className="dock-group">
+          {[50, 75, 100].map((p) => <button key={p} className={`dock-chip ${tempoPct === p ? 'on' : ''}`} disabled={listening} onClick={() => setTempoPct(p)}>{p}%</button>)}
+          <input className="dock-range" type="range" min={20} max={150} step={5} value={tempoPct} disabled={listening} onChange={(e) => setTempoPct(+e.target.value)} aria-label="Tempo percent" />
+          <span className="dock-label">{tempoPct}%</span>
+        </div>
+        <span className="dock-sep" />
+        {exercise.mode === 'timed' && <>
+          <button className={`dock-btn ${metroOn ? 'on' : ''}`} onClick={() => setMetroOn(!metroOn)} disabled={listening} aria-label="Metronome"><Icon name="metro" size={17} /></button>
+          <div className="beats" aria-hidden>{Array.from({ length: exercise.timeSig[0] }, (_, i) => <span key={i} className={beatFlash === i ? (i === 0 ? 'on accent' : 'on') : ''} />)}</div>
+          <span className="dock-sep" />
+        </>}
+        {!exercise.voice && <><button className={`dock-btn ${settings.hands ? 'on' : ''}`} onClick={() => setSettings({ hands: !settings.hands })} aria-label="Show hands"><Icon name="hand" size={17} /></button>
+        <span className="dock-label">Hands {settings.hands ? 'on' : 'off'}</span></>}
+        <span className="dock-fill" />
+        <span className="dock-status" title="Where your playing is coming from"><Icon name={input === 'MIDI' ? 'midi' : input === 'Microphone' || input === 'Voice' ? 'mic' : 'keys'} size={15} /> Input: {input}</span>
+        {/* in full screen the bar above already has Exit, so no second close here */}
+        {!fm.focus && <button className="dock-btn dock-fs" onClick={fm.toggle} aria-label="Full screen practice" title="Full screen practice"><Icon name="expand" size={16} /></button>}
+      </div>
+  );
+
   return (
     <div className={`practice-root ${fm.focus ? 'focus' : ''} ${fm.panel ? 'show-' + fm.panel : ''} ${fm.dockOpen ? 'dock-open' : ''}`}>
-      {fm.focus && <FocusBar title={exercise.title} panel={fm.panel} onPanel={fm.togglePanel} onExit={fm.exit} infoLabel="Teacher" onNext={onNext ? () => { if (index < lesson.exercises.length - 1) carryFocus(); onNext(); } : undefined} nextLocked={nextLocked} nextLabel={index < lesson.exercises.length - 1 ? 'Next' : 'Next lesson'} />}
+      {fm.focus && <FocusBar title={exercise.title} panel={fm.panel} onPanel={fm.togglePanel} onExit={fm.exit} infoLabel="Teacher" tools={<>
+        <button className={`fbtn tool lime ${listening ? 'live' : ''}`} onClick={() => start(true)} aria-label={listening ? 'Restart' : 'Start'}><Icon name={listening || s.state === 'COMPLETED' || s.state === 'RESTART' ? 'restart' : 'play'} size={16} /><span className="fl">{listening ? 'Restart' : 'Start'}</span></button>
+        <button className="fbtn tool" onClick={demo} aria-label={exercise.byEar ? 'Listen' : 'Demo'}><Icon name={exercise.byEar ? 'ear' : 'eye'} size={16} /><span className="fl">{exercise.byEar ? 'Listen' : 'Demo'}</span></button>
+        <button className={`fbtn tool ${fm.dockOpen ? 'on' : ''}`} onClick={fm.toggleDock} aria-expanded={fm.dockOpen} aria-label="Options"><Icon name="sliders" size={16} /><span className="fl">Options</span></button>
+      </>} onNext={onNext ? () => { if (index < lesson.exercises.length - 1) carryFocus(); onNext(); } : undefined} nextLocked={nextLocked} nextLabel={index < lesson.exercises.length - 1 ? 'Next' : 'Next lesson'} />}
       {fm.focus && fm.rotateHint && <RotateHint onDismiss={fm.dismissRotate} />}
-      {fm.focus && <DockFab open={fm.dockOpen} onToggle={fm.toggleDock} primary={
-        <button className={`fab lime ${listening ? 'live' : ''}`} onClick={() => start(true)} aria-label={listening ? 'Restart' : 'Start'}><Icon name={listening || s.state === 'COMPLETED' || s.state === 'RESTART' ? 'restart' : 'play'} size={22} /></button>
-      } />}
-      {chips}
+      {fm.focus ? chips : <div className="ex-toolbar">{chips}{dock}</div>}
       <ExHead kicker={`Exercise ${index + 1} of ${lesson.exercises.length}`} title={exercise.title} goal={exercise.objective}
         stats={[['Tempo', `${Math.round(bpm)} bpm`], ['Best', `${Math.round(best)}%`], ['Try', `${s.attempt}`], ['Slips', `${s.consecutive}/${exercise.maxConsecutiveMistakes > 10 ? '∞' : exercise.maxConsecutiveMistakes}`]]} />
       <section className="play-grid">
@@ -534,12 +567,6 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocke
                 targets={() => { const c = clock.current; return c ? exercise.events.filter((e) => e.pitches.length).map((e) => ({ midi: e.pitches[0], startMs: c.t0 + feelBeat(e.beat, exercise.swing) * c.mspb, endMs: c.t0 + feelBeat(e.beat + e.beats, exercise.swing) * c.mspb - 40 })) : []; }} />
             </div>
           )}
-          <KeyboardArea lo={lo} hi={hi} marks={marks} labels={labels} showKeyHints={settings.keyHints} baseHeight={exercise.voice ? 120 : fm.focus ? 200 : 180} scrollTo={curEv?.pitches[0] ?? allPitches[0]}
-            hands={exercise.voice ? undefined : {
-              events: exercise.events, exerciseId: exercise.id, timeOf: (b) => (b * msPerBeat(bpm)) / 1000, timeKey: bpm,
-              clock: () => { const c = clock.current; return c ? (performance.now() - c.t0) / 1000 : null; },
-              index: handIdx, active: handsActive, demo: exercise.mode === 'wait' && s.state === 'LISTENING' && reveal && demoIdx === null, correction: fix && exercise.mode === 'wait',
-            }} />
         </div>
         <aside className="side">
           <FloatHead title="Teacher" onClose={fm.closePanel} />
@@ -564,32 +591,15 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocke
             )}
         </aside>
       </section>
-      <div className="dock">
-        <button className={`dock-btn lime ${listening ? 'live' : ''}`} onClick={() => { if (settings.autoFocus && !fm.focus) fm.enter(); start(true); }} aria-label={listening ? 'Restart' : 'Start'}>
-          <Icon name={listening || s.state === 'COMPLETED' || s.state === 'RESTART' ? 'restart' : 'play'} size={18} />
-        </button>
-        <span className="dock-label">{listening ? 'Restart' : s.state === 'RESTART' ? `Attempt ${s.attempt + 1}` : s.state === 'COMPLETED' ? 'Again' : 'Start'}</span>
-        <button className="dock-btn" onClick={demo} aria-label={exercise.byEar ? 'Listen' : 'Demo'} title={exercise.byEar ? 'Listen to the phrase' : 'Watch a demo'}><Icon name={exercise.byEar ? 'ear' : 'eye'} size={17} /></button>
-        <span className="dock-label">{exercise.byEar ? 'Listen' : 'Demo'}</span>
-        <span className="dock-sep" />
-        <div className="dock-group">
-          {[50, 75, 100].map((p) => <button key={p} className={`dock-chip ${tempoPct === p ? 'on' : ''}`} disabled={listening} onClick={() => setTempoPct(p)}>{p}%</button>)}
-          <input className="dock-range" type="range" min={20} max={150} step={5} value={tempoPct} disabled={listening} onChange={(e) => setTempoPct(+e.target.value)} aria-label="Tempo percent" />
-          <span className="dock-label">{tempoPct}%</span>
-        </div>
-        <span className="dock-sep" />
-        {exercise.mode === 'timed' && <>
-          <button className={`dock-btn ${metroOn ? 'on' : ''}`} onClick={() => setMetroOn(!metroOn)} disabled={listening} aria-label="Metronome"><Icon name="metro" size={17} /></button>
-          <div className="beats" aria-hidden>{Array.from({ length: exercise.timeSig[0] }, (_, i) => <span key={i} className={beatFlash === i ? (i === 0 ? 'on accent' : 'on') : ''} />)}</div>
-          <span className="dock-sep" />
-        </>}
-        {!exercise.voice && <><button className={`dock-btn ${settings.hands ? 'on' : ''}`} onClick={() => setSettings({ hands: !settings.hands })} aria-label="Show hands"><Icon name="hand" size={17} /></button>
-        <span className="dock-label">Hands {settings.hands ? 'on' : 'off'}</span></>}
-        <span className="dock-fill" />
-        <span className="dock-status" title="Where your playing is coming from"><Icon name={input === 'MIDI' ? 'midi' : input === 'Microphone' || input === 'Voice' ? 'mic' : 'keys'} size={15} /> Input: {input}</span>
-        {/* in full screen the bar above already has Exit, so no second close here */}
-        {!fm.focus && <button className="dock-btn dock-fs" onClick={fm.toggle} aria-label="Full screen practice" title="Full screen practice"><Icon name="expand" size={16} /></button>}
+      <div className="kb-full">
+        <KeyboardArea lo={lo} hi={hi} marks={marks} labels={labels} showKeyHints={settings.keyHints} baseHeight={exercise.voice ? 120 : fm.focus ? 200 : 180} scrollTo={curEv?.pitches[0] ?? allPitches[0]}
+          hands={exercise.voice ? undefined : {
+            events: exercise.events, exerciseId: exercise.id, timeOf: (b) => (b * msPerBeat(bpm)) / 1000, timeKey: bpm,
+            clock: () => { const c = clock.current; return c ? (performance.now() - c.t0) / 1000 : null; },
+            index: handIdx, active: handsActive, demo: exercise.mode === 'wait' && s.state === 'LISTENING' && reveal && demoIdx === null, correction: fix && exercise.mode === 'wait',
+          }} />
       </div>
+      {fm.focus && dock}
     </div>
   );
 }
