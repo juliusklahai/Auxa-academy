@@ -186,7 +186,7 @@ export function AccountSheet({ onClose }: { onClose: () => void }) {
 
 export const PERKS: Record<'pro' | 'plus', string[]> = {
   pro: ['Levels 3 to 6: two hands, rhythm, keys and scales, chords', 'The church musician path: hymns in four parts, chord symbols, keyboard and organ', 'The whole song library', 'Standard singing coach', 'Progress saved on all your devices'],
-  plus: ['Everything in Pro', 'Levels 7 to 12: sight-reading, play by ear, jazz, arranging', 'Strict and Pro singing coach, Sing to score in four parts', 'Your own MusicXML and choir (SATB) scores'],
+  plus: ['Everything in Pro', 'Levels 7 to 12: sight-reading, play by ear, jazz, arranging', 'Strict and Pro singing coach, Sing to score in four parts', 'Your own MusicXML and choir (SATB) scores', 'Classes for teachers: assign lessons and follow every learner'],
 };
 
 /** The paywall: Pro and Plus, each by card (Stripe, renews monthly) or mobile money (Monime, 1-month pass). */

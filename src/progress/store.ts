@@ -12,6 +12,10 @@ export interface ProgressData {
   exercises: Record<string, ExerciseProgress>;
   practiceLog: Record<string, number>; // yyyy-mm-dd -> seconds
   placementSkipped?: boolean;
+  /** set by the placement test: lessons up to this level are open without the earlier ones */
+  placedLevel?: number;
+  /** certificates earned: level -> date (yyyy-mm-dd) */
+  certs?: Record<string, string>;
 }
 
 const KEY = 'maestro.progress.v1';
@@ -82,6 +86,7 @@ export class ProgressStore {
   /** A required lesson unlocks only when every prerequisite lesson is mastered (>= 80% and required passes). */
   lessonUnlocked(lesson: Lesson, all: Lesson[]): boolean {
     if (this.unlockAll) return true;
+    if (this.data.placedLevel !== undefined && (lesson.track ?? 'piano') === 'piano' && lesson.level <= this.data.placedLevel) return true;
     return lesson.prerequisites.every((pid) => {
       const pre = all.find((l) => l.id === pid);
       return pre ? this.lessonComplete(pre) : false;

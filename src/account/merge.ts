@@ -19,6 +19,8 @@ export function mergeProgress(a: ProgressData | null | undefined, b: ProgressDat
     }
     for (const [d, s] of Object.entries(src.practiceLog ?? {})) out.practiceLog[d] = Math.max(out.practiceLog[d] ?? 0, s);
     if (src.placementSkipped) out.placementSkipped = true;
+    if (src.placedLevel !== undefined) out.placedLevel = Math.max(out.placedLevel ?? -1, src.placedLevel);
+    for (const [lv, d] of Object.entries(src.certs ?? {})) { out.certs ??= {}; if (!out.certs[lv] || d < out.certs[lv]) out.certs[lv] = d; }
   }
   return out;
 }

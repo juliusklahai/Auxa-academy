@@ -1,5 +1,7 @@
 import { PageHead } from './PageHead';
 import { Glossary } from './Glossary';
+import { CertShelf } from './Certificate';
+import { certLevels, earned } from '../progress/certs';
 import { Games } from './Games';
 import { Composer } from './Composer';
 import { VoiceHelp } from './VoiceHelp';
@@ -138,6 +140,11 @@ export function Dashboard({ openLesson }: { openLesson: (l: Lesson, ex?: number)
   const due = progress.dueReviews();
   const today = progress.data.practiceLog[dayKey(Date.now())] ?? 0;
   const weakest = Object.entries(comps).sort((a, b) => a[1]! - b[1]!)[0];
+  const doneCount = PIANO_LESSONS.filter((l) => progress.lessonComplete(l)).length;
+  const showPlacement = progress.data.placedLevel === undefined && !progress.data.placementSkipped && doneCount < 6;
+  const nextCert = certLevels(LESSONS).find((lv) => !progress.data.certs?.[lv]) ?? null;
+  const certLs = nextCert === null ? [] : PIANO_LESSONS.filter((l) => l.level === nextCert);
+  const nextCertFrac = certLs.length ? certLs.filter((l) => progress.lessonComplete(l)).length / certLs.length : 0;
   return (
     <div className="page">
       {next ? (
@@ -158,7 +165,18 @@ export function Dashboard({ openLesson }: { openLesson: (l: Lesson, ex?: number)
           </div>
         </section>
       ) : <section className="card up-next"><div className="up-text"><h1>Every lesson mastered</h1><p>Play songs in My Music or free play in the Piano Studio.</p></div></section>}
+      {showPlacement && (
+        <section className="card place-invite">
+          <span className="cert-seal"><Icon name="award" size={18} /></span>
+          <div><b>Already play a little?</b><p className="muted">Take the 5-minute placement test and start at your level.</p></div>
+          <div className="place-invite-actions">
+            <button className="btn lime" onClick={() => window.dispatchEvent(new CustomEvent('maestro:placement'))}>Take the test</button>
+            <button className="link" onClick={() => { progress.data.placementSkipped = true; progress.save(); bumpProgress(); }}>No thanks</button>
+          </div>
+        </section>
+      )}
       <PathTimeline lessons={PIANO_LESSONS} openLesson={openLesson} />
+      <CertShelf earnedList={earned(progress)} nextLevel={nextCert} nextFrac={nextCertFrac} onOpen={(level, date) => window.dispatchEvent(new CustomEvent('maestro:cert', { detail: { level, date } }))} />
       <section className="grid2">
         <div className="card">
           <div className="card-head"><b>Skill profile</b></div>

@@ -9,6 +9,8 @@ import { cleanLink, COVERS, linkHost, myStats, removeCard, saveCard, savedIds, t
 import { LEVEL_GROUP, LEVEL_NAMES } from '../curriculum/levels';
 import { Icon } from './Icon';
 import { PageHead } from './PageHead';
+import { ClassesView } from './Classes';
+import type { Lesson } from '../core/types';
 
 const PLAYS: { id: Plays; label: string; icon: string }[] = [
   { id: 'piano', label: 'Piano', icon: 'piano' }, { id: 'voice', label: 'Voice', icon: 'mic' },
@@ -103,6 +105,7 @@ export function PersonCardView({ p, mine, saved, onOpen, onSave }: { p: PersonCa
             <div className="pc-meta">
               <span><Icon name="calendar" size={12} />{joined(p.joined_at)}</span>
               <span><Icon name="pin" size={12} />{p.location || lastSeen(s.last)}</span>
+              {(s.certs?.length ?? 0) > 0 && <span><Icon name="award" size={12} />{s.certs!.length} certificate{s.certs!.length > 1 ? 's' : ''}</span>}
             </div>
             <div className="pc-plays" title={p.plays.map((x) => PLAYS.find((y) => y.id === x)?.label).join(', ')}>
               <span className="pc-play-ics">{p.plays.slice(0, 4).map((x) => <i key={x}><Icon name={PLAYS.find((y) => y.id === x)?.icon ?? 'note'} size={11} /></i>)}</span>
@@ -143,6 +146,10 @@ function Journey({ p, mine, onEdit, onClose }: { p: PersonCard; mine: boolean; o
             <span><b>{s.days ?? 0}</b><i>days practiced</i></span>
             <span><b>{hours(s.minutes)}</b><i>at the keys</i></span>
           </div>
+          {(s.certs?.length ?? 0) > 0 && <>
+            <h4>Certificates</h4>
+            <div className="cert-row">{s.certs!.map((lv) => <span key={lv} className="cert-chip"><span className="cert-seal">{lv}</span><span><b>Level {lv}</b><small>{LEVEL_NAMES[lv]}</small></span></span>)}</div>
+          </>}
           <h4>The journey so far</h4>
           <ol className="pj-path">
             {(s.levels ?? []).filter(([lv, d], i, a) => d > 0 || lv <= (s.level ?? 0) || i === 0 || (a[i - 1]?.[1] ?? 0) > 0).map(([lv, d, t]) => (
@@ -223,7 +230,10 @@ function EditCard({ start, onClose }: { start: CardDraft; onClose: () => void })
 
 /* ---------- the page ---------- */
 type Filter = 'all' | 'saved' | Plays;
-export function PeopleView() {
+export function PeopleView({ openLesson }: { openLesson?: (l: Lesson, ex?: number) => void }) {
+  const [view, setView] = useState<'people' | 'classes'>(() => { try { return (localStorage.getItem('maestro.people.view') as 'people' | 'classes') || 'people'; } catch { return 'people'; } });
+  const pickView = (v: 'people' | 'classes') => { setView(v); try { localStorage.setItem('maestro.people.view', v); } catch { /* private mode */ } };
+  const switcher = <div className="seg pp-seg" role="tablist">{(['people', 'classes'] as const).map((v) => <button key={v} role="tab" aria-selected={view === v} className={view === v ? 'on' : ''} onClick={() => pickView(v)}>{v === 'people' ? 'People' : 'Classes'}</button>)}</div>;
   const a = useAccount();
   const { people, error, reload } = usePeople();
   const [q, setQ] = useState('');
@@ -238,6 +248,7 @@ export function PeopleView() {
     .filter((p) => !q.trim() || `${p.display_name} ${p.headline ?? ''} ${p.location ?? ''}`.toLowerCase().includes(q.trim().toLowerCase())), [people, me, filter, q, saved.join()]); // eslint-disable-line react-hooks/exhaustive-deps
   const draft: CardDraft = mine ?? { display_name: (a.profile?.display_name ?? '').trim(), headline: '', location: '', link_url: null, link_label: '', avatar_url: null, cover: 'forest', plays: ['piano'], visible: true };
 
+  if (view === 'classes') return <div className="page people"><PageHead title="Classes" sub="Learn together: join your teacher's class, or teach your own." />{switcher}<ClassesView openLesson={openLesson ?? (() => undefined)} /></div>;
   if (ACCOUNTS_ENABLED && !a.user) return (
     <div className="page people">
       <PageHead title="People" sub="See how other learners are getting on, and share your own playing." />
@@ -247,6 +258,7 @@ export function PeopleView() {
   return (
     <div className="page people">
       <PageHead title="People" sub="Learners on Maestro: where they are, how far they have come, and where to watch them play." />
+      {switcher}
       {mine
         ? <section className="pp-mine"><small>Your card</small><PersonCardView p={mine} mine onOpen={() => setOpen(mine)} /></section>
         : <section className="card pp-invite"><div><b>Make your card</b><p className="muted">Add a photo, a line about you and a link to your practice videos. Your progress fills in by itself.</p></div><button className="btn lime" onClick={() => setEditing(true)}><Icon name="plus" size={15} />Make my card</button></section>}

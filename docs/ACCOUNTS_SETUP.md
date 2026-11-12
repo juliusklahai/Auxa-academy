@@ -12,7 +12,7 @@ Without the `VITE_SUPABASE_*` variables the app runs exactly as before: no sign-
 ## 1. Supabase
 
 1. Create a project at supabase.com.
-2. Go to **SQL Editor**, paste in `supabase/migrations/0001_accounts.sql`, and run it. Then do the same with `supabase/migrations/0002_people.sql` (People cards and the `avatars` photo bucket).
+2. Go to **SQL Editor**, paste in `supabase/migrations/0001_accounts.sql`, and run it. Then do the same with `supabase/migrations/0002_people.sql` (People cards and the `avatars` photo bucket) and `supabase/migrations/0003_classes.sql` (classes, members and assignments for teachers), in that order.
 3. To change the admin email, edit the `insert into admin_emails` line first. That email gets the admin role on first sign-in, with every course unlocked.
 4. Go to **Authentication → URL Configuration**:
    - Site URL: `https://juliusklahai.github.io/maestro-academy/` (if this is left as `http://localhost:3000`, sign-in and reset-password emails open localhost)

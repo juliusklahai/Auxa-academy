@@ -6,7 +6,7 @@ import { mic, micHelp } from './input/mic';
 import { midiIn } from './input/midi';
 import { Icon } from './ui/Icon';
 import { LessonView } from './ui/LessonView';
-import { progress } from './ui/settings';
+import { bumpProgress, progress, useProgressVersion } from './ui/settings';
 import { Dashboard, LearnList, PianoStudio, SettingsView } from './ui/Views';
 import { MyMusic } from './ui/MyMusic';
 import { VoiceStudio } from './ui/VoiceStudio';
@@ -19,6 +19,10 @@ import { isNativeApp, onBack } from './native/bridge';
 import { InstallBanner } from './ui/InstallBanner';
 import { NotchBar } from './ui/NotchBar';
 import { PeopleView } from './ui/People';
+import { CertificateSheet } from './ui/Certificate';
+import { PlacementTest } from './ui/Placement';
+import { checkCerts } from './progress/certs';
+import { LESSONS as ALL_LESSONS } from './curriculum/lessons';
 import { ACCOUNTS_ENABLED } from './account/config';
 import { getAccount, initAccount, openUpgrade, useAccount, useUpgrade } from './account/store';
 import { allowLesson, lessonTier, TIER_NAME } from './account/gate';
@@ -77,6 +81,17 @@ export default function App() {
   const [landing, setLanding] = useState(false);
   const [pastLanding, setPastLanding] = useState(false);
   const [acctOpen, setAcctOpen] = useState(false);
+  const [cert, setCert] = useState<{ level: number; date: string; fresh?: boolean } | null>(null);
+  const [placing, setPlacing] = useState(false);
+  const pv = useProgressVersion();
+  // a level just finished: record the certificate and show it
+  useEffect(() => { const n = checkCerts(progress, ALL_LESSONS); if (n.length) { const lv = n[n.length - 1]; setCert({ level: lv, date: progress.data.certs![lv], fresh: true }); bumpProgress(); } }, [pv]);
+  useEffect(() => {
+    const c = (e: Event) => setCert((e as CustomEvent).detail);
+    const p = () => { setPlacing(true); window.scrollTo({ top: 0 }); };
+    window.addEventListener('maestro:cert', c); window.addEventListener('maestro:placement', p);
+    return () => { window.removeEventListener('maestro:cert', c); window.removeEventListener('maestro:placement', p); };
+  }, []);
   useEffect(() => { const f = () => setAcctOpen(true); window.addEventListener('maestro:account', f); return () => window.removeEventListener('maestro:account', f); }, []);
   useEffect(() => onGoHome(() => {
     setLesson(null); setSongId(null); setTab('home');
@@ -150,7 +165,7 @@ export default function App() {
                 {tab === 'music' && <MyMusic singPart={singPart} onSingHandled={() => setSingPart(null)} songId={songId} onSongHandled={() => setSongId(null)} xml={xmlToOpen} onXmlHandled={() => setXmlToOpen(null)} />}
                 {tab === 'voice' && <VoiceStudio openLesson={open} singChoir={(p) => { setSingPart(p); setTab('music'); }} openScore={(x) => { setXmlToOpen(x); setTab('music'); window.scrollTo({ top: 0 }); }} />}
                 {tab === 'studio' && <PianoStudio />}
-                {tab === 'people' && <PeopleView />}
+                {tab === 'people' && <PeopleView openLesson={open} />}
                 {tab === 'settings' && <SettingsView />}
                 {tab === 'admin' && <AdminView />}
               </>}
@@ -159,6 +174,8 @@ export default function App() {
         <NotchBar items={tabs.map((t) => ({ id: t.id, icon: t.icon, label: t.short ?? t.label }))} active={tab}
           onPick={(id) => { setTab(id as Tab); setLesson(null); window.scrollTo({ top: 0 }); }} />
         {isNativeApp ? <AppUpgrade reason={upgradeReason} /> : <UpgradeSheet />}<ResetPasswordSheet />{acctOpen && <AccountSheet onClose={() => setAcctOpen(false)} />}
+        {placing && <div className="place-overlay"><PlacementTest onDone={() => setPlacing(false)} /></div>}
+        {cert && <CertificateSheet level={cert.level} date={cert.date} fresh={cert.fresh} onClose={() => setCert(null)} />}
       </div>
     </div>
   );

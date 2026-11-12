@@ -21,6 +21,7 @@ export interface CardStats {
   days: number;           // days with practice
   last: string | null;    // last practice day, yyyy-mm-dd
   levels: [number, number, number][]; // [level, done, total] for the piano path
+  certs?: number[];       // levels with a certificate
 }
 export interface PersonCard {
   id: string;
@@ -59,6 +60,7 @@ export function myStats(now = Date.now()): CardStats {
     days: days.length,
     last: days[days.length - 1] ?? null,
     levels,
+    certs: Object.keys(progress.data.certs ?? {}).map(Number).sort((a, b) => a - b),
   };
 }
 
@@ -173,7 +175,7 @@ export function toggleSaved(id: string) {
 const lv = (done: number[]): [number, number, number][] => done.map((d, i) => [i, d, [4, 8, 8, 9, 6][i] ?? 6]);
 const SAMPLE: PersonCard[] = [
   { id: 's1', display_name: 'Aminata Kamara', headline: 'Learning gospel chords for Sunday choir', location: 'Freetown', link_url: 'https://youtube.com/@aminataplays', link_label: 'YouTube', avatar_url: null, cover: 'forest', plays: ['piano', 'voice'], visible: true,
-    stats: { level: 3, done: 26, total: 120, voice: 4, streak: 12, minutes: 840, days: 41, last: '2026-11-11', levels: lv([4, 8, 8, 2]) }, joined_at: '2026-06-02T10:00:00Z', updated_at: '2026-11-11T10:00:00Z' },
+    stats: { level: 3, done: 26, total: 120, voice: 4, streak: 12, minutes: 840, days: 41, last: '2026-11-11', levels: lv([4, 8, 8, 2]), certs: [0, 1, 2] }, joined_at: '2026-06-02T10:00:00Z', updated_at: '2026-11-11T10:00:00Z' },
   { id: 's2', display_name: 'Daniel Osei', headline: 'Jazz voicings, one standard a week', location: 'Accra', link_url: 'https://instagram.com/dan.keys', link_label: 'Instagram', avatar_url: null, cover: 'night', plays: ['piano', 'jazz'], visible: true,
     stats: { level: 5, done: 38, total: 120, voice: 0, streak: 5, minutes: 1920, days: 77, last: '2026-11-10', levels: lv([4, 8, 8, 9, 6, 3]) }, joined_at: '2026-03-15T10:00:00Z', updated_at: '2026-11-10T10:00:00Z' },
   { id: 's3', display_name: 'Grace Bangura', headline: 'Singing alto, arranging for my church choir', location: 'Bo', link_url: null, link_label: null, avatar_url: null, cover: 'keys', plays: ['voice', 'arranging'], visible: true,
