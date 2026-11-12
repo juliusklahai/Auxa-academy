@@ -863,3 +863,22 @@ html.theme-dark .people { --pc-bg: #1f1f21; --pc-ink: #f4f4f5; --pc-ink2: #c4c4c
 /* start and demo are already in the top row in full screen, so the options panel holds only the settings */
 .practice-root.focus > .dock > .dock-btn.lime, .practice-root.focus > .dock > .dock-btn.lime + .dock-label,
 .practice-root.focus > .dock > .dock-demo, .practice-root.focus > .dock > .dock-demo + .dock-label, .practice-root.focus > .dock > .dock-demo + .dock-label + .dock-sep { display: none; }
+.drill-prompt { white-space: pre-line; }
+
+/* glossary */
+.gloss-tools { display: flex; flex-wrap: wrap; gap: 10px 12px; align-items: center; margin-bottom: 14px; }
+.gloss-tools .chip-row { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+.gloss-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 12px; }
+.gloss-item { background: var(--card); border: 1px solid var(--hair); border-radius: 18px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
+.gloss-top { display: flex; align-items: center; gap: 10px; }
+.gloss-top b { font-size: 15px; flex: 1; }
+.gloss-sign { min-width: 34px; height: 30px; padding: 0 8px; border-radius: 9px; background: var(--pillbg); display: grid; place-items: center; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: 700; font-size: 15px; }
+.gloss-item p { margin: 0; color: var(--ink2); font-size: 14px; line-height: 1.45; }
+.gloss-link { justify-self: start; display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; padding: 0; color: var(--muted); font: inherit; font-size: 12.5px; cursor: pointer; }
+.icon-btn.sm { width: 32px; height: 32px; }
+.road { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0 12px; }
+.road-bar { width: 46px; height: 40px; border: 1.5px solid var(--ink); border-radius: 6px; display: grid; place-items: center; font-weight: 700; font-size: 16px; background: var(--card); }
+.road-sign { padding: 0 6px; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: 700; font-size: 15px; color: var(--ink2); }
+.road-sign.rep { font-style: normal; font-size: 22px; letter-spacing: -2px; color: var(--ink); }
+.gloss-link { text-align: left; }
+.road-end { align-self: flex-start; margin-top: -4px; padding: 0 10px 0 4px; border-top: 1.5px solid var(--ink); border-left: 1.5px solid var(--ink); font-size: 12px; font-weight: 700; }

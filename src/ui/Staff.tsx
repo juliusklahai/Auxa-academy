@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Accidental, Dot, Formatter, Renderer, Stave, StaveConnector, StaveNote, Voice } from 'vexflow';
+import { Accidental, Beam, Dot, Formatter, Fraction, Renderer, Stave, StaveConnector, StaveNote, Tuplet, Voice } from 'vexflow';
 import { midiToVexKey } from '../core/music';
 import type { BackNote, Clef, NoteStatus, ScoreEvent } from '../core/types';
 
@@ -7,10 +7,12 @@ const COLORS: Record<NoteStatus | 'current', string> = {
   pending: '#2a2a27', correct: '#1e8a4c', partial: '#b7791f', wrong: '#c53030', missed: '#c53030', current: '#1f1f1d',
 };
 
-function duration(beats: number): { d: string; dots: number } {
-  const table: [number, string, number][] = [[4, 'w', 0], [3, 'h', 1], [2, 'h', 0], [1.5, 'q', 1], [1, 'q', 0], [0.75, '8', 1], [0.5, '8', 0], [0.25, '16', 0]];
-  const hit = table.find(([b]) => Math.abs(b - beats) < 1e-6) ?? [1, 'q', 0];
-  return { d: hit[1], dots: hit[2] };
+const THIRD = 1 / 3;
+function duration(beats: number): { d: string; dots: number; trip: boolean } {
+  const table: [number, string, number, boolean][] = [[4, 'w', 0, false], [3, 'h', 1, false], [2, 'h', 0, false], [1.5, 'q', 1, false], [1, 'q', 0, false], [0.75, '8', 1, false],
+    [2 * THIRD, 'q', 0, true], [0.5, '8', 0, false], [THIRD, '8', 0, true], [0.25, '16', 0, false]];
+  const hit = table.find(([b]) => Math.abs(b - beats) < 1e-3) ?? [1, 'q', 0, false];
+  return { d: hit[1], dots: hit[2], trip: hit[3] };
 }
 
 interface Props {
@@ -51,7 +53,8 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
   const offsetRef = useRef(0);
   const [offset, setOffset] = useState(0);
   const [glow, setGlow] = useState<number | null>(null);
-  const bpb = timeSig[0];
+  // bar length in quarter beats: 6/8 is three quarters long, 2/2 is four
+  const bpb = timeSig[0] * (4 / timeSig[1]);
 
   // draw
   useLayoutEffect(() => {
@@ -71,8 +74,8 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
     for (const n of backing ?? []) if (n.line === 'melody') lanes[laneOf(n.midi, n.hand)].push({ beat: n.beat, beats: n.beats, pitches: [n.midi], idx: null, ghost: true });
     const lastBeat = Math.max(0, ...events.map((e) => e.beat + e.beats), ...(backing ?? []).map((n) => n.beat + n.beats));
     const nMeasures = Math.max(1, Math.ceil(lastBeat / bpb - 1e-9));
-    const VALUES = [4, 3, 2, 1.5, 1, 0.75, 0.5, 0.25];
-    const fit = (len: number) => VALUES.find((v) => v <= len + 1e-6) ?? 0.25;
+    const VALUES = [4, 3, 2, 1.5, 1, 0.75, 2 * THIRD, 0.5, THIRD, 0.25];
+    const fit = (len: number) => VALUES.find((v) => v <= len + 1e-3) ?? 0.25;
     // one monophonic sequence of chords and rests per lane and measure
     const perMeasure: Item[][][] = Array.from({ length: nMeasures }, () => Array.from({ length: lanesN }, () => []));
     lanes.forEach((items, l) => {
@@ -130,6 +133,7 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
       mx.push([x, x + w]);
       const voices: Voice[] = [];
       const built: { n: StaveNote; idx: number | null }[][] = [];
+      const extras: (Beam | Tuplet)[] = [];
       laneItems.forEach((items, l) => {
         if (!items.length) return;
         const c = clefs[l];
@@ -151,6 +155,20 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
           if (hid?.length && !rest && st !== 'correct') sorted.forEach((p, k) => { if (hid.includes(p)) n.setKeyStyle(k, { fillStyle: 'rgba(0,0,0,0)', strokeStyle: 'rgba(0,0,0,0)' }); });
           return { n, idx: it.ghost ? null : it.idx };
         });
+        // triplets: three equal notes in the time of two, bracketed with a 3
+        const trips: boolean[] = items.map((it) => duration(it.beats).trip);
+        const straight: StaveNote[] = [];
+        for (let k = 0; k < notes.length; k++) {
+          if (trips[k] && trips[k + 1] && trips[k + 2]) {
+            const grp = notes.slice(k, k + 3).map((q) => q.n);
+            extras.push(new Tuplet(grp, { num_notes: 3, notes_occupied: 2 }));
+            if (grp.every((g) => g.getDuration() === '8' && !g.isRest())) extras.push(new Beam(grp));
+            k += 2;
+          } else straight.push(notes[k].n);
+        }
+        // beam eighths and sixteenths by the beat (dotted quarters in compound time, e.g. 6/8)
+        const compound = timeSig[1] === 8 && timeSig[0] % 3 === 0;
+        try { extras.push(...Beam.generateBeams(straight, { groups: [compound ? new Fraction(3, 8) : new Fraction(1, 4)] })); } catch { /* unbeamable run */ }
         const voice = new Voice({ num_beats: timeSig[0], beat_value: timeSig[1] }).setMode(Voice.Mode.SOFT);
         voice.addTickables(notes.map((q) => q.n));
         voices.push(voice);
@@ -162,6 +180,7 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
       voices.forEach((v) => f.joinVoices([v]));
       f.format(voices, w - (mi === 0 ? first + 10 : 30));
       voices.forEach((v) => v.draw(ctx, staves[(v as unknown as { _lane: number })._lane]));
+      extras.forEach((e) => e.setContext(ctx).draw());
       built.flat().forEach(({ n, idx }) => { if (idx !== null && !ex[idx]) ex[idx] = n.getAbsoluteX() + 7; });
     });
     layout.current = { mx, ex, total };

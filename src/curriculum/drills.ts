@@ -1,6 +1,7 @@
 // Ear-training drills: question generators (pure, unit-tested). The EarDrill screen plays them and checks
 // answers given by tapping a choice or by playing on the keys.
 import type { DrillSpec } from '../core/types';
+import { countQuestion, meterQuestion, roadmapQuestion, tempoQuestion } from './readingDrills';
 
 export interface Sound { midi: number; startMs: number; durMs: number }
 export interface DrillQuestion {
@@ -18,6 +19,8 @@ export interface DrillQuestion {
   byKey?: (midi: number, slot: number) => boolean;
   /** heard after answering: the resolution or the answer played alone */
   reveal: Sound[];
+  /** road-map drills: the tiny score as tokens (bar numbers and signs), drawn as boxes */
+  map?: string[];
   /** one line on how to hear it next time */
   explain: string;
   tonic: number;
@@ -148,6 +151,10 @@ export function makeQuestion(spec: DrillSpec, rnd: Rnd = Math.random): DrillQues
   const tonic = pick(spec.keys ?? DEFAULT_KEYS, rnd);
   const beat = 600;
   switch (spec.kind) {
+    case 'count': return countQuestion(spec.pool, rnd);
+    case 'tempo': return tempoQuestion(spec.pool, rnd);
+    case 'meter': return meterQuestion(spec.pool, rnd);
+    case 'roadmap': return roadmapQuestion(spec.pool, rnd);
     case 'tonic': {
       const tune = pick(TUNES, rnd);
       const mel = tune.degs.map((d) => tonic + 12 + DEGREE_SEMI[d] - (DEGREE_SEMI[d] > 7 ? 12 : 0));

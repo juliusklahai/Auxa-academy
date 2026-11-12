@@ -3,8 +3,9 @@
 
 import { nameToMidi } from '../core/music';
 import type { Clef, Exercise, Hand, Lesson, ScoreEvent, SkillId } from '../core/types';
-import { MORE_LESSONS, type LessonDef } from './levels';
+import { frac, MORE_LESSONS, type LessonDef } from './levels';
 import { ADVANCED_LESSONS } from './advanced';
+import { COUNT_LESSON, RHYTHM_LESSONS, SETUP_LESSON } from './basics';
 import { playAlongs, type PlayAlongSpec } from './playalong';
 
 /** Build events from "C4:1 D4:1 E4:2 R:1 C4+E4+G4:4" (name:beats, R = rest, + = chord). */
@@ -12,7 +13,7 @@ export function seq(spec: string, hand: Hand = 'RH', fingers?: (number | number[
   let beat = 0;
   return spec.trim().split(/\s+/).map((tok, i) => {
     const [n, b] = tok.split(':');
-    const beats = parseFloat(b ?? '1');
+    const beats = frac(b ?? '1');
     const pitches = n === 'R' ? [] : n.split('+').map(nameToMidi);
     const f = fingers?.[i];
     const ev: ScoreEvent = { pitches, beat, beats, hand, fingers: f === undefined ? undefined : Array.isArray(f) ? f : [f] };
@@ -286,7 +287,16 @@ const BASE_PLAYALONG: Record<string, PlayAlongSpec> = {
 const withPlayAlong = (l: Lesson, spec?: PlayAlongSpec): Lesson => (spec ? { ...l, exercises: [...l.exercises, ...playAlongs(l.id, spec)] } : l);
 const pianoBase = BASE_LESSONS.filter((l) => (l.track ?? 'piano') === 'piano').map((l) => withPlayAlong(l, BASE_PLAYALONG[l.id]));
 const more = [...MORE_LESSONS, ...ADVANCED_LESSONS].map((l: LessonDef) => withPlayAlong(l, l.playAlong));
-export const LESSONS: Lesson[] = [...pianoBase, ...more, ...BASE_LESSONS.filter((l) => l.track === 'voice')];
+const pa = (l: LessonDef) => withPlayAlong(l, l.playAlong);
+/** put new lessons right after the lesson they build on, so the path reads in teaching order */
+function after(list: Lesson[], id: string, add: Lesson[]): Lesson[] {
+  const i = list.findIndex((l) => l.id === id);
+  return i < 0 ? [...list, ...add] : [...list.slice(0, i + 1), ...add, ...list.slice(i + 1)];
+}
+let piano: Lesson[] = [pa(SETUP_LESSON), ...pianoBase, ...more];
+piano = after(piano, 'L1-2', [pa(COUNT_LESSON)]);
+piano = after(piano, 'L4-5', RHYTHM_LESSONS.map(pa));
+export const LESSONS: Lesson[] = [...piano, ...BASE_LESSONS.filter((l) => l.track === 'voice')];
 
 export const lessonById = (id: string) => LESSONS.find((l) => l.id === id);
 export const PIANO_LESSONS = LESSONS.filter((l) => (l.track ?? 'piano') === 'piano');

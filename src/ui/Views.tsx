@@ -1,4 +1,5 @@
 import { PageHead } from './PageHead';
+import { Glossary } from './Glossary';
 import { VoiceHelp } from './VoiceHelp';
 import { useEffect, useRef, useState } from 'react';
 import { Select } from './Select';
@@ -182,7 +183,7 @@ export function LearnList({ openLesson, openSong }: { openLesson: (l: Lesson, ex
   useProgressVersion();
   const groups = [...new Set(PIANO_LESSONS.map((l) => LEVEL_GROUP[l.level] ?? 'More'))];
   const nextAll = PIANO_LESSONS.find((l) => !progress.lessonComplete(l) && progress.lessonUnlocked(l, LESSONS));
-  const tabs = [...groups, ...(openSong ? ['Songs'] : []), 'Singing'];
+  const tabs = [...groups, ...(openSong ? ['Songs'] : []), 'Singing', 'Glossary'];
   const [tab, setTab] = useState(() => { try { const t = sessionStorage.getItem('maestro.lessonsTab'); if (t && tabs.includes(t)) return t; } catch { /* */ } return LEVEL_GROUP[nextAll?.level ?? 0] ?? groups[0]; });
   const pick = (t: string) => { setTab(t); try { sessionStorage.setItem('maestro.lessonsTab', t); } catch { /* */ } };
   const done = LESSONS.filter((l) => progress.lessonComplete(l)).length;
@@ -203,6 +204,7 @@ export function LearnList({ openLesson, openSong }: { openLesson: (l: Lesson, ex
           </div>
         </section>
       ))}
+      {tab === 'Glossary' && <Glossary openLesson={(l) => openLesson(l)} />}
       {tab === 'Songs' && openSong && <section className="level"><div className="level-head"><b>Songs</b><span className="muted">Right hand, left hand or both, with instruments playing along</span></div><SongShelf onOpen={openSong} /></section>}
       {tab === 'Singing' && (
         <section className="level">

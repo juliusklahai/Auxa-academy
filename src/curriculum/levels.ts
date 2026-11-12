@@ -6,12 +6,15 @@ import { nameToMidi } from '../core/music';
 import type { Clef, Exercise, Hand, Lesson, ScoreEvent, SkillId, TeachStep } from '../core/types';
 import type { PlayAlongSpec } from './playalong';
 
+/** "2", "0.5" or "1/3" (triplet eighth) as beats */
+export const frac = (x: string) => (x.includes('/') ? Number(x.split('/')[0]) / Number(x.split('/')[1]) : parseFloat(x));
+
 /** "C4:1 D4:1 E4:2 R:1 C4+E4+G4:4" -> events (name:beats, R = rest, + = chord). */
 export function seqOf(spec: string, hand: Hand, fingers?: (number | number[])[]): ScoreEvent[] {
   let beat = 0;
   return spec.trim().split(/\s+/).map((tok, i) => {
     const [n, b] = tok.split(':');
-    const beats = parseFloat(b ?? '1');
+    const beats = frac(b ?? '1');
     const pitches = n === 'R' ? [] : n.split('+').map(nameToMidi);
     const f = fingers?.[i];
     const ev: ScoreEvent = { pitches, beat, beats, hand, fingers: f === undefined ? undefined : Array.isArray(f) ? f : [f] };

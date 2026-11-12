@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AssessmentSession, type Feedback } from '../assessment/session';
 import { audio } from '../audio/engine';
-import { beatToMs, effectiveBpm, feelBeat, metronomeClicks, msPerBeat } from '../audio/timing';
+import { beatToMs, clickBpm, effectiveBpm, feelBeat, metronomeClicks, msPerBeat } from '../audio/timing';
 import { midiToName } from '../core/music';
 import type { AssessmentReport, Exercise, Lesson, NoteStatus } from '../core/types';
 import { onLearnerNote } from '../input/bus';
@@ -424,23 +424,26 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocke
       return;
     }
     const mspb = msPerBeat(bpm);
+    // clicks follow the time signature's bottom number (eighths in 6/8, halves in 2/2); count in one bar
+    const cbpm = clickBpm(bpm, exercise.timeSig), cms = msPerBeat(cbpm);
     const countIn = exercise.timeSig[0];
+    const inMs = countIn * cms;
     const last = exercise.events[exercise.events.length - 1];
     const totalMs = beatToMs(last.beat + last.beats, bpm);
     const lead = 150;
-    t0.current = performance.now() + lead + countIn * mspb;
+    t0.current = performance.now() + lead + inMs;
     clock.current = { t0: t0.current, mspb };
     for (let i = 0; i < countIn; i++) {
-      audio.click(i === 0, false, lead + i * mspb);
-      timers.current.push(window.setTimeout(() => setBeatFlash(i), lead + i * mspb));
+      audio.click(i === 0, false, lead + i * cms);
+      timers.current.push(window.setTimeout(() => setBeatFlash(i), lead + i * cms));
     }
-    if (metroOn) metronomeClicks(0, totalMs, bpm, exercise.timeSig[0]).forEach((c) => {
-      audio.click(c.accent, c.sub, lead + countIn * mspb + c.time);
-      timers.current.push(window.setTimeout(() => setBeatFlash(Math.round(c.time / mspb) % exercise.timeSig[0]), lead + countIn * mspb + c.time));
+    if (metroOn) metronomeClicks(0, totalMs, cbpm, exercise.timeSig[0]).forEach((c) => {
+      audio.click(c.accent, c.sub, lead + inMs + c.time);
+      timers.current.push(window.setTimeout(() => setBeatFlash(Math.round(c.time / cms) % exercise.timeSig[0]), lead + inMs + c.time));
     });
-    playBacking(0, Infinity, lead + countIn * mspb);
+    playBacking(0, Infinity, lead + inMs);
     pushFeed('progress', `Attempt ${cur.attempt}: ${countIn}-beat count-in, then play with the moving line${exercise.backing?.length ? ' and the band' : ''}.`);
-    timers.current.push(window.setTimeout(() => { cur.listen(); rerender(); }, lead + countIn * mspb - Math.min(250, mspb * 0.5)));
+    timers.current.push(window.setTimeout(() => { cur.listen(); rerender(); }, lead + inMs - Math.min(250, mspb * 0.5)));
     timers.current.push(window.setInterval(() => {
       const nowMs = performance.now() - t0.current;
       // score-informed hint for the microphone: notes due around now

@@ -14,6 +14,12 @@ export function beatToMs(beat: number, bpm: number): number {
   return beat * msPerBeat(bpm);
 }
 
+/** Length of one bar in quarter-note beats (the app's timebase): 4/4 = 4, 3/4 = 3, 6/8 = 3, 2/2 = 4. */
+export const barBeats = (ts: [number, number]) => ts[0] * (4 / ts[1]);
+/** The metronome clicks the bottom number of the time signature: quarters in 4/4, eighths in 6/8, halves in 2/2.
+ *  Returns the click tempo (clicks per minute) for a quarter-note bpm. */
+export const clickBpm = (bpm: number, ts: [number, number]) => bpm * (ts[1] / 4);
+
 /** Times (ms) of count-in clicks preceding beat 0. */
 export function countInTimes(beatsPerBar: number, bpm: number): number[] {
   const d = msPerBeat(bpm);

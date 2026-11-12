@@ -3,6 +3,25 @@
 // Keys are "<lessonId>#<step index>".
 
 export const NARRATION: Record<string, string> = {
+  // ---- foundations added from the method-book review
+  'L0-0#0': "Let's get set before we play. Sit on the front half of the bench, in the middle of the piano. Your arms are level with the keys and your feet are flat on the floor. Shoulders down, sit tall, and breathe.",
+  'L0-0#1': 'Let your arms hang down loose. Now lift your hands up to the keys, but keep that same soft shape. Round fingers, like holding a ball. That is your piano hand.',
+  'L0-0#2': 'Put your thumb behind your middle finger to help it. Now let your whole arm drop into a black key, like a heavy feather, then float back up. Drop, and let go. The sound comes from weight, not from pushing.',
+  'L0-0#3': 'Black keys sound nice in any order, so you can make music already! Low keys sound like a big bear. High keys sound like a little bird. Play low, then high, and listen.',
+  'L1-6#0': 'Rhythms have words. Say ta for one beat. Ta-a for two beats. Ta-a-a for three, and ta-a-a-a for four. A rest is a quiet sh. Say the words and your hands will follow.',
+  'L1-6#1': 'Count the numbers too, one, two, three, four, in every bar. Clap and say the rhythm words while you count. When they line up, your rhythm is right.',
+  'L1-6#2': 'Some words tell you how fast to play. They are Italian. Adagio is slow. Andante is walking speed. Allegro is quick and happy. Presto is super fast.',
+  'L4-6#0': 'Sixteenth notes have two beams. Four of them fit in one beat. Say ti-ka-ti-ka, nice and even, like rain on a roof.',
+  'L4-6#1': 'Mix one eighth note and two sixteenths and you get a gallop, like a horse. Ti-tika is long, short, short. Tika-ti is short, short, long. Say it first, then play it.',
+  'L4-7#0': 'A little three over three notes makes a triplet. That means three notes in one beat. Say tri-po-let on every beat, smooth and round.',
+  'L4-7#1': 'Now switch between ti-ti and tri-po-let. Keep the beat steady in your head. Only change how you split it. The beat never moves.',
+  'L4-8#0': 'Two-four has two beats in a bar. Strong, weak. Strong, weak. Like a march. Count one, two, one, two.',
+  'L4-8#1': 'Six-eight has six little beats, but it feels like two big ones. Say one-and-a, two-and-a. At first, count all six slowly and lean on one and four.',
+  'L4-8#2': 'A C with a line through it is cut time. Count in two big beats, not four. It looks like four-four, but it feels broader and smoother.',
+  'L4-9#0': 'Two dots next to a thick double line mean go back. Play to the end sign, then go back to the start sign, and play that part again.',
+  'L4-9#1': 'A bracket with a one is the first ending. Play it the first time. When you come back, skip it and play the bracket with a two.',
+  'L4-9#2': 'D.C. means go back to the very beginning. D.S. means go back to the curly S sign. Al Fine means stop at the word Fine. Al Coda means jump to the Coda at the end.',
+  'L4-9#3': "A dot under an arch is a fermata. It looks like a bird's eye. Hold that note a bit longer, then keep going. When you play with others, everyone holds together.",
   // ---- Level 0
   'L0-1#0': 'Before we play, let\'s sit nicely. Sit in the middle of the piano, with your arms level with the keys. Make your fingers round, like you are holding a little ball. If your hands feel tight, shake them out and try again.',
   'L0-1#1': 'Look at the black keys. They come in little groups: two together, then three together, again and again. This pattern is like a map. It helps you find any key on the piano.',

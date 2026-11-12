@@ -350,7 +350,7 @@ export class AssessmentSession {
   }
 
   measureOf(i: number): number {
-    return Math.floor(this.exercise.events[i].beat / this.exercise.timeSig[0]) + 1;
+    return Math.floor(this.exercise.events[i].beat / (this.exercise.timeSig[0] * (4 / this.exercise.timeSig[1]))) + 1;
   }
 
   /** Restart only the current attempt (never the course). */

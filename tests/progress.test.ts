@@ -1,12 +1,13 @@
 import { ProgressStore, memoryKV } from '../src/progress/store';
-import { LESSONS } from '../src/curriculum/lessons';
+import { LESSONS, lessonById } from '../src/curriculum/lessons';
 import type { AssessmentReport } from '../src/core/types';
 
 const rep = (id: string, score: number, passed = score >= 80): AssessmentReport => ({
   exerciseId: id, score, grade: '', passed, components: [], correct: 0, partial: 0, wrong: 0, missed: 0, extra: 0,
   uncertainIgnored: 0, problemEvents: [], advice: [], hadThreeConsecutive: false,
 });
-const L1 = LESSONS[0], L2 = LESSONS[1];
+// the first lesson with exercises that later lessons depend on, and the one after it
+const L1 = lessonById('L0-1')!, L2 = lessonById('L0-2')!;
 
 describe('Test 4 (progression): 80% mastery gate', () => {
   it('first lesson is open, the next is locked', () => {

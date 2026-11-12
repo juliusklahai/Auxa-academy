@@ -18,6 +18,10 @@ export const DRILL_LINES: Record<DrillSpec['kind'], string> = {
   quality: 'Listen to the chord. What kind of chord is it?',
   progression: 'First you hear the home chord. Then four chords. Name each one.',
   bass: 'First you hear the home chord. Then four chords. Play the lowest note of each one.',
+  count: 'Four clicks, then a rhythm. Pick the words that fit, and say them out loud.',
+  tempo: 'Listen to how fast it goes. Which tempo word fits?',
+  meter: 'Find the strong beat, then count to the next one. Which time signature is it?',
+  roadmap: 'Follow the signs like a road map. In what order do you play the bars?',
 };
 
 /** All lines, for the recording script. */

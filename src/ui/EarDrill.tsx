@@ -120,9 +120,10 @@ export function EarDrill({ exercise, onNext }: { exercise: Exercise; onNext?: ()
           <span className="drill-round">Round {round + 1} of {rounds}</span>
           <div className="drill-dots">{Array.from({ length: rounds }, (_, i) => <i key={i} className={i < round ? 'past' : i === round ? 'now' : ''} />)}</div>
         </div>
+        {q.map && <div className="road" aria-label={`Bars: ${q.map.join(' ')}`}>{q.map.map((tok, i) => /^\d$/.test(tok) ? <span key={i} className="road-bar">{tok}</span> : tok.startsWith('[') ? <span key={i} className="road-end">{tok.slice(1)}</span> : <span key={i} className={`road-sign ${/[|:]/.test(tok) ? 'rep' : ''}`}>{tok}</span>)}</div>}
         <p className="drill-prompt">{q.prompt}</p>
         <div className="drill-listen">
-          <button className="btn lime" onClick={() => play(q.sound)}><Icon name="play" size={15} />Play again</button>
+          {q.sound.length > 0 && <button className="btn lime" onClick={() => play(q.sound)}><Icon name="play" size={15} />Play again</button>}
           {q.context.length > 0 && <button className="btn" onClick={() => play(q.context)}><Icon name="ear" size={15} />Hear the key</button>}
           {answered && <button className="btn" onClick={() => play(q.reveal)}><Icon name="note" size={15} />Hear the answer</button>}
         </div>
