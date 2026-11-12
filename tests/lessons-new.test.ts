@@ -62,8 +62,8 @@ describe('ear, jazz and arranging levels', () => {
       }
     }
   });
-  it('new levels are part of Plus', () => {
-    for (const l of fresh) expect(lessonTier(l)).toBe('plus');
+  it('new levels are part of Plus (the church path is Pro)', () => {
+    for (const l of fresh) expect(lessonTier(l)).toBe(l.level === 13 ? 'pro' : 'plus');
   });
 });
 

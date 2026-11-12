@@ -6,6 +6,7 @@ import type { Clef, Exercise, Hand, Lesson, ScoreEvent, SkillId } from '../core/
 import { frac, MORE_LESSONS, type LessonDef } from './levels';
 import { ADVANCED_LESSONS } from './advanced';
 import { COUNT_LESSON, RHYTHM_LESSONS, SETUP_LESSON } from './basics';
+import { CHURCH_LESSONS } from './church';
 import { playAlongs, type PlayAlongSpec } from './playalong';
 
 /** Build events from "C4:1 D4:1 E4:2 R:1 C4+E4+G4:4" (name:beats, R = rest, + = chord). */
@@ -293,7 +294,7 @@ function after(list: Lesson[], id: string, add: Lesson[]): Lesson[] {
   const i = list.findIndex((l) => l.id === id);
   return i < 0 ? [...list, ...add] : [...list.slice(0, i + 1), ...add, ...list.slice(i + 1)];
 }
-let piano: Lesson[] = [pa(SETUP_LESSON), ...pianoBase, ...more];
+let piano: Lesson[] = [pa(SETUP_LESSON), ...pianoBase, ...more, ...CHURCH_LESSONS.map(pa)];
 piano = after(piano, 'L1-2', [pa(COUNT_LESSON)]);
 piano = after(piano, 'L4-5', RHYTHM_LESSONS.map(pa));
 export const LESSONS: Lesson[] = [...piano, ...BASE_LESSONS.filter((l) => l.track === 'voice')];

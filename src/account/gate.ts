@@ -15,7 +15,8 @@ export type Feature = 'import';
 export interface Entitlement { tier: Tier; pro: boolean; plus: boolean; admin: boolean; enabled: boolean }
 export const LOCAL_ENTITLEMENT: Entitlement = { tier: 'plus', pro: true, plus: true, admin: false, enabled: false };
 
-export const lessonTier = (l: Lesson): Tier => (l.track ?? 'piano') === 'voice' || l.level <= FREE_MAX_LEVEL ? 'free' : l.level <= PRO_MAX_LEVEL ? 'pro' : 'plus';
+/** church musicians (Level 13) get the hymn path with Pro */
+export const lessonTier = (l: Lesson): Tier => (l.track ?? 'piano') === 'voice' || l.level <= FREE_MAX_LEVEL ? 'free' : l.level <= PRO_MAX_LEVEL || l.level === 13 ? 'pro' : 'plus';
 export const songTier = (s: Pick<Song, 'level'>): Tier => (s.level === 'Beginner' ? 'free' : 'pro');
 export const voiceLevelTier = (id: string): Tier => (id === 'easy' ? 'free' : id === 'standard' ? 'pro' : 'plus');
 export const featureTier = (_f: Feature): Tier => 'plus';

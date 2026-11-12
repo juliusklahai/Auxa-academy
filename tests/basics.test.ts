@@ -35,3 +35,23 @@ describe('method-book foundations', () => {
     expect(Math.abs(last.beat + last.beats - 8)).toBeLessThan(1e-9);
   });
 });
+
+import { HYMNS } from '../src/curriculum/hymns';
+import { parts } from '../src/curriculum/church';
+describe('church path', () => {
+  it('each hymn voice lasts the same number of whole bars', () => {
+    for (const h of Object.values(HYMNS)) {
+      const bar = h.timeSig[0] * (4 / h.timeSig[1]);
+      const len = (s: string) => s.split(' ').reduce((a, t) => a + parseFloat(t.split(':')[1]), 0);
+      const L = len(h.S);
+      for (const v of [h.A, h.T, h.B]) expect(len(v)).toBe(L);
+      expect(L % bar).toBe(0);
+    }
+  });
+  it('left-hand notes never cross above right-hand notes', () => {
+    for (const h of Object.values(HYMNS)) {
+      const ev = parts([h.S, 'RH'], [h.A, 'RH'], [h.T, 'LH'], [h.B, 'LH']);
+      for (const e of ev) if (e.hands) { const lh = e.pitches.filter((_, i) => e.hands![i] === 'LH'); const rh = e.pitches.filter((_, i) => e.hands![i] === 'RH'); if (lh.length && rh.length) expect(Math.max(...lh)).toBeLessThanOrEqual(Math.min(...rh)); }
+    }
+  });
+});
