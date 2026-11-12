@@ -31,7 +31,8 @@ export function Landing({ onStart, returning = false }: { onStart: () => void; r
   const [auth, setAuth] = useState<false | 'signin' | 'signup'>(false);
   const [open, setOpen] = useState(0);
 
-  const start = () => { if (!returning) setGuest(true); onStart(); };
+  // Start free / Open app: on into onboarding and sign-up (the app decides what is still needed)
+  const start = () => onStart();
   const steps = useRef<HTMLDivElement>(null);
   useStackedCards(steps, theme);
   const startLabel = returning ? 'Open app' : 'Start free';
@@ -134,6 +135,7 @@ export function Landing({ onStart, returning = false }: { onStart: () => void; r
           </nav>
         </div>
         <div className="lp-field"><DashField text="maestro" dark={theme === 'dark'} /></div>
+        <nav className="lp-legal"><a href="#/privacy">Privacy</a><a href="#/terms">Terms</a><a href="#/subscriptions">Subscriptions and refunds</a><a href="#/licenses">Credits</a></nav>
         <small className="lp-copy">© {new Date().getFullYear()} Maestro Academy</small>
       </footer>
 

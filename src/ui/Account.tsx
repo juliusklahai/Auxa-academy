@@ -7,7 +7,7 @@ import { TIER_NAME } from '../account/gate';
 import { toggleTheme, useTheme } from './theme';
 import {
   adminGrant, adminPayments, adminSearch, adminSetRole, authMessage, closeUpgrade, endRecovery, openBillingPortal, openUpgrade, refreshProfile,
-  sendPasswordReset, signInWithEmail, signInWithGoogle, signInWithPassword, signOut, signUp, startCheckout, updatePassword, useAccount, useUpgrade, type Profile,
+  deleteAccount, sendPasswordReset, signInWithEmail, signInWithGoogle, signInWithPassword, signOut, signUp, startCheckout, updatePassword, useAccount, useUpgrade, type Profile,
 } from '../account/store';
 import { Icon } from './Icon';
 
@@ -141,8 +141,29 @@ export function AccountCard({ bare }: { bare?: boolean }) {
             <button className="btn ghost" onClick={() => void refreshProfile()}>Refresh</button>
             <button className="btn ghost" onClick={() => void signOut()}>Sign out</button>
           </div>
+          <DeleteAccount />
+          <p className="acct-legal muted small"><a href="#/privacy">Privacy</a> · <a href="#/terms">Terms</a> · <a href="#/subscriptions">Subscriptions and refunds</a></p>
         </>
       )}
+    </div>
+  );
+}
+
+/** Delete the account, with a clear second step so it cannot happen by accident. */
+function DeleteAccount() {
+  const [ask, setAsk] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  if (!ask) return <button className="acct-delete" onClick={() => setAsk(true)}>Delete my account</button>;
+  return (
+    <div className="acct-delete-box">
+      <b>Delete your account for good?</b>
+      <p className="small">Your sign-in, plan and saved progress are removed and cannot be brought back. A card subscription is cancelled. Mobile money passes are not refunded.</p>
+      <div className="acct-actions">
+        <button className="btn danger" disabled={busy} onClick={() => { setBusy(true); setErr(''); deleteAccount().catch((e) => { setErr((e as Error).message); setBusy(false); }); }}>{busy ? 'Deleting…' : 'Yes, delete everything'}</button>
+        <button className="btn ghost" onClick={() => setAsk(false)}>Keep my account</button>
+      </div>
+      {err && <p className="err small">{err}</p>}
     </div>
   );
 }
@@ -269,6 +290,7 @@ export function UserMenu({ onAccount, onSetup, onAdmin, onHome, current }: { onA
             <span className={`lp-toggle ${theme === 'dark' ? 'on' : ''}`}><i /></span>
           </button>
           {ACCOUNTS_ENABLED && !isNativeApp && <button className="umenu-item" role="menuitem" onClick={pick(onHome)}><Icon name="home" size={16} />Maestro home page</button>}
+          <a className="umenu-item quiet" role="menuitem" href="#/privacy" onClick={() => setOpen(false)}><Icon name="doc" size={16} />Privacy and terms</a>
           {ACCOUNTS_ENABLED && a.user && (<><div className="umenu-sep" /><button className="umenu-item quiet" role="menuitem" onClick={pick(() => void signOut())}><Icon name="back" size={16} />Sign out</button></>)}
         </div>
       )}

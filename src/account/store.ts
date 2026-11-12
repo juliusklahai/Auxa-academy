@@ -169,6 +169,14 @@ export async function startCheckout(plan: string, provider: 'stripe' | 'monime')
   if (provider === 'monime' && out.id) localStorage.setItem('maestro.monime.pending', out.id);
   if (out.url) location.href = out.url;
 }
+/** Delete the account for good (sign-in, profile, progress); cancels a card subscription first. */
+export async function deleteAccount() {
+  const out = await callFn('delete-account', {});
+  if (!out.ok) throw new Error(out.error ?? 'Could not delete the account.');
+  await (await supabase()).auth.signOut();
+  try { localStorage.clear(); } catch { /* fine */ }
+  location.reload();
+}
 export async function openBillingPortal() { const out = await callFn('stripe-portal', {}); if (out.url) location.href = out.url; }
 export async function verifyMonime(id: string) {
   const out = await callFn('monime-verify', { id });

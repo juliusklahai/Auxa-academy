@@ -12,6 +12,7 @@ import { MyMusic } from './ui/MyMusic';
 import { VoiceStudio } from './ui/VoiceStudio';
 import { AccountSheet, AdminView, ResetPasswordSheet, UpgradeSheet, UserMenu } from './ui/Account';
 import { isGuest, Landing, Splash } from './ui/Landing';
+import { LegalPage, useLegalRoute } from './ui/Legal';
 import { appGoal, AppUpgrade, AuthScreen, markPaywallSeen, onboarded, Onboarding, Paywall, paywallSeen } from './ui/AppFlow';
 import { goHome, onGoHome } from './ui/nav';
 import { isNativeApp, onBack } from './native/bridge';
@@ -71,6 +72,7 @@ export default function App() {
   }), []);
   // The logo, from any screen: the Maestro home page (landing). Without accounts: the Overview.
   const [landing, setLanding] = useState(false);
+  const [pastLanding, setPastLanding] = useState(false);
   const [acctOpen, setAcctOpen] = useState(false);
   useEffect(() => onGoHome(() => {
     setLesson(null); setSongId(null); setTab('home');
@@ -90,20 +92,23 @@ export default function App() {
   const go = (t: Tab) => { setTab(t); setLesson(null); window.scrollTo({ top: 0 }); };
 
   const upgradeReason = useUpgrade();
-  // The phone app: onboarding, then sign up / sign in, then the plans page once, then the lessons.
-  if (isNativeApp) {
-    if (!onboarded()) return <Onboarding onDone={() => bump((x) => x + 1)} />;
-    if (ACCOUNTS_ENABLED && !account.user && !isGuest()) {
-      if (!account.ready) return <Splash />;
-      return <AuthScreen onGuest={() => bump((x) => x + 1)} />;
-    }
-    if (ACCOUNTS_ENABLED && account.user && !paywallSeen() && !account.ent.pro) {
-      return <Paywall reason="Welcome! Pick a plan or start free" onClose={() => { markPaywallSeen(); bump((x) => x + 1); }} />;
-    }
-  }
-  if (ACCOUNTS_ENABLED && !isNativeApp && (landing || (!account.user && !isGuest()))) {
+  const legal = useLegalRoute();
+  // Legal pages open on top of everything, signed in or not (app stores link to them).
+  if (legal) return <LegalPage id={legal} />;
+  // The website starts with its home page; "Start free" / "Open app" continues into the same start as
+  // the phone app. The phone app starts there directly.
+  if (ACCOUNTS_ENABLED && !isNativeApp && (landing || (!account.user && !isGuest() && !pastLanding))) {
     if (!account.ready && !landing) return <Splash />;
-    return <Landing returning={!!account.user || isGuest()} onStart={() => { setLanding(false); bump((x) => x + 1); window.scrollTo({ top: 0 }); }} />;
+    return <Landing returning={!!account.user || isGuest()} onStart={() => { setLanding(false); setPastLanding(true); bump((x) => x + 1); window.scrollTo({ top: 0 }); }} />;
+  }
+  // First run: onboarding, then sign up / sign in (or try it first), then the plans page once, then the lessons.
+  if (!onboarded() && !account.user && (isNativeApp || ACCOUNTS_ENABLED)) return <Onboarding onDone={() => { if (!isNativeApp) setTab(appGoal() === 'voice' ? 'voice' : 'learn'); bump((x) => x + 1); }} />;
+  if (ACCOUNTS_ENABLED && !account.user && !isGuest()) {
+    if (!account.ready) return <Splash />;
+    return <AuthScreen onGuest={() => bump((x) => x + 1)} />;
+  }
+  if (ACCOUNTS_ENABLED && account.user && !paywallSeen() && !account.ent.pro) {
+    return <Paywall reason="Welcome! Pick a plan or start free" onClose={() => { markPaywallSeen(); bump((x) => x + 1); }} />;
   }
 
   return (
