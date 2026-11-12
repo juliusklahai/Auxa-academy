@@ -18,7 +18,7 @@ import { bumpProgress, progress, setSettings, useProgressVersion, useSettings } 
 import { Staff } from './Staff';
 import { EarDrill } from './EarDrill';
 import { coachOn, say, stopSpeaking } from './voice';
-import { NARRATION } from '../curriculum/narration';
+import { exerciseLine, hubLine, RESULT_LINES, stepLine } from '../curriculum/spoken';
 import { VoiceHelp } from './VoiceHelp';
 import { PitchRoll } from './PitchRoll';
 import { carryFocus, isPhone, useFocusMode } from './focus';
@@ -62,7 +62,7 @@ function LessonHub({ lesson, onLearn, onExercise }: { lesson: Lesson; onLearn: (
   const nodes = [{ key: 'learn', title: 'Learn', sub: `${lesson.teach.length} short steps`, icon: 'play' as string, value: seen ? 1 : 0, done: seen, go: onLearn },
     ...lesson.exercises.map((e, i) => { const x = exProgress(e); return { key: e.id, title: e.title, sub: x.done ? 'Passed' : x.p.best ? `Best ${Math.round(x.p.best)}%` : 'Not started', icon: exIcon(e), value: x.value, done: x.done, go: () => onExercise(i) }; })];
   const next = nodes.findIndex((n) => !n.done);
-  useEffect(() => { void say(`${lesson.title}. ${lesson.summary}`); return () => stopSpeaking(); }, [lesson.id]); // eslint-disable-line
+  useEffect(() => { void say(hubLine(lesson)); return () => stopSpeaking(); }, [lesson.id]); // eslint-disable-line
   const passed = lesson.exercises.filter((e) => exProgress(e).done).length;
   return (
     <section className="hub">
@@ -184,7 +184,7 @@ function TeachPanel({ lesson, step, setStep, onDone, chips }: { lesson: Lesson; 
   useEffect(() => {
     let live = true;
     if (voiceOn) {
-      const text = NARRATION[`${lesson.id}#${step}`] ?? [s.title, s.body.replace(/\n+/g, ' ')].join('. ');
+      const text = stepLine(lesson, step);
       void say(text).then(() => { if (live && (seq || s.play)) window.setTimeout(() => { if (live) play(); }, 250); });
     }
     return () => { live = false; stopSpeaking(); };
@@ -274,13 +274,12 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocke
   const [report, setReport] = useState<AssessmentReport | null>(null);
   // voice coach: what this exercise asks, and how it went
   useEffect(() => {
-    void say(`Let's try: ${base.title}. ${base.objective} ${base.byEar ? 'Press listen first.' : 'Press start when you are ready.'}`);
+    void say(exerciseLine(base));
     return () => stopSpeaking();
   }, [base.id]); // eslint-disable-line
   useEffect(() => {
     if (!report) return;
-    const sc = Math.round(report.score);
-    void say(report.passed ? `Well done. ${sc} out of 100. ${onNext ? 'On to the next one when you are ready.' : ''}` : `${sc} out of 100. ${report.advice?.[0] ?? 'Slow down a little and try again.'}`);
+    void say(report.passed ? (index < lesson.exercises.length - 1 ? RESULT_LINES.passedMore : RESULT_LINES.passedLast) : RESULT_LINES.tryAgain);
   }, [report]); // eslint-disable-line
   const [beatFlash, setBeatFlash] = useState(-1);
   const [nice, setNice] = useState<{ id: number; text: string } | null>(null);

@@ -9,6 +9,7 @@ import { Icon } from './Icon';
 import { Piano, type KeyMark } from './Piano';
 import { bumpProgress, progress, useSettings } from './settings';
 import { say, stopSpeaking } from './voice';
+import { DRILL_LINES } from '../curriculum/spoken';
 
 type Mark = 'right' | 'wrong';
 
@@ -39,7 +40,7 @@ export function EarDrill({ exercise, onNext }: { exercise: Exercise; onNext?: ()
   useEffect(() => {
     let live = true;
     // the coach reads the task on the first round, then the sound plays
-    (round === 0 ? say(q.prompt) : Promise.resolve()).then(() => { if (live) window.setTimeout(() => { if (live) play(q.sound); }, 300); });
+    (round === 0 ? say(DRILL_LINES[spec.kind]) : Promise.resolve()).then(() => { if (live) window.setTimeout(() => { if (live) play(q.sound); }, 300); });
     return () => { live = false; stopSpeaking(); };
   }, [q]); // eslint-disable-line
 
