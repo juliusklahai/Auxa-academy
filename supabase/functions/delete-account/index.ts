@@ -16,7 +16,10 @@ Deno.serve(async (req) => {
     const subs = await stripe.subscriptions.list({ customer: prof.stripe_customer_id, status: 'all', limit: 20 });
     for (const s of subs.data) if (['active', 'trialing', 'past_due', 'unpaid'].includes(s.status)) await stripe.subscriptions.cancel(s.id);
   }
-  // the profile (with saved progress) goes with the sign-in; payment records stay for accounting, unlinked
+  // profile photos in avatars/<id>/
+  const { data: pics } = await db.storage.from('avatars').list(user.id, { limit: 100 });
+  if (pics?.length) await db.storage.from('avatars').remove(pics.map((p) => `${user.id}/${p.name}`));
+  // the profile (with saved progress and the People card) goes with the sign-in; payment records stay for accounting, unlinked
   await db.from('profiles').delete().eq('id', user.id);
   const { error } = await db.auth.admin.deleteUser(user.id);
   if (error) return json({ error: error.message }, 500);

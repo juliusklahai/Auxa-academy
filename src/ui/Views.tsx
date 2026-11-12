@@ -276,7 +276,7 @@ export function PianoStudio() {
       <div className="dock">
         <button className={`dock-btn lime ${running ? 'live' : ''}`} onClick={toggle} aria-label="Metronome start or stop"><Icon name={running ? 'pause' : 'metro'} size={18} /></button>
         <span className="dock-label">Metronome</span>
-        <button className={`dock-btn dock-fs ${fm.focus ? 'on' : ''}`} onClick={fm.toggle} aria-label="Full screen" title="Full screen"><Icon name="expand" size={17} /></button>
+        {!fm.focus && <button className="dock-btn dock-fs" onClick={fm.toggle} aria-label="Full screen" title="Full screen"><Icon name="expand" size={17} /></button>}
         <span className="dock-sep" />
         <button className="dock-btn" onClick={() => setB(bpm - 5)} aria-label="Slower">−</button>
         <input className="dock-num" type="number" min={20} max={300} value={bpm} onChange={(e) => setB(+e.target.value)} aria-label="BPM" />

@@ -232,10 +232,10 @@ select { border: 0; background: var(--white); border-radius: 999px; padding: 8px
 .state-pill.count_in { background: var(--white); }
 .state-pill.restart { background: var(--bad-soft); color: var(--bad); }
 .state-pill.completed { background: var(--ink); color: var(--lime); }
-.next { background: var(--ink); color: var(--on-ink); border-radius: var(--r-md); padding: 10px 14px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.next small { color: #a7a6a0; font-size: 11px; width: 100%; margin-bottom: -6px; }
-.next b { font-size: 24px; color: var(--lime); font-weight: 600; letter-spacing: -0.02em; }
-.next span { font-size: 12px; color: #cfcec8; }
+div.next { background: var(--ink); color: var(--on-ink); border-radius: var(--r-md); padding: 10px 14px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+div.next small { color: #a7a6a0; font-size: 11px; width: 100%; margin-bottom: -6px; }
+div.next b { font-size: 24px; color: var(--lime); font-weight: 600; letter-spacing: -0.02em; }
+div.next span { font-size: 12px; color: #cfcec8; }
 .fb { display: flex; gap: 8px; padding: 8px 11px; border-radius: 14px; font-size: 13.5px; background: #ecebe5; animation: fbin .25s ease-out; }
 @keyframes fbin { from { transform: translateY(-4px); opacity: 0; } }
 .fb .ic { font-weight: 800; width: 14px; flex: none; }

@@ -61,6 +61,7 @@ async function pushProgress() {
   if (!state.user) return;
   const sb = await supabase();
   await sb.rpc('save_progress', { p: progress.data });
+  void import('./people').then((m) => m.refreshMyStats()).catch(() => undefined);
 }
 /** Called after every saved attempt: sync to the account a few seconds later (batched). */
 export function progressChanged() {
@@ -207,3 +208,5 @@ const upSubs = new Set<() => void>();
 export const openUpgrade = (reason: string) => { upgradeReason = reason; upSubs.forEach((f) => f()); };
 export const closeUpgrade = () => { upgradeReason = null; upSubs.forEach((f) => f()); };
 export const useUpgrade = () => useSyncExternalStore((cb) => { upSubs.add(cb); return () => upSubs.delete(cb); }, () => upgradeReason);
+/** Ask the app shell to open the account (sign in) sheet. */
+export const openAccount = () => window.dispatchEvent(new CustomEvent('maestro:account'));

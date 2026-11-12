@@ -17,17 +17,20 @@ import { appGoal, AppUpgrade, AuthScreen, markPaywallSeen, onboarded, Onboarding
 import { goHome, onGoHome } from './ui/nav';
 import { isNativeApp, onBack } from './native/bridge';
 import { InstallBanner } from './ui/InstallBanner';
+import { NotchBar } from './ui/NotchBar';
+import { PeopleView } from './ui/People';
 import { ACCOUNTS_ENABLED } from './account/config';
 import { getAccount, initAccount, openUpgrade, useAccount, useUpgrade } from './account/store';
 import { allowLesson, lessonTier, TIER_NAME } from './account/gate';
 
-type Tab = 'home' | 'learn' | 'music' | 'voice' | 'studio' | 'settings' | 'admin';
+type Tab = 'home' | 'learn' | 'music' | 'voice' | 'studio' | 'people' | 'settings' | 'admin';
 const TABS: { id: Tab; label: string; short?: string; icon: string; title: string }[] = [
   { id: 'home', label: 'Overview', short: 'Home', icon: 'home', title: 'Piano Academy' },
   { id: 'learn', label: 'Lessons', icon: 'path', title: 'Lessons' },
   { id: 'music', label: 'My Music', short: 'Music', icon: 'doc', title: 'My Music' },
   { id: 'voice', label: 'Voice', icon: 'mic', title: 'Voice Studio' },
   { id: 'studio', label: 'Piano Studio', short: 'Piano', icon: 'piano', title: 'Piano Studio' },
+  { id: 'people', label: 'People', icon: 'people', title: 'People' },
 ];
 const MENU_TITLES: Partial<Record<Tab, string>> = { settings: 'Setup', admin: 'Admin' };
 
@@ -74,6 +77,7 @@ export default function App() {
   const [landing, setLanding] = useState(false);
   const [pastLanding, setPastLanding] = useState(false);
   const [acctOpen, setAcctOpen] = useState(false);
+  useEffect(() => { const f = () => setAcctOpen(true); window.addEventListener('maestro:account', f); return () => window.removeEventListener('maestro:account', f); }, []);
   useEffect(() => onGoHome(() => {
     setLesson(null); setSongId(null); setTab('home');
     if (ACCOUNTS_ENABLED && !isNativeApp) setLanding(true); // the app has no web home page
@@ -146,20 +150,14 @@ export default function App() {
                 {tab === 'music' && <MyMusic singPart={singPart} onSingHandled={() => setSingPart(null)} songId={songId} onSongHandled={() => setSongId(null)} xml={xmlToOpen} onXmlHandled={() => setXmlToOpen(null)} />}
                 {tab === 'voice' && <VoiceStudio openLesson={open} singChoir={(p) => { setSingPart(p); setTab('music'); }} openScore={(x) => { setXmlToOpen(x); setTab('music'); window.scrollTo({ top: 0 }); }} />}
                 {tab === 'studio' && <PianoStudio />}
+                {tab === 'people' && <PeopleView />}
                 {tab === 'settings' && <SettingsView />}
                 {tab === 'admin' && <AdminView />}
               </>}
         </main>
-        {/* phones: the main sections live in a thumb-sized bar at the bottom */}
-        <nav className="tabbar" aria-label="Sections">
-          {tabs.map((t) => (
-            <button key={t.id} className={tab === t.id && !lesson ? 'on' : ''} aria-current={tab === t.id && !lesson}
-              onClick={() => { setTab(t.id); setLesson(null); window.scrollTo({ top: 0 }); }}>
-              <span className="tb-ic"><Icon name={t.icon} size={20} /></span>
-              <span className="tb-label">{t.short ?? t.label}</span>
-            </button>
-          ))}
-        </nav>
+        {/* phones: the main sections live in a thumb-sized bar at the bottom, with a liquid notch under the active one */}
+        <NotchBar items={tabs.map((t) => ({ id: t.id, icon: t.icon, label: t.short ?? t.label }))} active={lesson ? null : tab}
+          onPick={(id) => { setTab(id as Tab); setLesson(null); window.scrollTo({ top: 0 }); }} />
         {isNativeApp ? <AppUpgrade reason={upgradeReason} /> : <UpgradeSheet />}<ResetPasswordSheet />{acctOpen && <AccountSheet onClose={() => setAcctOpen(false)} />}
       </div>
     </div>

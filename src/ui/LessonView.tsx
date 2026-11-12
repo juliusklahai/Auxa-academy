@@ -587,7 +587,8 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocke
         <span className="dock-label">Hands {settings.hands ? 'on' : 'off'}</span></>}
         <span className="dock-fill" />
         <span className="dock-status" title="Where your playing is coming from"><Icon name={input === 'MIDI' ? 'midi' : input === 'Microphone' || input === 'Voice' ? 'mic' : 'keys'} size={15} /> Input: {input}</span>
-        <button className={`dock-btn dock-fs ${fm.focus ? "on" : ""}`} onClick={fm.toggle} aria-label={fm.focus ? 'Leave full screen (Esc)' : 'Full screen practice'} title={fm.focus ? 'Leave full screen (Esc)' : 'Full screen practice'}><Icon name={fm.focus ? 'close' : 'expand'} size={16} /></button>
+        {/* in full screen the bar above already has Exit, so no second close here */}
+        {!fm.focus && <button className="dock-btn dock-fs" onClick={fm.toggle} aria-label="Full screen practice" title="Full screen practice"><Icon name="expand" size={16} /></button>}
       </div>
     </div>
   );
