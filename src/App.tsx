@@ -156,7 +156,7 @@ export default function App() {
               </>}
         </main>
         {/* phones: the main sections live in a thumb-sized bar at the bottom, with a liquid notch under the active one */}
-        <NotchBar items={tabs.map((t) => ({ id: t.id, icon: t.icon, label: t.short ?? t.label }))} active={lesson ? null : tab}
+        <NotchBar items={tabs.map((t) => ({ id: t.id, icon: t.icon, label: t.short ?? t.label }))} active={tab}
           onPick={(id) => { setTab(id as Tab); setLesson(null); window.scrollTo({ top: 0 }); }} />
         {isNativeApp ? <AppUpgrade reason={upgradeReason} /> : <UpgradeSheet />}<ResetPasswordSheet />{acctOpen && <AccountSheet onClose={() => setAcctOpen(false)} />}
       </div>
