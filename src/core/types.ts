@@ -50,6 +50,8 @@ export interface Exercise {
   swing?: boolean;
   /** spell black keys as flats on the staff (blues, jazz, flat keys) */
   flats?: boolean;
+  /** key signature in sharps (+) or flats (-), drawn on the staff */
+  fifths?: number;
   /** ear-training drill instead of reading a score (see DrillSpec) */
   drill?: DrillSpec;
   /** chords played before a by-ear phrase so you hear the key first */
@@ -171,7 +173,7 @@ export interface AssessmentReport {
  * - progression: four chords in a key, name each one (I ii iii IV V vi...)
  * - bass: four chords, play their bass notes (roots)
  */
-export type DrillKind = 'tonic' | 'degree' | 'interval' | 'quality' | 'progression' | 'bass' | 'count' | 'tempo' | 'meter' | 'roadmap';
+export type DrillKind = 'tonic' | 'degree' | 'interval' | 'quality' | 'progression' | 'bass' | 'count' | 'tempo' | 'meter' | 'roadmap' | 'notename' | 'keysig';
 export interface DrillSpec {
   kind: DrillKind;
   /** answers that can come up: degrees '1'..'7' (and 'b3','b7'...), intervals 'm2'..'P8', qualities 'maj','min','dim','aug','maj7','m7','7','m7b5','dim7', progressions like 'I-V-vi-IV' */

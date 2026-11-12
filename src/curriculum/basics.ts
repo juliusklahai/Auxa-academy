@@ -113,3 +113,41 @@ export const RHYTHM_LESSONS: LessonDef[] = [
     ],
   },
 ];
+
+/** Level 1: read from landmark notes by steps and skips, instead of naming every note from scratch. */
+export const LANDMARK_LESSON: LessonDef = {
+  id: 'L1-7', level: 1, title: 'Landmark notes: read by steps and skips', prerequisites: ['L1-3'],
+  summary: 'Three notes you know at a glance, and how to read everything else from them.',
+  teach: [
+    t('Three landmarks', 'Treble G: the treble clef curls around its line (the second line up). Bass F: the bass clef\'s two dots sit either side of its line (the fourth line up). Middle C: on its own short line between the two staves. Know these three instantly.', [67, 53, 60], [60, 67, 53]),
+    t('Steps', 'A step goes from a line to the very next space (or space to line) and moves to the next key. Up a step from treble G is A; down a step is F.', [67, 69, 65], [67, 69, 67, 65]),
+    t('Skips', 'A skip goes from a line to the next line (or space to space), jumping over one key. Up a skip from treble G is B; down a skip is E. Read the direction and the distance, and your finger finds the note.', [67, 71, 64], [67, 71, 67, 64]),
+  ],
+  exercises: [
+    drill('L1-7-a', 'Name it from the landmark: treble', 'Notes near treble G.', { kind: 'notename', pool: ['treble-near'], rounds: 8 }, ['noteReadingTreble']),
+    drill('L1-7-b', 'Name it from the landmark: bass', 'Notes near bass F.', { kind: 'notename', pool: ['bass-near'], rounds: 8 }, ['noteReadingBass']),
+    drill('L1-7-e', 'The whole staff', 'Any note on the treble or bass staff, plus ledger lines.', { kind: 'notename', pool: ['treble', 'bass', 'ledger'], rounds: 10 }, ['noteReadingTreble', 'noteReadingBass']),
+    ex('L1-7-c', 'Steps and skips from G', 'No letters on the keys: read each move from the note before.', 'treble', 'wait',
+      seqOf('G4:1 A4:1 B4:1 G4:1 E4:1 F4:1 G4:2 B4:1 A4:1 G4:1 E4:1 G4:4', 'RH', [3, 4, 5, 3, 1, 2, 3, 5, 4, 3, 1, 3]), ['noteReadingTreble'], { hideLabels: true }),
+    ex('L1-7-d', 'Steps and skips from F', 'Left hand, reading from bass F.', 'bass', 'wait',
+      seqOf('F3:1 E3:1 D3:1 F3:1 A3:1 G3:1 F3:2 D3:1 E3:1 F3:1 A3:1 F3:4', 'LH', [3, 4, 5, 3, 1, 2, 3, 5, 4, 3, 1, 3]), ['noteReadingBass'], { hideLabels: true }),
+  ],
+};
+
+/** Level 5: key signatures and the natural sign as their own idea. */
+export const KEYSIG_LESSON: LessonDef = {
+  id: 'L5-6', level: 5, title: 'Key signatures and the natural sign', prerequisites: ['L5-2'],
+  summary: 'Read the sharps or flats at the start of the line, and cancel them with a natural.',
+  teach: [
+    t('One sign for the whole piece', 'Instead of writing a sharp on every F, music puts the sharps or flats once, at the start of every line. That is the key signature. It applies to that letter in every octave, all the way through.'),
+    t('Naming the key', 'Sharps always arrive in the order F C G D A E B, flats in the order B E A D G C F. With sharps, go up one key from the last sharp: one sharp (F sharp) means G major. With flats, the second-to-last flat names the key; one flat is F major.'),
+    t('The natural sign', 'A natural sign cancels a sharp or flat: play the white key. It lasts until the end of that bar, then the key signature takes over again. Any sharp, flat or natural written in the music works the same way: for the rest of the bar only.', [66, 65], [66, 65]),
+  ],
+  exercises: [
+    drill('L5-6-a', 'Name the key', 'See the key signature and choose the major key.', { kind: 'keysig', pool: ['0', '1', '2', '-1', '-2'], rounds: 8 }, ['noteReadingTreble']),
+    ex('L5-6-b', 'G major with a natural', 'Every F is sharp, except where the natural sign says so.', 'treble', 'wait',
+      seqOf('G4:1 F#4:1 G4:1 A4:1 B4:1 A4:1 G4:1 F#4:1 G4:1 F4:1 E4:1 D4:1 E4:1 F#4:1 G4:2', 'RH'), ['noteReadingTreble'], { fifths: 1, hideLabels: true }),
+    ex('L5-6-c', 'F major with a natural', 'Every B is flat, until the natural sign.', 'treble', 'wait',
+      seqOf('F4:1 G4:1 A4:1 Bb4:1 C5:1 Bb4:1 A4:1 G4:1 A4:1 B4:1 C5:1 D5:1 C5:1 Bb4:1 A4:1 F4:1', 'RH'), ['noteReadingTreble'], { fifths: -1, hideLabels: true }),
+  ],
+};

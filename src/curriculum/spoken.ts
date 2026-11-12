@@ -22,6 +22,8 @@ export const DRILL_LINES: Record<DrillSpec['kind'], string> = {
   tempo: 'Listen to how fast it goes. Which tempo word fits?',
   meter: 'Find the strong beat, then count to the next one. Which time signature is it?',
   roadmap: 'Follow the signs like a road map. In what order do you play the bars?',
+  notename: 'Look at the note. Find a landmark note, count the steps, and pick its name.',
+  keysig: 'Look at the sharps or flats at the start. Which major key is it?',
 };
 
 /** All lines, for the recording script. */

@@ -161,3 +161,49 @@ export function roadmapQuestion(pool: string[], rnd: Rnd): DrillQuestion {
     tonic: 60,
   };
 }
+
+/* ---------------- note names on the staff ---------------- */
+const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+const WHITE = (lo: number, hi: number) => { const out: number[] = []; for (let m = lo; m <= hi; m++) if (![1, 3, 6, 8, 10].includes(m % 12)) out.push(m); return out; };
+const RANGES: Record<string, { clef: 'treble' | 'bass'; notes: number[]; tip: string }> = {
+  // around the landmarks first, then the whole staff, then ledger lines
+  'treble-near': { clef: 'treble', notes: WHITE(64, 72), tip: 'Find treble G (the line the clef curls round) and count steps from it.' },
+  treble: { clef: 'treble', notes: WHITE(62, 79), tip: 'Lines bottom to top: E G B D F. Spaces spell F A C E.' },
+  'bass-near': { clef: 'bass', notes: WHITE(50, 60), tip: 'Find bass F (the line between the two dots) and count steps from it.' },
+  bass: { clef: 'bass', notes: WHITE(43, 57), tip: 'Lines bottom to top: G B D F A. Spaces: A C E G.' },
+  ledger: { clef: 'treble', notes: [...WHITE(55, 60), ...WHITE(81, 86)], tip: 'Each ledger line adds one more step. Middle C has one ledger line below the treble staff.' },
+};
+const letterOf = (m: number) => LETTERS[[0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6][m % 12]];
+export function noteNameQuestion(pool: string[], rnd: Rnd): DrillQuestion {
+  const r = RANGES[pick(pool, rnd)] ?? RANGES.treble;
+  const m = pick(r.notes, rnd);
+  const name = letterOf(m);
+  return {
+    prompt: 'What is this note called?',
+    staff: { midi: [m], clef: r.clef },
+    sound: [], context: [], answers: [name], options: LETTERS,
+    reveal: [{ midi: m, startMs: 0, durMs: 700 }],
+    explain: `${name}. ${r.tip}`,
+    tonic: m,
+  };
+}
+
+/* ---------------- key signatures ---------------- */
+const MAJOR_BY_FIFTHS: Record<number, string> = { 0: 'C', 1: 'G', 2: 'D', 3: 'A', 4: 'E', [-1]: 'F', [-2]: 'B♭', [-3]: 'E♭', [-4]: 'A♭' };
+export function keySigQuestion(pool: string[], rnd: Rnd): DrillQuestion {
+  const f = Number(pick(pool, rnd));
+  const name = MAJOR_BY_FIFTHS[f];
+  const options = pool.map((p) => MAJOR_BY_FIFTHS[Number(p)]);
+  const how = f > 0 ? 'Sharps: the last sharp is the 7th note, so go up one key to name the key.'
+    : f < 0 ? (f === -1 ? 'One flat (B♭) is always F major.' : 'Flats: the second-to-last flat names the key.')
+      : 'No sharps or flats: C major.';
+  const tonic = { 0: 60, 1: 67, 2: 62, 3: 69, 4: 64, [-1]: 65, [-2]: 70, [-3]: 63, [-4]: 68 }[f] ?? 60;
+  return {
+    prompt: 'Which major key has this key signature?',
+    staff: { midi: [], clef: 'treble', fifths: f },
+    sound: [], context: [], answers: [name], options,
+    reveal: [0, 4, 7, 12].map((iv, i) => ({ midi: tonic + iv, startMs: i * 260, durMs: 500 })),
+    explain: `${name} major. ${how}`,
+    tonic,
+  };
+}

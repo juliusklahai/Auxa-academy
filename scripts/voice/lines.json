@@ -284,6 +284,42 @@
   "text": "Play along, Wandering River March. Keep time with the band, your notes come exactly on the beat. Press start when you are ready."
  },
  {
+  "key": "2f8c99b4",
+  "text": "Landmark notes, read by steps and skips. Three notes you know at a glance, and how to read everything else from them."
+ },
+ {
+  "key": "2ff6c38b",
+  "text": "Learn three landmark notes. Treble G, the treble clef curls around its line. Bass F, the bass clef's two dots sit on either side of its line. Middle C, on its own little line between the staves."
+ },
+ {
+  "key": "c3b777c0",
+  "text": "A step goes from a line to the very next space, or a space to the next line. On the piano, that's the very next white key. One step up from G is A."
+ },
+ {
+  "key": "74615ec7",
+  "text": "A skip goes from a line to the next line, jumping over one key. One skip up from G is B. Look which way the notes go and how far, and your finger will find it."
+ },
+ {
+  "key": "dceec340",
+  "text": "Name it from the landmark, treble. Notes near treble G. Listen, then answer."
+ },
+ {
+  "key": "2e7bd145",
+  "text": "Name it from the landmark, bass. Notes near bass F. Listen, then answer."
+ },
+ {
+  "key": "69b5ba59",
+  "text": "The whole staff. Any note on the treble or bass staff, plus ledger lines. Listen, then answer."
+ },
+ {
+  "key": "c8b7a63f",
+  "text": "Steps and skips from G. No letters on the keys, read each move from the note before. Press start when you are ready."
+ },
+ {
+  "key": "3ae57f9d",
+  "text": "Steps and skips from F. Left hand, reading from bass F. Press start when you are ready."
+ },
+ {
   "key": "d7a1c9bf",
   "text": "First melody, Ode to Joy. Beethoven's theme in C position, first slowly, then in time."
  },
@@ -910,6 +946,34 @@
  {
   "key": "45c8bdfa",
   "text": "Play along, Silver River March. The band plays; you play your notes on the strong beats. Press start when you are ready."
+ },
+ {
+  "key": "9562f619",
+  "text": "Key signatures and the natural sign. Read the sharps or flats at the start of the line, and cancel them with a natural."
+ },
+ {
+  "key": "8f9b0ecf",
+  "text": "Instead of writing a sharp next to every F, music puts it once at the start of each line. That's the key signature. It counts for that letter everywhere, all the way through."
+ },
+ {
+  "key": "f3c949ab",
+  "text": "Sharps always come in the same order, starting with F. With sharps, go up one key from the last sharp to name the key. One sharp means G major. One flat means F major."
+ },
+ {
+  "key": "1179d03d",
+  "text": "A natural sign cancels a sharp or flat. Play the white key. It lasts until the end of the bar, then the key signature comes back."
+ },
+ {
+  "key": "29f1225e",
+  "text": "Name the key. See the key signature and choose the major key. Listen, then answer."
+ },
+ {
+  "key": "29305ea6",
+  "text": "G major with a natural. Every F is sharp, except where the natural sign says so. Press start when you are ready."
+ },
+ {
+  "key": "d9ea3b2a",
+  "text": "F major with a natural. Every B is flat, until the natural sign. Press start when you are ready."
  },
  {
   "key": "e8052206",
@@ -2506,6 +2570,14 @@
  {
   "key": "94be5c12",
   "text": "Follow the signs like a road map. In what order do you play the bars?"
+ },
+ {
+  "key": "4986662e",
+  "text": "Look at the note. Find a landmark note, count the steps, and pick its name."
+ },
+ {
+  "key": "5b70f57d",
+  "text": "Look at the sharps or flats at the start. Which major key is it?"
  },
  {
   "key": "d427b3a7",

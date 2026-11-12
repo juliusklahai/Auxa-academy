@@ -16,12 +16,12 @@ describe('method-book foundations', () => {
     expect(ids.slice(ids.indexOf('L4-5') + 1, ids.indexOf('L4-5') + 5)).toEqual(['L4-6', 'L4-7', 'L4-8', 'L4-9']);
   });
   it('new steps all have narration', () => {
-    for (const id of ['L0-0', 'L1-6', 'L4-6', 'L4-7', 'L4-8', 'L4-9']) lessonById(id)!.teach.forEach((_, i) => expect(NARRATION[`${id}#${i}`], `${id}#${i}`).toBeTruthy());
+    for (const id of ['L0-0', 'L1-6', 'L1-7', 'L5-6', 'L4-6', 'L4-7', 'L4-8', 'L4-9']) lessonById(id)!.teach.forEach((_, i) => expect(NARRATION[`${id}#${i}`], `${id}#${i}`).toBeTruthy());
   });
   it('reading drills always offer the right answer among distinct choices', () => {
     const rnd = seeded(7);
-    for (const kind of ['count', 'tempo', 'meter', 'roadmap'] as const) {
-      const pool = kind === 'count' ? ['ta', 'ti-ti', 'tri-po-let', 'ti-ka-ti-ka'] : kind === 'tempo' ? ['Adagio', 'Andante', 'Allegro'] : kind === 'meter' ? ['2/4', '3/4', '6/8'] : ['0', '1', '2', '3', '4'];
+    for (const kind of ['count', 'tempo', 'meter', 'roadmap', 'notename', 'keysig'] as const) {
+      const pool = kind === 'count' ? ['ta', 'ti-ti', 'tri-po-let', 'ti-ka-ti-ka'] : kind === 'tempo' ? ['Adagio', 'Andante', 'Allegro'] : kind === 'meter' ? ['2/4', '3/4', '6/8'] : kind === 'notename' ? ['treble', 'bass', 'ledger', 'treble-near', 'bass-near'] : kind === 'keysig' ? ['0', '1', '2', '-1', '-2'] : ['0', '1', '2', '3', '4'];
       for (let i = 0; i < 40; i++) {
         const q = makeQuestion({ kind, pool }, rnd);
         expect(q.options).toContain(q.answers[0]);
@@ -53,5 +53,18 @@ describe('church path', () => {
       const ev = parts([h.S, 'RH'], [h.A, 'RH'], [h.T, 'LH'], [h.B, 'LH']);
       for (const e of ev) if (e.hands) { const lh = e.pitches.filter((_, i) => e.hands![i] === 'LH'); const rh = e.pitches.filter((_, i) => e.hands![i] === 'RH'); if (lh.length && rh.length) expect(Math.max(...lh)).toBeLessThanOrEqual(Math.min(...rh)); }
     }
+  });
+});
+
+import { keyAlter } from '../src/ui/Staff';
+describe('key signatures', () => {
+  it('knows which letters each key alters', () => {
+    expect(keyAlter(1, 'f')).toBe(1); expect(keyAlter(1, 'c')).toBe(0);
+    expect(keyAlter(2, 'c')).toBe(1); expect(keyAlter(-1, 'b')).toBe(-1); expect(keyAlter(-2, 'e')).toBe(-1); expect(keyAlter(-2, 'a')).toBe(0);
+  });
+  it('the key-signature lessons and hymns carry their key', () => {
+    expect(lessonById('L5-6')!.exercises.find((e) => e.id === 'L5-6-b')!.fifths).toBe(1);
+    expect(lessonById('C13-1')!.exercises[0].fifths).toBe(1);
+    expect(lessonById('L5-3')!.exercises.filter((e) => !e.drill).every((e) => e.fifths === 2)).toBe(true);
   });
 });

@@ -61,7 +61,8 @@ function hymn(h: HymnSetting, mix: Mix, from = 0, to = Infinity, pad = 0): Score
   return evs;
 }
 const O = HYMNS.old100, G = HYMNS.amazing, J = HYMNS.joy;
-const hymnOpts = (h: HymnSetting): Partial<Exercise> => ({ timeSig: h.timeSig, tempo: h.tempo, maxConsecutiveMistakes: 4 });
+const FIFTHS: Record<string, number> = { 'C major': 0, 'G major': 1, 'D major': 2, 'F major': -1 };
+const hymnOpts = (h: HymnSetting): Partial<Exercise> => ({ timeSig: h.timeSig, tempo: h.tempo, maxConsecutiveMistakes: 4, fifths: FIFTHS[h.key] ?? 0 });
 
 export const CHURCH_LESSONS: LessonDef[] = [
   {

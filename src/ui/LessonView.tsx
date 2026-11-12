@@ -22,6 +22,7 @@ import { exerciseLine, hubLine, RESULT_LINES, stepLine } from '../curriculum/spo
 import { VoiceHelp } from './VoiceHelp';
 import { PitchRoll } from './PitchRoll';
 import { carryFocus, isPhone, useFocusMode } from './focus';
+import { RhythmTap } from './RhythmTap';
 import { FocusBar, FloatHead, RotateHint } from './FocusBar';
 
 function rangeFor(pitches: number[]): [number, number] {
@@ -259,6 +260,8 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocke
   const [metroOn, setMetroOn] = useState(base.mode === 'timed');
   const exercise = useMemo<Exercise>(() => { const e = applyVoiceLevel(base, allowVoiceLevel(getAccount().ent, settings.voiceLevel) ? settings.voiceLevel : 'easy'); return settings.mistakePolicy === 'pause' ? { ...e, maxConsecutiveMistakes: 99 } : e; }, [base, settings.mistakePolicy, settings.voiceLevel]);
   const bpm = effectiveBpm(exercise.tempo, tempoPct);
+  const [prep, setPrep] = useState(false);
+  useEffect(() => setPrep(false), [exercise.id]);
   const session = useRef<AssessmentSession>(new AssessmentSession(exercise, bpm));
   const t0 = useRef(0);
   const clock = useRef<{ t0: number; mspb: number } | null>(null);
@@ -517,6 +520,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocke
         <span className="dock-label">{listening ? 'Restart' : s.state === 'RESTART' ? `Attempt ${s.attempt + 1}` : s.state === 'COMPLETED' ? 'Again' : 'Start'}</span>
         <button className="dock-btn dock-demo" onClick={demo} aria-label={exercise.byEar ? 'Listen' : 'Demo'} title={exercise.byEar ? 'Listen to the phrase' : 'Watch a demo'}><Icon name={exercise.byEar ? 'ear' : 'eye'} size={17} /></button>
         <span className="dock-label">{exercise.byEar ? 'Listen' : 'Demo'}</span>
+        {!exercise.byEar && <><button className="dock-btn dock-prep" onClick={() => setPrep(true)} aria-label="Tap the rhythm first" title="Prepare: tap the rhythm first"><Icon name="clap" size={17} /></button><span className="dock-label">Clap</span></>}
         <span className="dock-sep" />
         <div className="dock-group">
           {[50, 75, 100].map((p) => <button key={p} className={`dock-chip ${tempoPct === p ? 'on' : ''}`} disabled={listening} onClick={() => setTempoPct(p)}>{p}%</button>)}
@@ -549,6 +553,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocke
       {fm.focus ? chips : <div className="ex-toolbar">{chips}{dock}</div>}
       <ExHead kicker={`Exercise ${index + 1} of ${lesson.exercises.length}`} title={exercise.title} goal={exercise.objective}
         stats={[['Tempo', `${Math.round(bpm)} bpm`], ['Best', `${Math.round(best)}%`], ['Try', `${s.attempt}`], ['Slips', `${s.consecutive}/${exercise.maxConsecutiveMistakes > 10 ? '∞' : exercise.maxConsecutiveMistakes}`]]} />
+      {prep && <RhythmTap events={exercise.events} bpm={bpm} timeSig={exercise.timeSig} onClose={() => setPrep(false)} />}
       <section className="play-grid">
         <div className="stage">
           <div className="card score-card">
@@ -557,7 +562,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocke
               <span className="legend"><i className="lg correct" />correct <i className="lg partial" />timing <i className="lg wrong" />wrong <i className="lg pending" />to play</span>
             </div>
             {nice && <span key={nice.id} className="nice">{nice.text}</span>}
-            <Staff events={exercise.events} clef={exercise.clef} timeSig={exercise.timeSig} statuses={statuses} current={glowIdx} playhead={playhead} highContrast={settings.highContrast} height={exercise.grand ? 260 : 168} measureWidth={fm.focus ? 340 : 250} backing={exercise.backing} grand={exercise.grand} hidePending={exercise.byEar} flats={exercise.flats} />
+            <Staff events={exercise.events} clef={exercise.clef} timeSig={exercise.timeSig} statuses={statuses} current={glowIdx} playhead={playhead} highContrast={settings.highContrast} height={exercise.grand ? 260 : 168} measureWidth={fm.focus ? 340 : 250} backing={exercise.backing} grand={exercise.grand} hidePending={exercise.byEar} flats={exercise.flats} fifths={exercise.fifths} />
             {feed[0] && !report && <div key={feed[0].id} className={`latest fb ${feed[0].kind}`}><span className="ic">{icon(feed[0].kind)}</span>{feed[0].text}</div>}
             {report && <div className={`latest fb ${report.passed ? 'correct' : 'wrong'}`}><span className="ic">{report.passed ? '✓' : '✗'}</span>Score {Math.round(report.score)}/100 · {report.grade}{report.passed ? '' : '. 80 needed to pass.'}</div>}
           </div>

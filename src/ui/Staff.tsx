@@ -7,6 +7,14 @@ const COLORS: Record<NoteStatus | 'current', string> = {
   pending: '#2a2a27', correct: '#1e8a4c', partial: '#b7791f', wrong: '#c53030', missed: '#c53030', current: '#1f1f1d',
 };
 
+const KEY_NAMES: Record<number, string> = { 1: 'G', 2: 'D', 3: 'A', 4: 'E', 5: 'B', 6: 'F#', 7: 'C#', [-1]: 'F', [-2]: 'Bb', [-3]: 'Eb', [-4]: 'Ab', [-5]: 'Db', [-6]: 'Gb', [-7]: 'Cb' };
+/** how the key signature alters a letter: +1 sharp, -1 flat, 0 natural */
+export function keyAlter(fifths: number, letter: string): number {
+  const L = letter.toLowerCase();
+  if (fifths > 0) return 'fcgdaeb'.slice(0, fifths).includes(L) ? 1 : 0;
+  if (fifths < 0) return 'beadgcf'.slice(0, -fifths).includes(L) ? -1 : 0;
+  return 0;
+}
 const THIRD = 1 / 3;
 function duration(beats: number): { d: string; dots: number; trip: boolean } {
   const table: [number, string, number, boolean][] = [[4, 'w', 0, false], [3, 'h', 1, false], [2, 'h', 0, false], [1.5, 'q', 1, false], [1, 'q', 0, false], [0.75, '8', 1, false],
@@ -35,6 +43,8 @@ interface Props {
   hidePending?: boolean;
   /** spell black keys as flats */
   flats?: boolean;
+  /** key signature: sharps (+) or flats (-), drawn at the start; accidentals are then shown only against it */
+  fifths?: number;
 }
 
 interface Layout { mx: [number, number][]; ex: number[]; total: number }
@@ -44,7 +54,8 @@ interface Layout { mx: [number, number][]; ex: number[]; total: number }
  * when you reach the last measure on screen, the strip slides so that measure moves to the left
  * and the next ones come into view. A playhead follows the beat in timed mode.
  */
-export function Staff({ events, clef, timeSig, statuses, current = -1, playhead, highContrast, measureWidth = 250, height = 168, showTime = true, backing, grand = false, hidePending = false, flats = false }: Props) {
+export function Staff({ events, clef, timeSig, statuses, current = -1, playhead, highContrast, measureWidth = 250, height = 168, showTime = true, backing, grand = false, hidePending = false, flats: flatsProp = false, fifths }: Props) {
+  const flats = fifths !== undefined ? fifths < 0 : flatsProp;
   const view = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLDivElement>(null);
   const svgHost = useRef<HTMLDivElement>(null);
@@ -120,7 +131,7 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
       const w = mi === 0 ? first + measureWidth - 6 : measureWidth;
       const staves = clefs.map((c, l) => {
         const st = new Stave(x, ys[l], w);
-        if (mi === 0) { st.addClef(c); if (showTime) st.addTimeSignature(`${timeSig[0]}/${timeSig[1]}`); }
+        if (mi === 0) { st.addClef(c); if (fifths) st.addKeySignature(KEY_NAMES[fifths] ?? 'C'); if (showTime) st.addTimeSignature(`${timeSig[0]}/${timeSig[1]}`); }
         if (mi === nMeasures - 1) st.setEndBarType(3);
         st.setContext(ctx).draw();
         return st;
@@ -137,13 +148,21 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
       laneItems.forEach((items, l) => {
         if (!items.length) return;
         const c = clefs[l];
+        // accidentals carry through the bar: remember what each line or space has become
+        const barAlter = new Map<string, number>();
         const notes = items.map((it) => {
           const { d, dots } = duration(it.beats);
           const rest = it.pitches.length === 0;
           const sorted = [...it.pitches].sort((a, b2) => a - b2);
           const keys = rest ? [c === 'bass' ? 'd/3' : 'b/4'] : sorted.map((p) => midiToVexKey(p, flats));
           const n = new StaveNote({ clef: c, keys, duration: d + (rest ? 'r' : ''), auto_stem: true });
-          if (!rest) sorted.forEach((p, k) => { const nm = midiToVexKey(p, flats).split('/')[0]; if (nm.length > 1) n.addModifier(new Accidental(nm.slice(1)), k); });
+          if (!rest) sorted.forEach((p, k) => {
+            const vk = midiToVexKey(p, flats), [nm, oct] = vk.split('/');
+            const letter = nm[0], alter = nm.includes('#') ? 1 : nm.includes('b') ? -1 : 0;
+            const was = barAlter.get(letter + oct) ?? keyAlter(fifths ?? 0, letter);
+            if (alter !== was) n.addModifier(new Accidental(alter === 1 ? '#' : alter === -1 ? 'b' : 'n'), k);
+            barAlter.set(letter + oct, alter);
+          });
           if (dots) Dot.buildAndAttach([n], { all: true });
           const st = it.idx !== null ? statuses?.[it.idx] ?? 'pending' : 'pending';
           const hide = hidePending && !it.ghost && !rest && st !== 'correct' && st !== 'partial';
@@ -185,7 +204,7 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
     });
     layout.current = { mx, ex, total };
     if (strip.current) strip.current.style.width = `${total}px`;
-  }, [events, clef, timeSig, statuses, highContrast, measureWidth, height, bpb, showTime, backing, grand, hidePending, flats]);
+  }, [events, clef, timeSig, statuses, highContrast, measureWidth, height, bpb, showTime, backing, grand, hidePending, flats, fifths]);
 
   // fit the staff to the space it gets: shrink it when the view is shorter (phones in landscape) and
   // center it when the view is taller

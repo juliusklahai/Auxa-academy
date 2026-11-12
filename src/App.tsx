@@ -146,7 +146,7 @@ export default function App() {
             ? <LessonView key={`${lesson.id}-${exStart ?? ''}`} lesson={lesson} initialExercise={exStart} onNextLesson={nextLesson ? () => open(nextLesson) : undefined} nextLocked={!!nextLesson && !allowLesson(getAccount().ent, nextLesson)} />
             : <>
                 {tab === 'home' && <><InstallBanner /><Dashboard openLesson={open} /></>}
-                {tab === 'learn' && <LearnList openLesson={open} openSong={(id) => { setSongId(id); setTab('music'); }} />}
+                {tab === 'learn' && <LearnList openLesson={open} openSong={(id) => { setSongId(id); setTab('music'); }} openScore={(x) => { setXmlToOpen(x); setTab('music'); window.scrollTo({ top: 0 }); }} />}
                 {tab === 'music' && <MyMusic singPart={singPart} onSingHandled={() => setSingPart(null)} songId={songId} onSongHandled={() => setSongId(null)} xml={xmlToOpen} onXmlHandled={() => setXmlToOpen(null)} />}
                 {tab === 'voice' && <VoiceStudio openLesson={open} singChoir={(p) => { setSingPart(p); setTab('music'); }} openScore={(x) => { setXmlToOpen(x); setTab('music'); window.scrollTo({ top: 0 }); }} />}
                 {tab === 'studio' && <PianoStudio />}

@@ -33,6 +33,12 @@ export const NARRATION: Record<string, string> = {
   'C13-8#3': 'On an organ, the sound stops the moment you let go. So hold every note for its full length, and join it smoothly to the next one. If two chords share a note, just keep holding it.',
   'C13-8#4': 'On an organ, start with a soft, normal sound, called an eight-foot stop. Add a four-foot stop to make it brighter. Your feet play the bass on the pedals, so your left hand only plays the tenor.',
   // ---- foundations added from the method-book review
+  'L1-7#0': "Learn three landmark notes. Treble G: the treble clef curls around its line. Bass F: the bass clef's two dots sit on either side of its line. Middle C: on its own little line between the staves.",
+  'L1-7#1': "A step goes from a line to the very next space, or a space to the next line. On the piano, that's the very next white key. One step up from G is A.",
+  'L1-7#2': 'A skip goes from a line to the next line, jumping over one key. One skip up from G is B. Look which way the notes go and how far, and your finger will find it.',
+  'L5-6#0': "Instead of writing a sharp next to every F, music puts it once at the start of each line. That's the key signature. It counts for that letter everywhere, all the way through.",
+  'L5-6#1': 'Sharps always come in the same order, starting with F. With sharps, go up one key from the last sharp to name the key. One sharp means G major. One flat means F major.',
+  'L5-6#2': 'A natural sign cancels a sharp or flat. Play the white key. It lasts until the end of the bar, then the key signature comes back.',
   'L0-0#0': "Let's get set before we play. Sit on the front half of the bench, in the middle of the piano. Your arms are level with the keys and your feet are flat on the floor. Shoulders down, sit tall, and breathe.",
   'L0-0#1': 'Let your arms hang down loose. Now lift your hands up to the keys, but keep that same soft shape. Round fingers, like holding a ball. That is your piano hand.',
   'L0-0#2': 'Put your thumb behind your middle finger to help it. Now let your whole arm drop into a black key, like a heavy feather, then float back up. Drop, and let go. The sound comes from weight, not from pushing.',

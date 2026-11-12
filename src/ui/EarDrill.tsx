@@ -6,6 +6,7 @@ import { makeQuestion, optionLabel, type DrillQuestion, type Sound } from '../cu
 import { onLearnerNote } from '../input/bus';
 import { setExpected } from '../input/expect';
 import { Icon } from './Icon';
+import { Staff } from './Staff';
 import { Piano, type KeyMark } from './Piano';
 import { bumpProgress, progress, useSettings } from './settings';
 import { say, stopSpeaking } from './voice';
@@ -120,6 +121,7 @@ export function EarDrill({ exercise, onNext }: { exercise: Exercise; onNext?: ()
           <span className="drill-round">Round {round + 1} of {rounds}</span>
           <div className="drill-dots">{Array.from({ length: rounds }, (_, i) => <i key={i} className={i < round ? 'past' : i === round ? 'now' : ''} />)}</div>
         </div>
+        {q.staff && <div className="drill-staff"><Staff events={[{ beat: 0, beats: 4, pitches: q.staff.midi }]} clef={q.staff.clef} timeSig={[4, 4]} fifths={q.staff.fifths} showTime={false} measureWidth={150} /></div>}
         {q.map && <div className="road" aria-label={`Bars: ${q.map.join(' ')}`}>{q.map.map((tok, i) => /^\d$/.test(tok) ? <span key={i} className="road-bar">{tok}</span> : tok.startsWith('[') ? <span key={i} className="road-end">{tok.slice(1)}</span> : <span key={i} className={`road-sign ${/[|:]/.test(tok) ? 'rep' : ''}`}>{tok}</span>)}</div>}
         <p className="drill-prompt">{q.prompt}</p>
         <div className="drill-listen">

@@ -5,7 +5,7 @@ import { nameToMidi } from '../core/music';
 import type { Clef, Exercise, Hand, Lesson, ScoreEvent, SkillId } from '../core/types';
 import { frac, MORE_LESSONS, type LessonDef } from './levels';
 import { ADVANCED_LESSONS } from './advanced';
-import { COUNT_LESSON, RHYTHM_LESSONS, SETUP_LESSON } from './basics';
+import { COUNT_LESSON, KEYSIG_LESSON, LANDMARK_LESSON, RHYTHM_LESSONS, SETUP_LESSON } from './basics';
 import { CHURCH_LESSONS } from './church';
 import { playAlongs, type PlayAlongSpec } from './playalong';
 
@@ -296,6 +296,10 @@ function after(list: Lesson[], id: string, add: Lesson[]): Lesson[] {
 }
 let piano: Lesson[] = [pa(SETUP_LESSON), ...pianoBase, ...more, ...CHURCH_LESSONS.map(pa)];
 piano = after(piano, 'L1-2', [pa(COUNT_LESSON)]);
+piano = after(piano, 'L1-3', [pa(LANDMARK_LESSON)]);
+piano = after(piano, 'L5-2', [pa(KEYSIG_LESSON)]);
+// from here on, key lessons show their key signature
+for (const l of piano) if (l.id === 'L5-3') l.exercises.forEach((e) => { if (!e.drill && e.fifths === undefined) e.fifths = 2; });
 piano = after(piano, 'L4-5', RHYTHM_LESSONS.map(pa));
 export const LESSONS: Lesson[] = [...piano, ...BASE_LESSONS.filter((l) => l.track === 'voice')];
 
