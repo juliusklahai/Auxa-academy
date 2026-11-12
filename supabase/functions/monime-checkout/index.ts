@@ -2,8 +2,8 @@
 import { APP_URL, caller, cors, json } from '../_shared/util.ts';
 
 const PASSES: Record<string, { name: string; env: string }> = {
-  pass_pro: { name: 'Maestro Pro, 1 month', env: 'MONIME_PRICE_PRO' },
-  pass_plus: { name: 'Maestro Plus, 1 month', env: 'MONIME_PRICE_PLUS' },
+  pass_pro: { name: 'Auxa Pro, 1 month', env: 'MONIME_PRICE_PRO' },
+  pass_plus: { name: 'Auxa Plus, 1 month', env: 'MONIME_PRICE_PLUS' },
 };
 
 Deno.serve(async (req) => {

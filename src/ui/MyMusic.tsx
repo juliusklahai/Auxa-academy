@@ -31,7 +31,7 @@ import type { KeyMark } from './Piano';
 import { PitchRoll } from './PitchRoll';
 import { ScoreView, noteKey, type ScoreViewHandle } from './ScoreView';
 import { isPhone, useFocusMode } from './focus';
-import { DockFab, FocusBar, FloatHead, RotateHint } from './FocusBar';
+import { FocusBar, FloatHead, RotateHint } from './FocusBar';
 import { progress, bumpProgress, setSettings, useSettings } from './settings';
 
 interface Mix { mute: boolean; solo: boolean; vol: number; inst: Instrument }
@@ -477,13 +477,53 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
     );
   }
 
+  const dock = (
+      <div className="dock has-more">
+        <button className={`dock-btn lime ${run === 'practice' ? 'live' : ''}`} onClick={run === 'practice' ? stop : () => { if (settings.autoFocus && !fm.focus) fm.enter(); void practice(); }} disabled={!targets.size} aria-label={run === 'practice' ? 'Stop practicing' : 'Practice'}><Icon name={run === 'practice' ? 'pause' : 'play'} size={18} /></button>
+        <span className="dock-label">{run === 'practice' ? 'Stop' : 'Practice'}</span>
+        <button className={`dock-btn dock-demo ${run === 'listen' ? 'on' : ''}`} onClick={run === 'listen' ? stop : () => { if (settings.autoFocus && settings.hands && settings.handsListen && !fm.focus) fm.enter(); listen(); }} aria-label={run === 'listen' ? 'Stop playback' : 'Listen'}><Icon name={run === 'listen' ? 'pause' : 'wave'} size={17} /></button>
+        <span className="dock-label">{run === 'listen' ? 'Stop' : 'Listen'}</span>
+        <span className="dock-sep" />
+        <button className={`dock-btn ${more ? 'on' : ''}`} onClick={() => setMore(!more)} aria-expanded={more} aria-label="Tempo, bars, key, loop and click"><Icon name="sliders" size={16} /></button>
+        <span className="dock-summary">{Math.round(bpm)} bpm · bars {from + 1}–{to + 1}{tr ? ` · ${tr > 0 ? '+' : ''}${tr}` : ''}{loop ? ' · loop' : ''}</span>
+        <div className={`dock-more ${more ? 'open' : ''}`}>
+        <div className="row"><div className="dock-group">
+          {[50, 75, 100].map((p) => <button key={p} className={`dock-chip ${tempoPct === p ? 'on' : ''}`} disabled={run !== 'idle'} onClick={() => setTempoPct(p)}>{p}%</button>)}
+          <input className="dock-range" type="range" min={20} max={150} step={5} value={tempoPct} disabled={run !== 'idle'} onChange={(e) => setTempoPct(+e.target.value)} aria-label="Tempo percent" />
+          <span className="dock-label">{Math.round(bpm)} bpm</span>
+        </div>
+        </div><div className="row">
+        <span className="dock-label">Bars</span>
+        <Select className="dock-select" value={from} disabled={run !== 'idle'} onChange={(e) => { const v = +e.target.value; setFrom(v); if (to < v) setTo(v); }} aria-label="From measure">{measOpts}</Select>
+        <span className="dock-label">to</span>
+        <Select className="dock-select" value={to} disabled={run !== 'idle'} onChange={(e) => { const v = +e.target.value; setTo(v); if (from > v) setFrom(v); }} aria-label="To measure">{measOpts}</Select>
+        </div><div className="row">
+        <span className="dock-label">Key</span>
+        <button className="dock-btn sm" disabled={run !== 'idle' || tr <= -12} onClick={() => setTr(tr - 1)} aria-label="Transpose down a semitone">−</button>
+        <span className="dock-label keylabel" title="Transpose for playback, practice and the notation">{tr === 0 ? 'Written' : `${tr > 0 ? '+' : ''}${tr} · ${transposedKey(score.keyFifths, tr).replace(' major', '')}`}</span>
+        <button className="dock-btn sm" disabled={run !== 'idle' || tr >= 12} onClick={() => setTr(tr + 1)} aria-label="Transpose up a semitone">+</button>
+        </div><div className="row">
+        <button className={`dock-btn ${loop ? 'on' : ''}`} onClick={() => setLoop(!loop)} aria-label="Loop"><Icon name="restart" size={16} /></button>
+        <span className="dock-label">Loop</span>
+        <button className={`dock-btn ${metro ? 'on' : ''}`} onClick={() => setMetro(!metro)} aria-label="Metronome"><Icon name="metro" size={16} /></button>
+        <span className="dock-label">Click</span>
+          </div>
+        </div>
+        <span className="dock-fill" />
+        <span className="dock-status"><Icon name={sing || input === 'Microphone' ? 'mic' : input === 'MIDI' ? 'midi' : 'keys'} size={15} /> Input: {input}</span>
+        {/* in full screen the bar above already has Exit, so no second close here */}
+        {!fm.focus && <button className="dock-btn dock-fs" onClick={fm.toggle} aria-label="Full screen practice" title="Full screen practice"><Icon name="expand" size={16} /></button>}
+      </div>
+  );
+
   return (
     <div className={`page practice-root ${fm.focus ? 'focus' : ''} ${fm.panel ? 'show-' + fm.panel : ''} ${fm.dockOpen ? 'dock-open' : ''}`}>
-      {fm.focus && <FocusBar title={score.title} panel={fm.panel} onPanel={fm.togglePanel} onExit={fm.exit} infoLabel="Teacher" settingsLabel="Parts & mixer" />}
+      {fm.focus && <FocusBar title={score.title} panel={fm.panel} onPanel={fm.togglePanel} onExit={fm.exit} infoLabel="Teacher" settingsLabel="Parts & mixer" settingsIcon="people" tools={<>
+        <button className={`fbtn tool lime ${run === 'practice' ? 'live' : ''}`} onClick={run === 'practice' ? stop : () => void practice()} disabled={!targets.size} aria-label={run === 'practice' ? 'Stop practicing' : 'Practice'}><Icon name={run === 'practice' ? 'pause' : 'play'} size={16} /><span className="fl">{run === 'practice' ? 'Stop' : 'Practice'}</span></button>
+        <button className={`fbtn tool ${run === 'listen' ? 'on' : ''}`} onClick={run === 'listen' ? stop : listen} aria-label={run === 'listen' ? 'Stop playback' : 'Listen'}><Icon name={run === 'listen' ? 'pause' : 'wave'} size={16} /><span className="fl">{run === 'listen' ? 'Stop' : 'Listen'}</span></button>
+        <button className={`fbtn tool ${fm.dockOpen ? 'on' : ''}`} onClick={fm.toggleDock} aria-expanded={fm.dockOpen} aria-label="Options"><Icon name="sliders" size={16} /><span className="fl">Options</span></button>
+      </>} />}
       {fm.focus && fm.rotateHint && <RotateHint onDismiss={fm.dismissRotate} />}
-      {fm.focus && <DockFab open={fm.dockOpen} onToggle={fm.toggleDock} primary={
-        <button className={`fab lime ${run !== 'idle' ? 'live' : ''}`} onClick={run !== 'idle' ? stop : () => void practice()} disabled={!targets.size} aria-label={run !== 'idle' ? 'Stop' : 'Practice'}><Icon name={run !== 'idle' ? 'pause' : 'play'} size={22} /></button>
-      } />}
       <PageHead kicker={score.composer || 'Imported score'} title={score.title} stats={[
         ['Tempo', `${tempos.length > 1 ? `${Math.round(Math.min(...tempos) * tempoPct / 100)}–${Math.round(Math.max(...tempos) * tempoPct / 100)}` : Math.round(bpm)} bpm`],
         ['Time', `${score.timeSig[0]}/${score.timeSig[1]}`],
@@ -501,6 +541,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
         <button className="chip" onClick={() => { stop(); setScore(null); }}>Library</button>
         <input ref={fileIn} type="file" accept=".musicxml,.xml,.mxl" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ''; }} />
       </div>
+      {!fm.focus && <div className="ex-toolbar mm-toolbar">{dock}</div>}
       {(err || score.warnings.length > 0) && <p className="small tip">{err || score.warnings.join(' ')}</p>}
       <section className="play-grid">
         <div className="stage">
@@ -513,25 +554,6 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
             <ScoreView ref={view} xml={shownXml} zoom={zoom} transpose={tr} horizontal={fm.focus} onError={setErr} />
             {feed[0] && !report && <div key={feed[0].id} className={`latest fb ${feed[0].kind}`}><span className="ic">{icon(feed[0].kind)}</span>{feed[0].text}</div>}
           </div>
-          {sing ? (
-            <div className="card roll-card">
-              <div className="card-head"><b>Your voice</b><span className="muted small">Line = you, bars = your part</span></div>
-              <PitchRoll octaveFree
-                hold={() => (session.current && mode === 'wait' && session.current.state === 'LISTENING' ? build.current?.exercise.events[session.current.currentIndex()]?.pitches[0] ?? null : null)}
-                targets={() => { const c = clock.current, bb = build.current; return c && bb && mode === 'timed' ? bb.exercise.events.map((e) => ({ midi: e.pitches[0], startMs: c.t0 + c.tl.msAt(bb.startQ + e.beat), endMs: c.t0 + c.tl.msAt(bb.startQ + e.beat + e.beats) - 40 })) : []; }} />
-            </div>
-          ) : (
-            <KeyboardArea lo={lo} hi={hi} marks={marks} labels={settings.labels} baseHeight={170} scrollTo={curEv?.pitches[0] ?? targetPitches[0]}
-              handsVisible={run !== 'listen' || settings.handsListen}
-              extra={<button className={`kb-btn ${settings.handsListen ? 'on' : ''}`} onClick={() => setSettings({ handsListen: !settings.handsListen })} title="Show the hands playing while you listen"><Icon name="wave" size={13} /><span>Hands in Listen {settings.handsListen ? 'on' : 'off'}</span></button>}
-              hands={hb ? {
-                events: hb.exercise.events, exerciseId: hb.exercise.id,
-                timeOf: (beat) => { const tl = clock.current?.tl ?? tlFor(hb.startQ); return (tl.msAt(hb.startQ + beat) - tl.msAt(hb.startQ)) / 1000; },
-                timeKey: `${tempoPct}|${followTempo}|${hb.startQ}|${run}`,
-                clock: () => { const c = clock.current; if (!c || !(run === 'listen' || (run === 'practice' && mode === 'timed'))) return null; return (performance.now() - c.t0 - (c.tl.msAt(hb.startQ) - c.tl.msAt(c.q0))) / 1000; },
-                index: handIdx, active: run !== 'idle', demo: !!s && run === 'practice' && s.state === 'LISTENING' && mode === 'wait', correction: fix && mode === 'wait' && run === 'practice',
-              } : undefined} />
-          )}
         </div>
         <aside className="side">
           <FloatHead title={fm.panel === 'settings' ? 'Parts & mixer' : 'Teacher'} onClose={fm.closePanel} />
@@ -617,42 +639,28 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
               </div>}
         </aside>
       </section>
-      <div className="dock has-more">
-        <button className={`dock-btn lime ${run === 'practice' ? 'live' : ''}`} onClick={run === 'practice' ? stop : () => { if (settings.autoFocus && !fm.focus) fm.enter(); void practice(); }} disabled={!targets.size} aria-label={run === 'practice' ? 'Stop practicing' : 'Practice'}><Icon name={run === 'practice' ? 'pause' : 'play'} size={18} /></button>
-        <span className="dock-label">{run === 'practice' ? 'Stop' : 'Practice'}</span>
-        <button className={`dock-btn ${run === 'listen' ? 'on' : ''}`} onClick={run === 'listen' ? stop : () => { if (settings.autoFocus && settings.hands && settings.handsListen && !fm.focus) fm.enter(); listen(); }} aria-label={run === 'listen' ? 'Stop playback' : 'Listen'}><Icon name={run === 'listen' ? 'pause' : 'wave'} size={17} /></button>
-        <span className="dock-label">{run === 'listen' ? 'Stop' : 'Listen'}</span>
-        <span className="dock-sep" />
-        <button className={`dock-btn ${more ? 'on' : ''}`} onClick={() => setMore(!more)} aria-expanded={more} aria-label="Tempo, bars, key, loop and click"><Icon name="sliders" size={16} /></button>
-        <span className="dock-summary">{Math.round(bpm)} bpm · bars {from + 1}–{to + 1}{tr ? ` · ${tr > 0 ? '+' : ''}${tr}` : ''}{loop ? ' · loop' : ''}</span>
-        <div className={`dock-more ${more ? 'open' : ''}`}>
-        <div className="row"><div className="dock-group">
-          {[50, 75, 100].map((p) => <button key={p} className={`dock-chip ${tempoPct === p ? 'on' : ''}`} disabled={run !== 'idle'} onClick={() => setTempoPct(p)}>{p}%</button>)}
-          <input className="dock-range" type="range" min={20} max={150} step={5} value={tempoPct} disabled={run !== 'idle'} onChange={(e) => setTempoPct(+e.target.value)} aria-label="Tempo percent" />
-          <span className="dock-label">{Math.round(bpm)} bpm</span>
-        </div>
-        </div><div className="row">
-        <span className="dock-label">Bars</span>
-        <Select className="dock-select" value={from} disabled={run !== 'idle'} onChange={(e) => { const v = +e.target.value; setFrom(v); if (to < v) setTo(v); }} aria-label="From measure">{measOpts}</Select>
-        <span className="dock-label">to</span>
-        <Select className="dock-select" value={to} disabled={run !== 'idle'} onChange={(e) => { const v = +e.target.value; setTo(v); if (from > v) setFrom(v); }} aria-label="To measure">{measOpts}</Select>
-        </div><div className="row">
-        <span className="dock-label">Key</span>
-        <button className="dock-btn sm" disabled={run !== 'idle' || tr <= -12} onClick={() => setTr(tr - 1)} aria-label="Transpose down a semitone">−</button>
-        <span className="dock-label keylabel" title="Transpose for playback, practice and the notation">{tr === 0 ? 'Written' : `${tr > 0 ? '+' : ''}${tr} · ${transposedKey(score.keyFifths, tr).replace(' major', '')}`}</span>
-        <button className="dock-btn sm" disabled={run !== 'idle' || tr >= 12} onClick={() => setTr(tr + 1)} aria-label="Transpose up a semitone">+</button>
-        </div><div className="row">
-        <button className={`dock-btn ${loop ? 'on' : ''}`} onClick={() => setLoop(!loop)} aria-label="Loop"><Icon name="restart" size={16} /></button>
-        <span className="dock-label">Loop</span>
-        <button className={`dock-btn ${metro ? 'on' : ''}`} onClick={() => setMetro(!metro)} aria-label="Metronome"><Icon name="metro" size={16} /></button>
-        <span className="dock-label">Click</span>
+      <div className="kb-full">
+        {sing ? (
+          <div className="card roll-card">
+            <div className="card-head"><b>Your voice</b><span className="muted small">Line = you, bars = your part</span></div>
+            <PitchRoll octaveFree
+              hold={() => (session.current && mode === 'wait' && session.current.state === 'LISTENING' ? build.current?.exercise.events[session.current.currentIndex()]?.pitches[0] ?? null : null)}
+              targets={() => { const c = clock.current, bb = build.current; return c && bb && mode === 'timed' ? bb.exercise.events.map((e) => ({ midi: e.pitches[0], startMs: c.t0 + c.tl.msAt(bb.startQ + e.beat), endMs: c.t0 + c.tl.msAt(bb.startQ + e.beat + e.beats) - 40 })) : []; }} />
           </div>
-        </div>
-        <span className="dock-fill" />
-        <span className="dock-status"><Icon name={sing || input === 'Microphone' ? 'mic' : input === 'MIDI' ? 'midi' : 'keys'} size={15} /> Input: {input}</span>
-        {/* in full screen the bar above already has Exit, so no second close here */}
-        {!fm.focus && <button className="dock-btn dock-fs" onClick={fm.toggle} aria-label="Full screen practice" title="Full screen practice"><Icon name="expand" size={16} /></button>}
+        ) : (
+          <KeyboardArea lo={lo} hi={hi} marks={marks} labels={settings.labels} baseHeight={170} scrollTo={curEv?.pitches[0] ?? targetPitches[0]}
+            handsVisible={run !== 'listen' || settings.handsListen}
+            extra={<button className={`kb-btn ${settings.handsListen ? 'on' : ''}`} onClick={() => setSettings({ handsListen: !settings.handsListen })} title="Show the hands playing while you listen"><Icon name="wave" size={13} /><span>Hands in Listen {settings.handsListen ? 'on' : 'off'}</span></button>}
+            hands={hb ? {
+              events: hb.exercise.events, exerciseId: hb.exercise.id,
+              timeOf: (beat) => { const tl = clock.current?.tl ?? tlFor(hb.startQ); return (tl.msAt(hb.startQ + beat) - tl.msAt(hb.startQ)) / 1000; },
+              timeKey: `${tempoPct}|${followTempo}|${hb.startQ}|${run}`,
+              clock: () => { const c = clock.current; if (!c || !(run === 'listen' || (run === 'practice' && mode === 'timed'))) return null; return (performance.now() - c.t0 - (c.tl.msAt(hb.startQ) - c.tl.msAt(c.q0))) / 1000; },
+              index: handIdx, active: run !== 'idle', demo: !!s && run === 'practice' && s.state === 'LISTENING' && mode === 'wait', correction: fix && mode === 'wait' && run === 'practice',
+            } : undefined} />
+        )}
       </div>
+      {fm.focus && dock}
     </div>
   );
 }
@@ -684,7 +692,7 @@ export function SongShelf({ onOpen }: { onOpen: (id: string) => void }) {
               <button key={sg.id} className="song-card clean" onClick={() => onOpen(sg.id)}>
                 {!allowSong(ent, sg) && <span className="pro-tag">Pro</span>}
                 <b>{sg.title}</b>
-                <small className="muted">{sg.original ? 'Maestro original' : sg.composer}</small>
+                <small className="muted">{sg.original ? 'Auxa original' : sg.composer}</small>
                 <span className="song-about">{sg.about}</span>
                 <span className="song-with">With {[...new Set(Object.values(sg.colors).map((c) => INST_ICON[c!] ?? c))].slice(0, 3).join(', ') || 'piano'}{sg.groove !== 'none' ? ' and a beat' : ''}</span>
               </button>

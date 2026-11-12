@@ -23,7 +23,7 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
   const shown = name || a.profile?.display_name || '';
   const svg = useMemo(() => certificateSvg(shown, level, date), [shown, level, date]);
   const [busy, setBusy] = useState('');
-  const file = `Maestro-Level-${level}-certificate.png`;
+  const file = `Auxa-Level-${level}-certificate.png`;
   const save = async () => {
     setBusy('save');
     try { const b = await toPng(svg); const u = URL.createObjectURL(b); const el = document.createElement('a'); el.href = u; el.download = file; el.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); } finally { setBusy(''); }
@@ -33,7 +33,7 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
     try {
       const b = await toPng(svg); const f = new File([b], file, { type: 'image/png' });
       const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean };
-      if (nav.canShare?.({ files: [f] })) await navigator.share({ files: [f], title: `Level ${level} certificate`, text: `I finished Level ${level} on Maestro Academy!` });
+      if (nav.canShare?.({ files: [f] })) await navigator.share({ files: [f], title: `Level ${level} certificate`, text: `I finished Level ${level} on Auxa Academy!` });
       else await save();
     } catch { /* closed the share sheet */ } finally { setBusy(''); }
   };

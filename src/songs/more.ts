@@ -14,7 +14,7 @@ interface Def {
 }
 function song(d: Def): Song {
   const parts = [piano(d.rh, d.lh), ...(d.extra ?? []).map((x, i) => line(`P${i + 2}`, x.name, x.program, x.clef, x.music))];
-  const spec: SongSpec = { title: d.title, composer: d.composer, arranger: d.original ? undefined : 'Maestro arrangement', fifths: d.fifths, beats: d.beats, beatType: d.beatType ?? 4, tempo: d.tempo, pickup: d.pickup, parts };
+  const spec: SongSpec = { title: d.title, composer: d.composer, arranger: d.original ? undefined : 'Auxa arrangement', fifths: d.fifths, beats: d.beats, beatType: d.beatType ?? 4, tempo: d.tempo, pickup: d.pickup, parts };
   const colors: Song['colors'] = {};
   (d.extra ?? []).forEach((x, i) => { colors[`P${i + 2}`] = x.color; });
   return { id: d.id, title: d.title, composer: d.composer, level: d.level, groove: d.groove, about: d.about, spec, colors, original: d.original };
@@ -73,14 +73,14 @@ export const MORE_SONGS: Song[] = [
     lh: 'C3:3 | C3:3 | G2:3 | C3:3 | C3:3 | C3:3 | G2:3 | C3:3',
   }),
   song({
-    id: 'o-firstsong', title: 'Little Copper Kite', composer: 'Maestro original', original: true, level: 'Beginner', groove: 'soft', fifths: 0, beats: 4, tempo: 90,
+    id: 'o-firstsong', title: 'Little Copper Kite', composer: 'Auxa original', original: true, level: 'Beginner', groove: 'soft', fifths: 0, beats: 4, tempo: 90,
     about: 'Original practice piece in C position. Steps, one small skip, and a left hand that only plays C and G.',
     rh: 'C4 D4 E4:2 | E4 F4 G4:2 | G4 F4 E4 D4 | C4:2 E4:2 | D4 E4 F4:2 | G4 E4 C4:2 | D4 D4 E4 D4 | C4:4',
     lh: 'C3:4 | C3:4 | G2:4 | C3:4 | G2:4 | C3:4 | G2:4 | C3:4',
     extra: [flute('E5:4 | G5:4 | B4:4 | C5:4 | B4:4 | C5:4 | B4:2 G4:2 | C5:4')],
   }),
   song({
-    id: 'o-robot', title: 'Robot Parade', composer: 'Maestro original', original: true, level: 'Beginner', groove: 'soft', fifths: 0, beats: 4, tempo: 104,
+    id: 'o-robot', title: 'Robot Parade', composer: 'Auxa original', original: true, level: 'Beginner', groove: 'soft', fifths: 0, beats: 4, tempo: 104,
     about: 'Original piece for steady pulse: hands take turns, so you never play both at once.',
     rh: 'C4 C4 G4:2 | R:4 | E4 E4 G4:2 | R:4 | F4 E4 D4 C4 | R:4 | D4 E4 C4:2 | R:4',
     lh: 'R:4 | C3 C3 G2:2 | R:4 | C3 E3 G3:2 | R:4 | F3 E3 D3 C3 | R:4 | G2 G2 C3:2',
@@ -114,14 +114,14 @@ export const MORE_SONGS: Song[] = [
     lh: 'R | C3 E3+G3 E3+G3 | C3 E3+G3 E3+G3 | F2 A2+C3 A2+C3 | C3 E3+G3 E3+G3 | G2 B2+D3 B2+D3 | G2 B2+D3 B2+D3 | G2 B2+F3 B2+F3 | C3 E3+G3:2',
   }),
   song({
-    id: 'o-harbor', title: 'Harbor Lights at Dusk', composer: 'Maestro original', original: true, level: 'Easy', groove: 'gentle6', fifths: 1, beats: 3, tempo: 84,
+    id: 'o-harbor', title: 'Harbor Lights at Dusk', composer: 'Auxa original', original: true, level: 'Easy', groove: 'gentle6', fifths: 1, beats: 3, tempo: 84,
     about: 'Original piece in G major. The left hand plays broken chords (root, fifth, tenth); the right hand sings over it.',
     rh: 'B4:2 A4 | G4:2 D4 | E4 F#4 G4 | A4:3 | B4:2 C5 | D5:2 B4 | A4 G4 F#4 | G4:3',
     lh: 'G2 D3 B3 | E2 B2 G3 | C3 G3 E3 | D3 A3 F#3 | G2 D3 B3 | B2 F#3 D3 | D3 A3 C4 | G2 D3 G3',
     extra: [cello('G2:3 | E2:3 | C3:3 | D3:3 | G2:3 | B2:3 | D3:3 | G2:3')],
   }),
   song({
-    id: 'o-rain', title: 'Rainy Window Waltz', composer: 'Maestro original', original: true, level: 'Easy', groove: 'waltz', fifths: -1, beats: 3, tempo: 100,
+    id: 'o-rain', title: 'Rainy Window Waltz', composer: 'Auxa original', original: true, level: 'Easy', groove: 'waltz', fifths: -1, beats: 3, tempo: 100,
     about: 'Original waltz in F major with B flat. Oom-pah-pah left hand, flowing right hand with eighth notes.',
     rh: 'A4 C5 F5 | E5:2 D5 | C5:0.5 D5:0.5 C5 Bb4 | A4:3 | G4 A4 Bb4 | C5:2 A4 | G4:0.5 A4:0.5 G4 E4 | F4:3',
     lh: 'F2 A2+C3 A2+C3 | C3 E3+G3 E3+G3 | F2 A2+C3 A2+C3 | F2 A2+C3 A2+C3 | C3 E3+Bb3 E3+Bb3 | F2 A2+C3 A2+C3 | C3 E3+Bb3 E3+Bb3 | F2 A2+C3 A2+C3',
@@ -140,14 +140,14 @@ export const MORE_SONGS: Song[] = [
     lh: 'A2:0.5 E3+C4:0.5 E3+C4:0.5 E3+C4:0.5 | A2:0.5 E3+C4:0.5 E3+C4:0.5 E3+C4:0.5 | A2:0.5 E3+C4:0.5 E3+C4:0.5 E3+C4:0.5 | A2:0.5 E3+C4:0.5 E3+C4:0.5 E3+C4:0.5 | A2:0.5 E3+C4:0.5 D3+F3:0.5 D3+F3:0.5 | E3+B3:0.5 E3+C4:0.5 C3+A3:0.5 D3+A3:0.5 | E3+G#3:0.5 E3+A3:0.5 E3+G#3:0.5 E2:0.5 | A2:2',
   }),
   song({
-    id: 'o-fox', title: 'The Wandering Fox', composer: 'Maestro original', original: true, level: 'Intermediate', groove: 'soft', fifths: 0, beats: 4, tempo: 96,
+    id: 'o-fox', title: 'The Wandering Fox', composer: 'Auxa original', original: true, level: 'Intermediate', groove: 'soft', fifths: 0, beats: 4, tempo: 96,
     about: 'Original piece in A minor with syncopation and an Alberti bass in the left hand.',
     rh: 'A4 C5:0.5 E5:1.5 D5 | C5:0.5 B4:0.5 A4 B4:2 | G#4 B4:0.5 E5:1.5 D5 | C5:0.5 B4:0.5 C5 A4:2 | F5 E5:0.5 D5:1.5 C5 | D5:0.5 C5:0.5 B4 C5:2 | B4:0.5 C5:0.5 D5 E5 G#4 | A4:4',
     lh: 'A2:0.5 E3:0.5 C3:0.5 E3:0.5 A2:0.5 E3:0.5 C3:0.5 E3:0.5 | G2:0.5 D3:0.5 B2:0.5 D3:0.5 G2:0.5 D3:0.5 B2:0.5 D3:0.5 | E2:0.5 B2:0.5 G#2:0.5 B2:0.5 E2:0.5 B2:0.5 G#2:0.5 B2:0.5 | A2:0.5 E3:0.5 C3:0.5 E3:0.5 A2:0.5 E3:0.5 C3:0.5 E3:0.5 | D2:0.5 A2:0.5 F2:0.5 A2:0.5 D2:0.5 A2:0.5 F2:0.5 A2:0.5 | G2:0.5 D3:0.5 B2:0.5 D3:0.5 C3:0.5 G3:0.5 E3:0.5 G3:0.5 | E2:0.5 B2:0.5 G#2:0.5 B2:0.5 E2:0.5 B2:0.5 G#2:0.5 B2:0.5 | A2:4',
     extra: [violin('E5:4 | D5:4 | B4:4 | C5:4 | A5:4 | G5:2 E5:2 | E5:2 B4:2 | A4:4')],
   }),
   song({
-    id: 'o-lighthouse', title: 'Lighthouse Nocturne', composer: 'Maestro original', original: true, level: 'Intermediate', groove: 'none', fifths: -3, beats: 4, tempo: 70,
+    id: 'o-lighthouse', title: 'Lighthouse Nocturne', composer: 'Auxa original', original: true, level: 'Intermediate', groove: 'none', fifths: -3, beats: 4, tempo: 70,
     about: 'Original nocturne in E flat major (three flats). Wide left-hand arpeggios under a singing melody.',
     rh: 'G4:2 Bb4:1.5 Ab4:0.5 | G4:3 Eb4 | F4:2 Ab4:1.5 G4:0.5 | F4:4 | Eb5:2 D5:1.5 C5:0.5 | Bb4:2 G4:2 | Ab4:1.5 G4:0.5 F4 D4 | Eb4:4',
     lh: 'Eb2:0.5 Bb2:0.5 Eb3:0.5 G3:0.5 Bb3:0.5 G3:0.5 Eb3:0.5 Bb2:0.5 | Eb2:0.5 Bb2:0.5 Eb3:0.5 G3:0.5 Bb3:0.5 G3:0.5 Eb3:0.5 Bb2:0.5 | Bb1:0.5 F2:0.5 Bb2:0.5 D3:0.5 Ab3:0.5 D3:0.5 Bb2:0.5 F2:0.5 | Bb1:0.5 F2:0.5 Bb2:0.5 D3:0.5 Ab3:0.5 D3:0.5 Bb2:0.5 F2:0.5 | C2:0.5 G2:0.5 C3:0.5 Eb3:0.5 G3:0.5 Eb3:0.5 C3:0.5 G2:0.5 | G1:0.5 D2:0.5 G2:0.5 Bb2:0.5 D3:0.5 Bb2:0.5 G2:0.5 D2:0.5 | Ab1:0.5 Eb2:0.5 Ab2:0.5 C3:0.5 Bb1:0.5 F2:0.5 Bb2:0.5 D3:0.5 | Eb2:0.5 Bb2:0.5 Eb3:0.5 G3:0.5 Eb3:2',
@@ -161,7 +161,7 @@ export const MORE_SONGS: Song[] = [
     lh: 'C4+E4:4 | C4+D4:4 | B3+D4:4 | C4+E4:4 | C4+E4:4 | C4+D4:4 | B3+D4:4 | B3+C4:4 | A3+C4:4 | D3+A3:4 | G3+B3:4 | C3:4',
   }),
   song({
-    id: 'o-toccatina', title: 'Copper Comet Toccatina', composer: 'Maestro original', original: true, level: 'Advanced', groove: 'soft', fifths: 4, beats: 4, tempo: 108,
+    id: 'o-toccatina', title: 'Copper Comet Toccatina', composer: 'Auxa original', original: true, level: 'Advanced', groove: 'soft', fifths: 4, beats: 4, tempo: 108,
     about: 'Original study in E major (four sharps): sixteenth-note runs in the right hand, octave leaps and chords in the left.',
     rh: 'E5:0.25 D#5:0.25 C#5:0.25 B4:0.25 G#4:0.25 B4:0.25 E5:0.25 G#5:0.25 F#5:0.25 E5:0.25 D#5:0.25 C#5:0.25 B4:1 | A4:0.25 B4:0.25 C#5:0.25 D#5:0.25 E5:0.25 F#5:0.25 G#5:0.25 A5:0.25 G#5:1 E5:1 | C#5:0.25 D#5:0.25 E5:0.25 C#5:0.25 A4:0.25 C#5:0.25 E5:0.25 A5:0.25 G#5:0.25 F#5:0.25 E5:0.25 D#5:0.25 C#5:1 | B4:0.25 C#5:0.25 D#5:0.25 E5:0.25 F#5:0.25 G#5:0.25 A5:0.25 B5:0.25 E6:2',
     lh: 'E2:0.5 E3:0.5 G#3+B3:1 B1:0.5 B2:0.5 F#3+A3:1 | A1:0.5 A2:0.5 C#3+E3:1 E2:0.5 E3:0.5 G#3+B3:1 | A1:0.5 A2:0.5 C#3+E3:1 F#2:0.5 F#3:0.5 A3+C#4:1 | B1:0.5 B2:0.5 D#3+F#3+A3:1 E2:0.5 B2:0.5 E3+G#3+B3:1',

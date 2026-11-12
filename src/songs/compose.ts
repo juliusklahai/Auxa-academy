@@ -80,13 +80,13 @@ export function composeSong(seed: string, level: SongLevel, variant = 0): Song {
   }
   const title = `${r.pick(ADJ)} ${r.pick(NOUN)} ${r.pick(FORM[level])}`;
   const spec: SongSpec = {
-    title, composer: 'Maestro original', fifths: P.fifths, beats: P.beats, beatType: 4, tempo: P.tempo,
+    title, composer: 'Auxa original', fifths: P.fifths, beats: P.beats, beatType: 4, tempo: P.tempo,
     parts: [{ id: 'P1', name: 'Piano', program: 1, staves: [{ clef: 'G', music: rhBars.join(' | ') }, { clef: 'F', music: lhBars.join(' | ') }] }],
   };
   const keyName = `${(flats ? FLAT : SHARP)[P.tonic]} major`;
   const lhText = { whole: 'one long bass note per bar', fifths: 'root and fifth', waltz: 'an oom-pah-pah waltz bass', alberti: 'an Alberti bass', arp: 'flowing arpeggios' }[P.lh];
   return {
-    id: `gen-${level.toLowerCase()}-${variant}-${seed}`, title, composer: 'Maestro original (practice piece)', level, groove: P.groove, original: true,
+    id: `gen-${level.toLowerCase()}-${variant}-${seed}`, title, composer: 'Auxa original (practice piece)', level, groove: P.groove, original: true,
     about: `Original practice piece in ${keyName}, ${P.beats}/4. Left hand: ${lhText}.`, spec, colors: {},
   };
 }

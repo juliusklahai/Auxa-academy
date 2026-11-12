@@ -1,4 +1,4 @@
-// Sing to score: sing into the microphone, Maestro writes down each note with its pitch and timing,
+// Sing to score: sing into the microphone, Auxa writes down each note with its pitch and timing,
 // then shows it as a score: the melody alone, or arranged for four voices (SATB) with chord names.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { audio } from '../audio/engine';
@@ -216,7 +216,7 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
         <div>
           <span className="s2s-kicker"><i />New</span>
           <b className="s2s-title">Sing to score</b>
-          <p className="muted small">Sing a tune, or load a recording of yourself singing. Maestro writes down every note and how long you held it, then can arrange it for four voices.</p>
+          <p className="muted small">Sing a tune, or load a recording of yourself singing. Auxa writes down every note and how long you held it, then can arrange it for four voices.</p>
         </div>
         {!recording && (
           <button className="btn lime s2s-rec" onClick={() => void record()}><span className="rec-dot" />{phase === 'done' ? 'Sing again' : 'Start singing'}</button>

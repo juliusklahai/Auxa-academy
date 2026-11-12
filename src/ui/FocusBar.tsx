@@ -4,12 +4,13 @@ import { goHome } from './nav';
 import { InstallHint } from './InstallBanner';
 
 /** Floating controls shown in full-screen practice: open/close the floating panels, leave (Esc). */
-export function FocusBar({ title, panel, onPanel, onExit, infoLabel = 'Info', settingsLabel, onNext, nextLocked, nextLabel = 'Next', tools }: {
+export function FocusBar({ title, panel, onPanel, onExit, infoLabel = 'Info', settingsLabel, onNext, nextLocked, nextLabel = 'Next', tools, settingsIcon = 'sliders' }: {
   title: string; panel: 'info' | 'settings' | null; onPanel: (p: 'info' | 'settings') => void; onExit: () => void; infoLabel?: string; settingsLabel?: string;
   /** go straight on to the next exercise (or lesson) without leaving full screen */
   onNext?: () => void; nextLocked?: boolean; nextLabel?: string;
   /** practice buttons (start, demo, options) shown in the same row */
   tools?: ReactNode;
+  settingsIcon?: string;
 }) {
   return (
     <div className="focus-bar" role="toolbar" aria-label="Practice view controls">
@@ -18,7 +19,7 @@ export function FocusBar({ title, panel, onPanel, onExit, infoLabel = 'Info', se
       <div className="focus-actions">
       {tools}
       {tools && <span className="focus-sep" />}
-      {settingsLabel && <button className={`fbtn ${panel === 'settings' ? 'on' : ''}`} onClick={() => onPanel('settings')}><Icon name="sliders" size={15} /><span className="fl">{settingsLabel}</span></button>}
+      {settingsLabel && <button className={`fbtn ${panel === 'settings' ? 'on' : ''}`} onClick={() => onPanel('settings')}><Icon name={settingsIcon} size={15} /><span className="fl">{settingsLabel}</span></button>}
       <button className={`fbtn ${panel === 'info' ? 'on' : ''}`} onClick={() => onPanel('info')} aria-label={infoLabel}><Icon name="doc" size={15} /><span className="fl">{infoLabel}</span></button>
       {onNext && <button className="fbtn next" onClick={onNext} title={nextLocked ? 'The next lesson is part of a higher plan' : 'Go to the next exercise'}>{nextLocked ? <Icon name="lock" size={14} /> : null}{nextLabel}<Icon name="next" size={15} /></button>}
       <button className="fbtn exit" onClick={onExit} aria-label="Exit" title="Leave full screen (Esc)"><Icon name="close" size={15} /><span className="fl">Exit</span> <kbd>Esc</kbd></button>

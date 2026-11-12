@@ -1,4 +1,4 @@
-# Maestro Academy (Phase 1)
+# Auxa Academy (Phase 1)
 
 An interactive piano, music-reading and musicianship academy that listens to you play and teaches like a private teacher:
 **see it, hear it, understand it, play it, get feedback, correct it, master it.**
@@ -20,7 +20,7 @@ Phase 1 is a working foundation: a real first-note-to-first-melody course with g
 - **Singing levels** from Easy (encouraging) to Pro coach (strict tuning).
 - **Keyboard you can size or hide**: drag the bar above the keys to give the notes more room, pick Auto, 25, 37, 49, 61 or 88 keys (the hands scale with the keys), or hide the on-screen keyboard when you play on a MIDI keyboard or piano.
 - **My Music (MusicXML)**: open .musicxml, .xml or compressed .mxl (MuseScore, Sibelius, Finale, Dorico...). Faithful notation (OpenSheetMusicDisplay, bundled offline), a personal library, Listen with a moving cursor, and **Practice**: choose right hand, left hand, both hands or any SATB voice. In "Waits for me" mode the score stops on each note until you play it on your MIDI keyboard, acoustic piano (mic) or screen, then moves on while the other parts answer. "Keeps time" mode follows the beat with a count-in and accompaniment. Every note turns green, amber or red on the score. Mixer with mute, solo and volume per part, bar range, loop, tempo 20-150%, click, **tempo changes followed**, **transpose ±12 semitones** (notation too), and a **Speakers mode** in which the microphone ignores the app's own play-along.
-- **Play-along band for any score**: open any MusicXML and Maestro works out its chords bar by bar, then adds a strings pad, a bass line and an optional melody guide (each with its own sound and volume), plus an optional drum groove.
+- **Play-along band for any score**: open any MusicXML and Auxa works out its chords bar by bar, then adds a strings pad, a bass line and an optional melody guide (each with its own sound and volume), plus an optional drum groove.
 - **Full-screen practice**: when you press Start or Practice, only the score and the keyboard fill the screen. Teacher feedback and parts/mixer open as floating panels; Esc (or the Exit button) returns.
 - **Voice Studio**: pitch matching with a live tuning meter, range finder with a suggested choir part, a live pitch curve of your voice against the target notes, four sight-singing lessons (any octave counts, intonation in cents), and "sing in a choir": sing your SATB part while the other voices play.
 - **Assessment engine**: READY, COUNT_IN, LISTENING, EVALUATING, FEEDBACK, COMPLETED or RESTART. Wait-for-note mode and timed mode. Explained mistakes, a hint on the second, and a restart of the current attempt on the third consecutive confirmed mistake. A badly played chord counts as one attempt.
@@ -52,9 +52,9 @@ npm run build:single   # ONE self-contained file: dist-single/index.html
 
 ### Fully offline use
 
-- **Easiest**: open `dist-single/index.html` (a prebuilt copy is included as `Maestro.html`) by double-clicking it. Everything, including notation and sound, is inside that file.
+- **Easiest**: open `dist-single/index.html` (a prebuilt copy is included as `Auxa.html`) by double-clicking it. Everything, including notation and sound, is inside that file.
 - **Microphone and MIDI need a secure context.** Chrome and Edge usually allow them from a local file; if they are blocked, run `npm run preview` and use `http://localhost:4173`, which always counts as secure.
-- **Install as an app**: open the `npm run preview` URL in Chrome or Edge and choose "Install Maestro" in the address bar. It then launches in its own window and works without internet.
+- **Install as an app**: open the `npm run preview` URL in Chrome or Edge and choose "Install Auxa" in the address bar. It then launches in its own window and works without internet.
 
 ## Quick user guide
 

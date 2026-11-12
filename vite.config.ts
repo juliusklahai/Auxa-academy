@@ -19,7 +19,7 @@ function androidApk(): Plugin {
         const r = await fetch(APK_URL, { redirect: 'follow' });
         if (!r.ok) return;
         const b = Buffer.from(await r.arrayBuffer());
-        if (b.length > 10000 && b[0] === 0x50 && b[1] === 0x4b) await writeFile(join(out, 'Maestro.apk'), b);
+        if (b.length > 10000 && b[0] === 0x50 && b[1] === 0x4b) { await writeFile(join(out, 'Maestro.apk'), b); await writeFile(join(out, 'Auxa.apk'), b); }
       } catch { /* offline: no APK in this build */ }
     },
   };

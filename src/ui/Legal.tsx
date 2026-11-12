@@ -5,9 +5,9 @@ import { useEffect, useState } from 'react';
 import { Icon } from './Icon';
 
 const env = import.meta.env as Record<string, string | undefined>;
-/** Who runs Maestro and how to reach them. Set these in .env before publishing. */
+/** Who runs Auxa and how to reach them. Set these in .env before publishing. */
 export const LEGAL = {
-  name: env.VITE_LEGAL_NAME || 'Maestro Academy',
+  name: env.VITE_LEGAL_NAME || 'Auxa Academy',
   email: env.VITE_LEGAL_EMAIL || '',
   country: env.VITE_LEGAL_COUNTRY || '',
   updated: '12 November 2026',
@@ -34,7 +34,7 @@ export const closeLegal = () => { if (history.length > 1 && document.referrer.st
 function Privacy() {
   return (
     <>
-      <p>This policy explains what {LEGAL.name} ("Maestro", "we") collects when you use the Maestro website and apps, why, and the choices you have. We keep it short because we collect very little.</p>
+      <p>This policy explains what {LEGAL.name} ("Auxa", "we") collects when you use the Auxa website and apps, why, and the choices you have. We keep it short because we collect very little.</p>
       <h3>What we collect</h3>
       <ul>
         <li><b>Your account:</b> your email address, the name you give, and how you signed in (email or Google). If you never create an account, nothing about you is stored on our servers.</li>
@@ -42,7 +42,7 @@ function Privacy() {
         <li><b>Your plan:</b> which plan you have and until when, and payment references (for example a Stripe customer number or a mobile money payment id). We never see or store card numbers or mobile money PINs; Stripe and Monime handle them.</li>
       </ul>
       <h3>Your microphone and recordings</h3>
-      <p>Maestro listens through your microphone to check the notes you play or sing. This happens on your device. Audio is not uploaded, stored on our servers or shared. Recordings you make in Sing to score stay on your device unless you download or share them yourself. MIDI keyboard input is also handled only on your device.</p>
+      <p>Auxa listens through your microphone to check the notes you play or sing. This happens on your device. Audio is not uploaded, stored on our servers or shared. Recordings you make in Sing to score stay on your device unless you download or share them yourself. MIDI keyboard input is also handled only on your device.</p>
       <h3>How we use it</h3>
       <ul>
         <li>To run your account, save your progress and give you the plan you paid for.</li>
@@ -58,9 +58,9 @@ function Privacy() {
       </ul>
       <p>Each handles data under its own privacy policy and only as needed to provide its service.</p>
       <h3>Storage on your device</h3>
-      <p>Maestro saves settings, progress and your session in your browser or app storage so it works offline and keeps you signed in. These are not used for tracking. Clearing site data or uninstalling the app removes them.</p>
+      <p>Auxa saves settings, progress and your session in your browser or app storage so it works offline and keeps you signed in. These are not used for tracking. Clearing site data or uninstalling the app removes them.</p>
       <h3>Children</h3>
-      <p>Maestro is made for learners of all ages. Children under 13 (or the age required where you live) should use Maestro with a parent or guardian, who should create and manage the account. We do not knowingly collect more than the account details above from children. If you believe a child has given us personal data without consent, contact us and we will delete it.</p>
+      <p>Auxa is made for learners of all ages. Children under 13 (or the age required where you live) should use Auxa with a parent or guardian, who should create and manage the account. We do not knowingly collect more than the account details above from children. If you believe a child has given us personal data without consent, contact us and we will delete it.</p>
       <h3>Keeping and deleting your data</h3>
       <p>We keep your account until you delete it. You can delete your account at any time in the app under <b>Account → Delete my account</b>; this removes your sign-in, profile and saved progress straight away. Payment records may be kept as required for tax and accounting, without being linked to your account.</p>
       <h3>Your rights</h3>
@@ -76,25 +76,25 @@ function Privacy() {
 function Terms() {
   return (
     <>
-      <p>These terms are an agreement between you and {LEGAL.name}{LEGAL.country ? `, ${LEGAL.country}` : ''}, for using the Maestro website and apps. By creating an account or using Maestro you agree to them. If you are under 18, a parent or guardian must agree for you.</p>
-      <h3>Using Maestro</h3>
+      <p>These terms are an agreement between you and {LEGAL.name}{LEGAL.country ? `, ${LEGAL.country}` : ''}, for using the Auxa website and apps. By creating an account or using Auxa you agree to them. If you are under 18, a parent or guardian must agree for you.</p>
+      <h3>Using Auxa</h3>
       <ul>
-        <li>We give you a personal, non-transferable right to use Maestro for learning and enjoying music.</li>
+        <li>We give you a personal, non-transferable right to use Auxa for learning and enjoying music.</li>
         <li>Keep your sign-in details private. You are responsible for what happens in your account.</li>
-        <li>Do not misuse Maestro: no attempts to break, copy or resell it, get around plan limits, or harm other people or our systems.</li>
+        <li>Do not misuse Auxa: no attempts to break, copy or resell it, get around plan limits, or harm other people or our systems.</li>
       </ul>
       <h3>Your content</h3>
-      <p>Scores you open, tunes you sing and arrangements you make belong to you (or to whoever owns their copyright). Only open or share music you have the right to use. Maestro processes your content only to provide the app to you.</p>
+      <p>Scores you open, tunes you sing and arrangements you make belong to you (or to whoever owns their copyright). Only open or share music you have the right to use. Auxa processes your content only to provide the app to you.</p>
       <h3>Lessons and songs</h3>
-      <p>Maestro's lessons, exercises, original songs, voice coach scripts, design and software belong to us or our licensors. Classical and traditional pieces in the library are in the public domain; our arrangements of them are ours.</p>
+      <p>Auxa's lessons, exercises, original songs, voice coach scripts, design and software belong to us or our licensors. Classical and traditional pieces in the library are in the public domain; our arrangements of them are ours.</p>
       <h3>Plans and payments</h3>
       <p>Some lessons and features need a paid plan. Prices, renewal and refunds are explained in <a href="#/subscriptions">Subscriptions and refunds</a>, which is part of these terms.</p>
       <h3>Availability</h3>
-      <p>We work to keep Maestro running and improving, and may change or remove features. Note detection depends on your device, microphone and surroundings, so scores are a guide, not an exam result.</p>
+      <p>We work to keep Auxa running and improving, and may change or remove features. Note detection depends on your device, microphone and surroundings, so scores are a guide, not an exam result.</p>
       <h3>Disclaimer and liability</h3>
-      <p>Maestro is provided "as is". To the extent the law allows, we are not liable for indirect or consequential losses, and our total liability is limited to the amount you paid us in the 12 months before the claim. Nothing here limits rights you have under consumer law that cannot be excluded.</p>
+      <p>Auxa is provided "as is". To the extent the law allows, we are not liable for indirect or consequential losses, and our total liability is limited to the amount you paid us in the 12 months before the claim. Nothing here limits rights you have under consumer law that cannot be excluded.</p>
       <h3>Ending</h3>
-      <p>You can stop using Maestro and delete your account at any time. We may suspend accounts that seriously break these terms, after warning you where possible.</p>
+      <p>You can stop using Auxa and delete your account at any time. We may suspend accounts that seriously break these terms, after warning you where possible.</p>
       <h3>Changes and law</h3>
       <p>We may update these terms; if a change matters we will tell you in the app first. {LEGAL.country ? `These terms are governed by the laws of ${LEGAL.country}.` : ''} Questions: {contact}.</p>
     </>
@@ -122,7 +122,7 @@ function Subscriptions() {
       </ul>
       <h3>Refunds</h3>
       <ul>
-        <li>If you were charged by mistake, charged twice, or Maestro did not work for you and we could not fix it, write to {contact} within 14 days of the payment and we will refund it.</li>
+        <li>If you were charged by mistake, charged twice, or Auxa did not work for you and we could not fix it, write to {contact} within 14 days of the payment and we will refund it.</li>
         <li>Where the law gives you a right to cancel and get your money back (for example a 14-day cooling-off period), that right applies.</li>
         <li>Partly used months are otherwise not refunded, but cancelling always stops future payments.</li>
       </ul>
@@ -137,7 +137,7 @@ function Subscriptions() {
 function Licenses() {
   return (
     <>
-      <p>Maestro is built with the help of open-source software and public-domain music. Thank you to everyone behind them.</p>
+      <p>Auxa is built with the help of open-source software and public-domain music. Thank you to everyone behind them.</p>
       <ul>
         <li><b>React</b> (MIT): interface.</li>
         <li><b>OpenSheetMusicDisplay</b> (BSD-3-Clause) and <b>VexFlow</b> (MIT): drawing scores.</li>
@@ -146,7 +146,7 @@ function Licenses() {
         <li><b>fflate</b> (MIT): opening compressed MusicXML.</li>
         <li><b>Manrope</b> font (SIL Open Font License).</li>
       </ul>
-      <p>Classical and traditional pieces (for example Ode to Joy, Amazing Grace, When the Saints) are in the public domain. Maestro's arrangements, lessons and original songs are © {LEGAL.name}.</p>
+      <p>Classical and traditional pieces (for example Ode to Joy, Amazing Grace, When the Saints) are in the public domain. Auxa's arrangements, lessons and original songs are © {LEGAL.name}.</p>
     </>
   );
 }
@@ -159,7 +159,7 @@ export function LegalPage({ id }: { id: LegalId }) {
     <div className="legal">
       <header className="legal-top">
         <button className="ob-close" onClick={closeLegal} aria-label="Back"><Icon name="back" size={18} /></button>
-        <span className="lp-logo"><span className="lp-mark" aria-hidden><i /><i /><i /></span>maestro</span>
+        <span className="lp-logo"><span className="lp-mark" aria-hidden><i /><i /><i /></span>auxa</span>
       </header>
       <nav className="legal-tabs">{PAGES.map((p) => <a key={p.id} href={`#/${p.id}`} className={p.id === id ? 'on' : ''}>{p.title}</a>)}</nav>
       <article className="legal-body">

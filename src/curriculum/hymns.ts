@@ -1,4 +1,4 @@
-// Four-part settings of public-domain hymn tunes, written by Maestro's own arranger (src/compose/harmony.ts,
+// Four-part settings of public-domain hymn tunes, written by Auxa's own arranger (src/compose/harmony.ts,
 // 'hymn' style: note against note, planned cadences, rule-checked voice leading), then tidied by hand.
 // Tunes: Old Hundredth (Genevan Psalter, 1551), New Britain / Amazing Grace (1829), Hymn to Joy (Beethoven, 1824).
 export interface HymnSetting { title: string; tune: string; key: string; timeSig: [number, number]; tempo: number; S: string; A: string; T: string; B: string; chords: string }

@@ -568,7 +568,7 @@ export const ADVANCED_LESSONS: LessonDef[] = [
       }),
       step('4. Write the bass against the melody', 'Make the bass a second melody: contrary motion to the soprano, stepping where it can, roots at cadences.'),
       step('5. Fill the alto and tenor', 'Complete each chord with the nearest notes, keeping common tones and checking for parallels. Then sing or play each line alone: it should be easy to sing.'),
-      step('Let Sing to score help', 'In Voice, sing any tune into Sing to score and choose Four parts. Maestro follows these same rules. Compare its choices with your own, then change what you prefer.'),
+      step('Let Sing to score help', 'In Voice, sing any tune into Sing to score and choose Four parts. Auxa follows these same rules. Compare its choices with your own, then change what you prefer.'),
     ],
     exercises: [
       ex('A12-5-a', 'Twinkle: choose the bass', 'The tune in half notes, inner voices given. Find the bass for I – I – IV – I – IV – I – V – I.', 'treble', 'wait', satb('C3+E3+G3+C4:2 C3+E3+C4+G4:2 F2+F3+C4+A4:2 C3+E3+C4+G4:2 F2+C3+A3+F4:2 C3+G3+C4+E4:2 G2+G3+B3+D4:2 C3+E3+G3+C4:2', ['B']), ['noteReadingBass'], { grand: true, hideLabels: true }),

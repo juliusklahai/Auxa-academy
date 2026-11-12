@@ -69,7 +69,7 @@ export default function App() {
   const [xmlToOpen, setXmlToOpen] = useState<string | null>(null);
   const account = useAccount();
   const [, bump] = useState(0);
-  // Android back button (inside the Maestro app): close the lesson, then go back to Home, then leave
+  // Android back button (inside the Auxa app): close the lesson, then go back to Home, then leave
   const navRef = useRef({ lesson, tab });
   navRef.current = { lesson, tab };
   useEffect(() => onBack(() => {
@@ -77,7 +77,7 @@ export default function App() {
     if (navRef.current.tab !== 'home') { setTab('home'); return true; }
     return false;
   }), []);
-  // The logo, from any screen: the Maestro home page (landing). Without accounts: the Overview.
+  // The logo, from any screen: the Auxa home page (landing). Without accounts: the Overview.
   const [landing, setLanding] = useState(false);
   const [pastLanding, setPastLanding] = useState(false);
   const [acctOpen, setAcctOpen] = useState(false);
@@ -134,8 +134,8 @@ export default function App() {
     <div className="backdrop">
       <div className="device">
         <header className="appbar">
-          <button className="app-logo" onClick={goHome} aria-label="Maestro home page" title="Home page">
-            <span className="lp-mark" aria-hidden><i /><i /><i /></span><span className="app-logo-word">maestro</span>
+          <button className="app-logo" onClick={goHome} aria-label="Auxa home page" title="Home page">
+            <span className="lp-mark" aria-hidden><i /><i /><i /></span><span className="app-logo-word">auxa</span>
           </button>
           {lesson && (
             <div className="app-crumb">

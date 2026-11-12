@@ -177,7 +177,7 @@ export function AccountSheet({ onClose }: { onClose: () => void }) {
   return (
     <div className="sheet-back" onClick={onClose}>
       <div className="sheet acct-sheet" role="dialog" aria-label="Account" onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-head"><div><small className="muted">Maestro</small><b>{a.user ? 'Your account' : 'Sign in'}</b></div><button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="close" size={16} /></button></div>
+        <div className="sheet-head"><div><small className="muted">Auxa</small><b>{a.user ? 'Your account' : 'Sign in'}</b></div><button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="close" size={16} /></button></div>
         <AccountCard bare />
       </div>
     </div>
@@ -204,7 +204,7 @@ export function UpgradeSheet() {
   return (
     <div className="sheet-back" onClick={closeUpgrade}>
       <div className="sheet" role="dialog" aria-label="Upgrade" onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-head"><div><small className="muted">Maestro Academy</small><b>{reason}</b></div><button className="icon-btn" onClick={closeUpgrade} aria-label="Close"><Icon name="close" size={16} /></button></div>
+        <div className="sheet-head"><div><small className="muted">Auxa Academy</small><b>{reason}</b></div><button className="icon-btn" onClick={closeUpgrade} aria-label="Close"><Icon name="close" size={16} /></button></div>
         {!a.user && <SignInForm compact />}
         <div className="tier-grid">
           {tiers.map((t) => {
@@ -289,7 +289,7 @@ export function UserMenu({ onAccount, onSetup, onAdmin, onHome, current }: { onA
             <Icon name={theme === 'dark' ? 'eye' : 'eye'} size={16} />{theme === 'dark' ? 'Light mode' : 'Dark mode'}
             <span className={`lp-toggle ${theme === 'dark' ? 'on' : ''}`}><i /></span>
           </button>
-          {ACCOUNTS_ENABLED && !isNativeApp && <button className="umenu-item" role="menuitem" onClick={pick(onHome)}><Icon name="home" size={16} />Maestro home page</button>}
+          {ACCOUNTS_ENABLED && !isNativeApp && <button className="umenu-item" role="menuitem" onClick={pick(onHome)}><Icon name="home" size={16} />Auxa home page</button>}
           <a className="umenu-item quiet" role="menuitem" href="#/privacy" onClick={() => setOpen(false)}><Icon name="doc" size={16} />Privacy and terms</a>
           {ACCOUNTS_ENABLED && a.user && (<><div className="umenu-sep" /><button className="umenu-item quiet" role="menuitem" onClick={pick(() => void signOut())}><Icon name="back" size={16} />Sign out</button></>)}
         </div>

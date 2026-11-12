@@ -117,10 +117,10 @@ function speakLive(line: string): Promise<void> {
  */
 export function testVoice(): Promise<boolean> {
   const n = native;
-  if (n?.speak) { n.speak('Hello! I am your Maestro coach.', 'test', 1); return Promise.resolve(true); }
+  if (n?.speak) { n.speak('Hello! I am your Auxa coach.', 'test', 1); return Promise.resolve(true); }
   if (typeof speechSynthesis === 'undefined') { setSilent(true); return Promise.resolve(false); }
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance('Hello! I am your Maestro coach.');
+  const u = new SpeechSynthesisUtterance('Hello! I am your Auxa coach.');
   const v = bestVoice();
   if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-US';
   return new Promise((res) => {

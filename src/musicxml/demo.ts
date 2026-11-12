@@ -1,4 +1,4 @@
-// A short original SATB chorale (voiced by a search that forbids parallel fifths/octaves) ("Maestro Chorale", written for this app, free to use) in hymn layout:
+// A short original SATB chorale (voiced by a search that forbids parallel fifths/octaves) ("Auxa Chorale", written for this app, free to use) in hymn layout:
 // two staves, soprano + alto on the treble staff, tenor + bass on the bass staff, as real choir and
 // church music is printed. Generated as standard MusicXML so it goes through the same importer as user files.
 
@@ -34,6 +34,6 @@ export function demoChoraleXml(): string {
   }).join('');
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
-<score-partwise version="4.0"><work><work-title>Maestro Chorale</work-title></work><identification><creator type="composer">Maestro demo (original)</creator></identification>
+<score-partwise version="4.0"><work><work-title>Auxa Chorale</work-title></work><identification><creator type="composer">Auxa demo (original)</creator></identification>
 <part-list><score-part id="P1"><part-name>Choir</part-name></score-part></part-list><part id="P1">${body}</part></score-partwise>`;
 }

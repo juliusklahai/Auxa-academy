@@ -1,4 +1,4 @@
-// Bridge to the Maestro native apps (Android now, iOS later). In a normal browser everything here is a
+// Bridge to the Auxa native apps (Android now, iOS later). In a normal browser everything here is a
 // no-op and the web features are used instead.
 //
 // Native → web calls arrive on window.__maestroNative (MIDI bytes, device lists, the back button).

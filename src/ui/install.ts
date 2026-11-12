@@ -1,4 +1,4 @@
-// "Install Maestro" (add to home screen): the installed app opens full screen, with no browser bar and
+// "Install Auxa" (add to home screen): the installed app opens full screen, with no browser bar and
 // no full-screen notice. Chrome/Android offers a prompt we can trigger; iPhone needs Share → Add to Home Screen.
 import { useSyncExternalStore } from 'react';
 import { isInstalled } from './focus';

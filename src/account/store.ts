@@ -144,7 +144,7 @@ export async function updatePassword(password: string) {
 export const endRecovery = () => set({ recovery: false });
 export async function signInWithGoogle() {
   const sb = await supabase();
-  // Google does not allow sign-in inside an app's web view: the Maestro app opens the phone's browser
+  // Google does not allow sign-in inside an app's web view: the Auxa app opens the phone's browser
   // and Google sends people straight back into the app.
   if (native) {
     const { data, error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: AUTH_RETURN, skipBrowserRedirect: true } });

@@ -92,6 +92,6 @@ export function writeXml(s: XmlScore): string {
   }
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
-<score-partwise version="4.0"><work><work-title>${esc(s.title)}</work-title></work><identification><creator type="composer">${esc(s.composer ?? 'Sung into Maestro')}</creator></identification>
+<score-partwise version="4.0"><work><work-title>${esc(s.title)}</work-title></work><identification><creator type="composer">${esc(s.composer ?? 'Sung into Auxa')}</creator></identification>
 <part-list><score-part id="P1"><part-name>${esc(s.partName)}</part-name></score-part></part-list><part id="P1">${body}</part></score-partwise>`;
 }

@@ -19,7 +19,7 @@ const CLASSICS: Song[] = [
     about: 'Right hand in C position, left hand plays one bass note per half bar. Violin sings a gentle counter-melody, cello holds the bass.',
     colors: { P2: 'violin', P3: 'cello' },
     spec: {
-      title: 'Twinkle, Twinkle, Little Star', composer: 'Traditional', arranger: 'Maestro arrangement', fifths: 0, beats: 4, beatType: 4, tempo: 92,
+      title: 'Twinkle, Twinkle, Little Star', composer: 'Traditional', arranger: 'Auxa arrangement', fifths: 0, beats: 4, beatType: 4, tempo: 92,
       parts: [
         piano(
           'C4 C4 G4 G4 | A4 A4 G4:2 | F4 F4 E4 E4 | D4 D4 C4:2 | G4 G4 F4 F4 | E4 E4 D4:2 | G4 G4 F4 F4 | E4 E4 D4:2 | C4 C4 G4 G4 | A4 A4 G4:2 | F4 F4 E4 E4 | D4 D4 C4:2',
@@ -34,7 +34,7 @@ const CLASSICS: Song[] = [
     about: 'The full 16-bar theme. Right hand stays in C position; left hand alternates C and G. The violin joins an octave higher at the climax.',
     colors: { P2: 'violin', P3: 'cello' },
     spec: {
-      title: 'Ode to Joy', composer: 'Ludwig van Beethoven', arranger: 'Maestro arrangement', fifths: 0, beats: 4, beatType: 4, tempo: 100,
+      title: 'Ode to Joy', composer: 'Ludwig van Beethoven', arranger: 'Auxa arrangement', fifths: 0, beats: 4, beatType: 4, tempo: 100,
       parts: [
         piano(
           'E4 E4 F4 G4 | G4 F4 E4 D4 | C4 C4 D4 E4 | E4:1.5 D4:0.5 D4:2 | E4 E4 F4 G4 | G4 F4 E4 D4 | C4 C4 D4 E4 | D4:1.5 C4:0.5 C4:2 | D4 D4 E4 C4 | D4 E4:0.5 F4:0.5 E4 C4 | D4 E4:0.5 F4:0.5 E4 D4 | C4 D4 G3:2 | E4 E4 F4 G4 | G4 F4 E4 D4 | C4 C4 D4 E4 | D4:1.5 C4:0.5 C4:2',
@@ -49,7 +49,7 @@ const CLASSICS: Song[] = [
     about: 'A dance in 3/4 from the Notebook for Anna Magdalena Bach. Right hand: quarter notes and running eighths. Left hand: one note per bar. Flute doubles your melody.',
     colors: { P2: 'flute', P3: 'cello' },
     spec: {
-      title: 'Minuet in G', composer: 'Christian Petzold (attr.)', arranger: 'Maestro arrangement', fifths: 1, beats: 3, beatType: 4, tempo: 104,
+      title: 'Minuet in G', composer: 'Christian Petzold (attr.)', arranger: 'Auxa arrangement', fifths: 1, beats: 3, beatType: 4, tempo: 104,
       parts: [
         piano(
           'D5 G4:0.5 A4:0.5 B4:0.5 C5:0.5 | D5 G4 G4 | E5 C5:0.5 D5:0.5 E5:0.5 F#5:0.5 | G5 G4 G4 | C5 D5:0.5 C5:0.5 B4:0.5 A4:0.5 | B4 C5:0.5 B4:0.5 A4:0.5 G4:0.5 | F#4 G4:0.5 A4:0.5 B4:0.5 G4:0.5 | A4:3 | D5 G4:0.5 A4:0.5 B4:0.5 C5:0.5 | D5 G4 G4 | E5 C5:0.5 D5:0.5 E5:0.5 F#5:0.5 | G5 G4 G4 | C5 D5:0.5 C5:0.5 B4:0.5 A4:0.5 | B4 C5:0.5 B4:0.5 A4:0.5 G4:0.5 | A4 B4:0.5 A4:0.5 G4:0.5 F#4:0.5 | G4:3',
@@ -64,7 +64,7 @@ const CLASSICS: Song[] = [
     about: 'The famous opening in 3/8. Right hand: the E-D# turn and broken chords. Left hand: rising A minor and E major arpeggios, passed smoothly to the right hand. Soft strings support the harmony.',
     colors: { P2: 'strings' },
     spec: {
-      title: 'Für Elise (opening)', composer: 'Ludwig van Beethoven', arranger: 'Maestro arrangement', fifths: 0, beats: 3, beatType: 8, tempo: 66, pickup: true,
+      title: 'Für Elise (opening)', composer: 'Ludwig van Beethoven', arranger: 'Auxa arrangement', fifths: 0, beats: 3, beatType: 8, tempo: 66, pickup: true,
       parts: [
         piano(
           'E5:0.25 D#5:0.25 | E5:0.25 D#5:0.25 E5:0.25 B4:0.25 D5:0.25 C5:0.25 | A4:0.5 R:0.25 C4:0.25 E4:0.25 A4:0.25 | B4:0.5 R:0.25 E4:0.25 G#4:0.25 B4:0.25 | C5:0.5 R:0.25 E4:0.25 E5:0.25 D#5:0.25 | E5:0.25 D#5:0.25 E5:0.25 B4:0.25 D5:0.25 C5:0.25 | A4:0.5 R:0.25 C4:0.25 E4:0.25 A4:0.25 | B4:0.5 R:0.25 E4:0.25 C5:0.25 B4:0.25 | A4:1',
@@ -78,7 +78,7 @@ const CLASSICS: Song[] = [
     about: 'Right hand plays the chord changes as half-note triads; left hand plays the famous repeating bass. The violin sings the canon melody above you.',
     colors: { P2: 'violin', P3: 'cello' },
     spec: {
-      title: 'Canon in D', composer: 'Johann Pachelbel', arranger: 'Maestro arrangement', fifths: 2, beats: 4, beatType: 4, tempo: 66,
+      title: 'Canon in D', composer: 'Johann Pachelbel', arranger: 'Auxa arrangement', fifths: 2, beats: 4, beatType: 4, tempo: 66,
       parts: [
         piano(
           'D4+F#4+A4:2 C#4+E4+A4:2 | D4+F#4+B4:2 C#4+F#4+A4:2 | D4+G4+B4:2 D4+F#4+A4:2 | D4+G4+B4:2 C#4+E4+A4:2 | D4+F#4+A4:2 C#4+E4+A4:2 | D4+F#4+B4:2 C#4+F#4+A4:2 | D4+G4+B4:2 D4+F#4+A4:2 | D4+G4+B4:2 C#4+E4+A4:2 | D4+F#4+A4:4',
@@ -93,7 +93,7 @@ const CLASSICS: Song[] = [
     about: 'A flowing melody in 3/4 with dotted rhythms. Left hand plays one low note per bar. The flute guides the tune and strings fill the harmony.',
     colors: { P2: 'flute', P3: 'strings' },
     spec: {
-      title: 'Greensleeves', composer: 'Traditional', arranger: 'Maestro arrangement', fifths: 0, beats: 3, beatType: 4, tempo: 92, pickup: true,
+      title: 'Greensleeves', composer: 'Traditional', arranger: 'Auxa arrangement', fifths: 0, beats: 3, beatType: 4, tempo: 92, pickup: true,
       parts: [
         piano(
           'A4 | C5:2 D5 | E5:1.5 F5:0.5 E5 | D5:2 B4 | G4:1.5 A4:0.5 B4 | C5:2 A4 | A4:1.5 G#4:0.5 A4 | B4:2 G#4 | E4:2 A4 | C5:2 D5 | E5:1.5 F5:0.5 E5 | D5:2 B4 | G4:1.5 A4:0.5 B4 | C5:1.5 B4:0.5 A4 | G#4:1.5 F#4:0.5 G#4 | A4:2',

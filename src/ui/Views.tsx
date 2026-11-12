@@ -23,7 +23,7 @@ import { Icon } from './Icon';
 
 import { SongShelf } from './MyMusic';
 import { Piano, type KeyMark } from './Piano';
-import { DockFab, FloatHead, FocusBar, RotateHint } from './FocusBar';
+import { FloatHead, FocusBar, RotateHint } from './FocusBar';
 import { isPhone, useFocusMode } from './focus';
 import { bumpProgress, progress, setSettings, useProgressVersion, useSettings } from './settings';
 
@@ -284,11 +284,11 @@ export function PianoStudio() {
   const pianoH = fm.focus ? Math.max(130, Math.min(360, vh - (vh < 520 ? 110 : 200))) : size === '88' ? 190 : 230;
   return (
     <div className={`page practice-root studio ${fm.focus ? 'focus' : ''} ${fm.panel ? 'show-' + fm.panel : ''} ${fm.dockOpen ? 'dock-open' : ''}`}>
-      {fm.focus && <FocusBar title="Piano Studio" panel={fm.panel} onPanel={fm.togglePanel} onExit={fm.exit} infoLabel="Keyboard" />}
+      {fm.focus && <FocusBar title="Piano Studio" panel={fm.panel} onPanel={fm.togglePanel} onExit={fm.exit} infoLabel="Keyboard" tools={<>
+        <button className={`fbtn tool lime ${running ? 'live' : ''}`} onClick={toggle} aria-label="Metronome start or stop"><Icon name={running ? 'pause' : 'metro'} size={16} /><span className="fl">{running ? 'Stop' : 'Click'}</span></button>
+        <button className={`fbtn tool ${fm.dockOpen ? 'on' : ''}`} onClick={fm.toggleDock} aria-expanded={fm.dockOpen} aria-label="Options"><Icon name="sliders" size={16} /><span className="fl">Options</span></button>
+      </>} />}
       {fm.focus && fm.rotateHint && <RotateHint onDismiss={fm.dismissRotate} />}
-      {fm.focus && <DockFab open={fm.dockOpen} onToggle={fm.toggleDock} primary={
-        <button className={`fab lime ${running ? 'live' : ''}`} onClick={toggle} aria-label="Metronome start or stop"><Icon name={running ? 'pause' : 'metro'} size={22} /></button>
-      } />}
       {fm.focus && <div className="side"><div className="card panel-info"><FloatHead title="Keyboard" onClose={fm.closePanel} /><div className="chip-row">{options}</div></div></div>}
       <PageHead kicker="Free play, not scored" title="Piano Studio" stats={[['You played', last], ['Tempo', `${bpm} bpm`], ['Meter', `${beats}/4`]]} />
       <div className="chip-row">{options}</div>
@@ -474,7 +474,7 @@ export function SettingsView() {
           <p className="small muted">Progress is stored on this device and works offline.</p>
           <div className="row wrap">
             <button className="btn" onClick={() => { try { void navigator.clipboard.writeText(exportJson); setMsg('Progress copied to the clipboard.'); } catch { /* ignore */ } }}>Copy progress</button>
-            <button className="btn" onClick={() => { try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([exportJson], { type: 'application/json' })); a.download = 'maestro-progress.json'; a.click(); } catch { /* sandboxed */ } }}>Download</button>
+            <button className="btn" onClick={() => { try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([exportJson], { type: 'application/json' })); a.download = 'auxa-progress.json'; a.click(); } catch { /* sandboxed */ } }}>Download</button>
             {confirmReset
               ? <><button className="btn danger" onClick={() => { progress.reset(); bumpProgress(); setConfirmReset(false); }}>Yes, erase</button><button className="btn" onClick={() => setConfirmReset(false)}>Cancel</button></>
               : <button className="btn danger" onClick={() => setConfirmReset(true)}>Reset progress</button>}

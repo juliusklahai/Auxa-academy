@@ -100,7 +100,7 @@ export function PersonCardView({ p, mine, saved, onOpen, onSave }: { p: PersonCa
         <Avatar p={p} />
         <div className="pc-id">
           <h3>{p.display_name}{mine && <span className="pc-you">You</span>}</h3>
-          <p className="pc-line">{p.headline || `Learning ${p.plays.includes('voice') && !p.plays.includes('piano') ? 'to sing' : 'piano'} with Maestro`}</p>
+          <p className="pc-line">{p.headline || `Learning ${p.plays.includes('voice') && !p.plays.includes('piano') ? 'to sing' : 'piano'} with Auxa`}</p>
           <div className="pc-meta-row">
             <div className="pc-meta">
               <span><Icon name="calendar" size={12} />{joined(p.joined_at)}</span>
@@ -138,7 +138,7 @@ function Journey({ p, mine, onEdit, onClose }: { p: PersonCard; mine: boolean; o
         <div className="pj-body">
           <Avatar p={p} size={76} />
           <h3>{p.display_name}</h3>
-          <p className="pc-line">{p.headline || 'Learning with Maestro'}</p>
+          <p className="pc-line">{p.headline || 'Learning with Auxa'}</p>
           <div className="pc-meta"><span><Icon name="calendar" size={12} />{joined(p.joined_at)}</span>{p.location && <span><Icon name="pin" size={12} />{p.location}</span>}<span><Icon name="clock" size={12} />{lastSeen(s.last)}</span></div>
           <div className="pj-nums">
             <span><b>{s.done ?? 0}</b><i>lessons mastered</i></span>
@@ -257,7 +257,7 @@ export function PeopleView({ openLesson }: { openLesson?: (l: Lesson, ex?: numbe
   );
   return (
     <div className="page people">
-      <PageHead title="People" sub="Learners on Maestro: where they are, how far they have come, and where to watch them play." />
+      <PageHead title="People" sub="Learners on Auxa: where they are, how far they have come, and where to watch them play." />
       {switcher}
       {mine
         ? <section className="pp-mine"><small>Your card</small><PersonCardView p={mine} mine onOpen={() => setOpen(mine)} /></section>

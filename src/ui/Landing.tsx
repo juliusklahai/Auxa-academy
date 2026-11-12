@@ -18,7 +18,7 @@ const price = (id: string) => PLANS.find((p) => p.id === id)?.price ?? '';
 
 const FAQ: [string, string][] = [
   ['Do I need a real piano?', 'No. Play on any piano or keyboard near your phone, plug in a MIDI keyboard, or tap the keys on screen.'],
-  ['How does it hear me?', 'Your phone’s microphone. Maestro picks out the notes you play, even softly, and tells you right away which were right.'],
+  ['How does it hear me?', 'Your phone’s microphone. Auxa picks out the notes you play, even softly, and tells you right away which were right.'],
   ['I have never played before. Is that fine?', 'Yes. Level 0 starts with finding middle C. Every new key comes with short songs where the band plays and you add just that key.'],
   ['Can I learn to sing too?', 'Yes. The singing coach starts gentle and encouraging, and gets strict about pitch only when you ask it to.'],
   ['What is free?', `Levels 0 to 2, the beginner songs and the Easy singing coach. Pro is ${price('pro') || 'monthly'}, or ${price('pass_pro') || 'a monthly pass'} by mobile money.`],
@@ -43,7 +43,7 @@ export function Landing({ onStart, returning = false }: { onStart: () => void; r
       <div className="lp-glow a" aria-hidden /><div className="lp-glow b" aria-hidden />
 
       <header className="lp-nav">
-        <span className="lp-logo"><span className="lp-mark" aria-hidden><i /><i /><i /></span>maestro</span>
+        <span className="lp-logo"><span className="lp-mark" aria-hidden><i /><i /><i /></span>auxa</span>
         <nav className="lp-links">
           <button onClick={() => go('steps')}>How it works</button>
           <button onClick={() => go('plans')}>Plans</button>
@@ -63,7 +63,7 @@ export function Landing({ onStart, returning = false }: { onStart: () => void; r
       <section className="lp-hero">
         <span className="lp-pill"><i />Piano · Singing · Theory</span>
         <h1>Learn piano with a teacher <em>that listens.</em></h1>
-        <p>Play on any piano. Maestro hears every note and shows you what to fix.</p>
+        <p>Play on any piano. Auxa hears every note and shows you what to fix.</p>
         <div className="lp-cta">
           <button className="lp-btn light big" onClick={start}>{returning ? 'Continue learning' : 'Start free'}</button>
           {!returning && <button className="lp-btn ghost big" onClick={() => setAuth('signup')}>Create account</button>}
@@ -76,7 +76,7 @@ export function Landing({ onStart, returning = false }: { onStart: () => void; r
           <h2>Three steps to <br />your <em>first</em> song.</h2>
         </div>
         <div className="lp-steps" ref={steps}>
-          <Step n="01" kicker="Step 1 · Start free" title="Pick where you start." text="From your very first note to sight-reading. No card needed." screen={<Device3D src="landing/screen-home.jpg" alt="Maestro overview with your lessons" chips={CHIPS_START} />} />
+          <Step n="01" kicker="Step 1 · Start free" title="Pick where you start." text="From your very first note to sight-reading. No card needed." screen={<Device3D src="landing/screen-home.jpg" alt="Auxa overview with your lessons" chips={CHIPS_START} />} />
           <Step n="02" kicker="Step 2 · Play" title="Play. It listens." text="Any piano near your phone, or a MIDI keyboard. Every note checked as you play." screen={<Device3D src="landing/screen-play.jpg" alt="A lesson: notes turn green as you play them" chips={CHIPS_PLAY} />} />
           <Step n="03" kicker="Step 3 · Play along" title="The band plays, you join in." text="Short songs for every new key, until it feels easy." screen={<Device3D src="landing/screen-along.jpg" alt="A play-along song with guide hands" chips={CHIPS_ALONG} />} />
         </div>
@@ -127,16 +127,16 @@ export function Landing({ onStart, returning = false }: { onStart: () => void; r
 
       <footer className="lp-foot">
         <div className="lp-foot-row">
-          <span className="lp-logo"><span className="lp-mark" aria-hidden><i /><i /><i /></span>maestro</span>
+          <span className="lp-logo"><span className="lp-mark" aria-hidden><i /><i /><i /></span>auxa</span>
           <nav>
             <button onClick={() => go('plans')}>Plans</button>
             <button onClick={() => go('faq')}>FAQ</button>
             {returning ? <button onClick={start}>Open app</button> : <button onClick={() => setAuth('signin')}>Sign in</button>}
           </nav>
         </div>
-        <div className="lp-field"><DashField text="maestro" dark={theme === 'dark'} /></div>
+        <div className="lp-field"><DashField text="auxa" dark={theme === 'dark'} /></div>
         <nav className="lp-legal"><a href="#/privacy">Privacy</a><a href="#/terms">Terms</a><a href="#/subscriptions">Subscriptions and refunds</a><a href="#/licenses">Credits</a></nav>
-        <small className="lp-copy">© {new Date().getFullYear()} Maestro Academy</small>
+        <small className="lp-copy">© {new Date().getFullYear()} Auxa Academy</small>
       </footer>
 
       {auth && (
@@ -260,7 +260,7 @@ const CHIPS_START: Chip[] = [
   { x: -34, y: 22, z: 90, r: -4, w: 236, node: (
     <div className="lg-alert">
       <span className="lg-ic"><MicIcon /></span>
-      <b>“Maestro” would like to use the microphone</b>
+      <b>“Auxa” would like to use the microphone</b>
       <small>So it can hear you play and sing.</small>
       <div className="lg-alert-btns"><span>Don’t allow</span><span className="ok">Allow</span></div>
     </div>) },

@@ -36,6 +36,6 @@ export function allLines(lessons: Lesson[]): string[] {
   }
   Object.values(RESULT_LINES).forEach((x) => out.add(x));
   Object.values(DRILL_LINES).forEach((x) => out.add(x));
-  out.add('Hello! I am your Maestro coach.');
+  out.add('Hello! I am your Auxa coach.');
   return [...out];
 }

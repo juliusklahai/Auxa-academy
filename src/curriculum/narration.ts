@@ -290,7 +290,7 @@ export const NARRATION: Record<string, string> = {
   'A12-5#2': 'Chords like to travel in a circle: home, then away, then tension, then back home. Change chords once or twice a bar, and keep it steady.',
   'A12-5#3': 'Make the bass a second tune. When the top goes up, let the bass go down. Step where you can, and use the chord\'s name note at the endings.',
   'A12-5#4': 'Now fill in the middle voices with the closest notes. Then sing or play each part alone. Each one should be easy to sing.',
-  'A12-5#5': 'In Voice, you can sing a tune into Sing to score and choose four parts. Maestro follows these same rules. Compare its ideas with yours.',
+  'A12-5#5': 'In Voice, you can sing a tune into Sing to score and choose four parts. Auxa follows these same rules. Compare its ideas with yours.',
   'A12-6#0': 'A passing note fills the gap between two chord notes, step by step. It makes the line flow, without changing the chord. Listen and compare.',
   'A12-6#1': 'A neighbor note steps away and comes right back, like a little decoration.',
   'A12-6#2': 'A suspension holds a note from the last chord for a moment, then lets it fall to where it belongs. It sounds tender and beautiful. Listen and compare.',

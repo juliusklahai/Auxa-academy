@@ -55,7 +55,7 @@ export function ClassesView({ openLesson }: { openLesson: (l: Lesson, ex?: numbe
           </div>
         </section>
       ) : (
-        <section className="card cl-join"><div><b>Teach with Maestro</b><p className="muted">Classes for teachers come with the Plus plan.</p></div><button className="btn lime" onClick={() => openUpgrade('Classes for teachers are part of Plus.')}>See Plus</button></section>
+        <section className="card cl-join"><div><b>Teach with Auxa</b><p className="muted">Classes for teachers come with the Plus plan.</p></div><button className="btn lime" onClick={() => openUpgrade('Classes for teachers are part of Plus.')}>See Plus</button></section>
       )}
     </div>
   );
@@ -74,7 +74,7 @@ function ClassPage({ c, teacher, openLesson, onBack }: { c: ClassRow; teacher: b
   const levels = useMemo(() => [...new Set(LESSONS.map((l) => l.level))].sort((x, y) => x - y), []);
   const run = async (k: string, f: () => Promise<void>) => { setBusy(k); setErr(''); try { await f(); } catch (e) { setErr((e as Error).message); } setBusy(''); };
   const share = async () => {
-    const text = `Join my Maestro class "${c.name}" with the code ${c.code}.`;
+    const text = `Join my Auxa class "${c.name}" with the code ${c.code}.`;
     try { if (navigator.share) await navigator.share({ title: c.name, text }); else { await navigator.clipboard.writeText(c.code); setCopied(true); setTimeout(() => setCopied(false), 1500); } } catch { /* closed */ }
   };
   return (

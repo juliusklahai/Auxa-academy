@@ -998,3 +998,9 @@ html.theme-dark .people { --pc-bg: #1f1f21; --pc-ink: #f4f4f5; --pc-ink2: #c4c4c
 .cl-name { display: grid; } .cl-name small { color: var(--muted); font-size: 12px; }
 .cl-del { justify-self: start; border: 0; background: none; padding: 8px 0; font: inherit; cursor: pointer; }
 .place-card { width: min(640px, 100%); box-sizing: border-box; }
+/* My Music: the options pop-out opens downward when the bar sits in the page or under the full-screen row */
+.ex-toolbar > .dock.has-more { overflow: visible; }
+.ex-toolbar > .dock .dock-more, .practice-root.focus > .dock .dock-more { top: calc(100% + 10px); bottom: auto; left: 0; transform: none; }
+.mm-toolbar { margin-top: 12px; }
+.mm-toolbar > .dock .dock-summary { display: inline; }
+.ex-toolbar > .dock.has-more { position: relative; z-index: 40; }

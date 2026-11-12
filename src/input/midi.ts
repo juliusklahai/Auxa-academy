@@ -1,5 +1,5 @@
 // MIDI keyboards: Web MIDI in browsers (Chrome, Edge, Opera, Firefox 108+ on desktop; not Safari/iOS),
-// and the phone's own MIDI system inside the Maestro apps.
+// and the phone's own MIDI system inside the Auxa apps.
 import { native, onNativeMidi } from '../native/bridge';
 
 export interface MidiNoteEvent { midi: number; on: boolean; velocity: number; at: number }

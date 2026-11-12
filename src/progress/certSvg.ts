@@ -18,12 +18,12 @@ export function certificateSvg(name: string, level: number, date: string) {
   <g transform="translate(${W / 2 - 150} 110)">
     <rect width="64" height="64" rx="16" fill="#141414"/>
     <rect x="15" y="16" width="8" height="32" rx="4" fill="#fff"/><rect x="28" y="16" width="8" height="32" rx="4" fill="#fff"/><rect x="41" y="16" width="8" height="32" rx="4" fill="#e3f53a"/>
-    <text x="84" y="46" font-family="Inter, Helvetica, Arial, sans-serif" font-size="40" font-weight="700" fill="#141414" letter-spacing="-1">maestro</text>
+    <text x="84" y="46" font-family="Inter, Helvetica, Arial, sans-serif" font-size="40" font-weight="700" fill="#141414" letter-spacing="-1">auxa</text>
     <text x="246" y="46" font-family="Inter, Helvetica, Arial, sans-serif" font-size="40" font-weight="300" fill="#141414">academy</text>
   </g>
   <text x="${W / 2}" y="290" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="30" letter-spacing="10" fill="#556b00">CERTIFICATE OF ACHIEVEMENT</text>
   <text x="${W / 2}" y="370" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="28" fill="#55554f">This certifies that</text>
-  <text x="${W / 2}" y="490" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="96" font-style="italic" fill="#141414">${esc(name || 'A Maestro learner')}</text>
+  <text x="${W / 2}" y="490" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="96" font-style="italic" fill="#141414">${esc(name || 'A Auxa learner')}</text>
   <line x1="${W / 2 - 420}" y1="520" x2="${W / 2 + 420}" y2="520" stroke="#141414" stroke-width="1.5"/>
   <text x="${W / 2}" y="590" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="28" fill="#55554f">has mastered every lesson of</text>
   <text x="${W / 2}" y="670" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="54" font-weight="700" fill="#141414" letter-spacing="-1">Level ${level} · ${esc(LEVEL_NAMES[level] ?? '')}</text>
@@ -35,7 +35,7 @@ export function certificateSvg(name: string, level: number, date: string) {
   </g>
   <g transform="translate(${W - 580} 820)">
     <line x1="0" y1="60" x2="340" y2="60" stroke="#141414" stroke-width="1.5"/>
-    <text x="170" y="40" text-anchor="middle" font-family="Georgia, serif" font-size="34" font-style="italic" fill="#141414">Maestro Coach</text>
+    <text x="170" y="40" text-anchor="middle" font-family="Georgia, serif" font-size="34" font-style="italic" fill="#141414">Auxa Coach</text>
     <text x="170" y="96" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="22" fill="#77776f">${lessons.length} lessons mastered</text>
   </g>
   <g transform="translate(${W / 2} 880)">

@@ -21,7 +21,7 @@ function steps(): string[] {
     'Set the Preferred engine to "Speech Services by Google". If it is missing, install it from the Play Store.',
     'Tap the gear next to it, then "Install voice data", and download English (United States).',
     'Set the Language to English, then press Play there to check you can hear it.',
-    ...(isSamsung ? ['Samsung Internet may still stay quiet: open Maestro in Chrome instead.'] : []),
+    ...(isSamsung ? ['Samsung Internet may still stay quiet: open Auxa in Chrome instead.'] : []),
     ...(isNativeApp ? [] : ['Come back, reload this page, and tap "Test the voice".']),
   ];
   return [

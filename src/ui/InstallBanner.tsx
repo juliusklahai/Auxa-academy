@@ -12,7 +12,7 @@ export function InstallBanner() {
     <div className="install-banner">
       <img src="./icon-192.png" alt="" width={40} height={40} />
       <div className="ib-text">
-        <b>Install Maestro on your phone</b>
+        <b>Install Auxa on your phone</b>
         <span>{ios ? 'Tap the Share button, then “Add to Home Screen”.' : 'Opens full screen with no address bar, and works offline.'}</span>
       </div>
       {!ios && <button className="btn lime sm" onClick={() => (st.canPrompt ? void installApp() : setIos(true))}>Install</button>}
@@ -26,6 +26,6 @@ export function InstallHint({ dark }: { dark?: boolean }) {
   const st = useInstall();
   if (st.installed || (!st.canPrompt && !st.ios)) return null;
   return st.canPrompt
-    ? <button className={`link ${dark ? 'on-dark' : ''}`} onClick={() => void installApp()}>Install Maestro for true full screen</button>
-    : <small className={dark ? 'on-dark' : ''}>Tip: Share → Add to Home Screen opens Maestro full screen.</small>;
+    ? <button className={`link ${dark ? 'on-dark' : ''}`} onClick={() => void installApp()}>Install Auxa for true full screen</button>
+    : <small className={dark ? 'on-dark' : ''}>Tip: Share → Add to Home Screen opens Auxa full screen.</small>;
 }

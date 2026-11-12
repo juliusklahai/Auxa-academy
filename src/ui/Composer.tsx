@@ -1,4 +1,4 @@
-// Create: play a short tune with the metronome and Maestro writes it down. Then hear it, try again, or add
+// Create: play a short tune with the metronome and Auxa writes it down. Then hear it, try again, or add
 // four-part harmony with the arranger and open it in My Music to keep, print or share.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { audio } from '../audio/engine';
@@ -89,7 +89,7 @@ export function Composer({ openScore }: { openScore?: (xml: string) => void }) {
   const lo = 48, hi = 84;
   return (
     <section className="level composer">
-      <div className="level-head"><b>Create</b><span className="muted">Make up a tune, and Maestro writes it down</span></div>
+      <div className="level-head"><b>Create</b><span className="muted">Make up a tune, and Auxa writes it down</span></div>
       <div className="card comp-card">
         <div className="comp-idea"><Icon name="note" size={16} /><span><b>Idea:</b> {PROMPTS[prompt]}</span><button className="link" onClick={() => setPrompt((p) => (p + 1) % PROMPTS.length)}>Another idea</button></div>
         <div className="comp-set">

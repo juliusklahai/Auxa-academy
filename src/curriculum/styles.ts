@@ -1,6 +1,6 @@
 // Level 14: Styles. Pop chords and left-hand patterns, colour chords, blues and boogie-woogie, ragtime and
 // stride, Latin, gospel, highlife and Afrobeat (our own material), and accompanying a singer.
-// Level 9 additions: fingering, pedaling, minor scales, ornaments. All patterns written for Maestro.
+// Level 9 additions: fingering, pedaling, minor scales, ornaments. All patterns written for Auxa.
 import type { BackNote, Clef, Exercise, Hand, ScoreEvent, SkillId } from '../core/types';
 import { parts } from './church';
 import { seqOf, type LessonDef } from './levels';

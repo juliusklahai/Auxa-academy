@@ -45,7 +45,7 @@ export function useFocusMode(onExit?: () => void) {
       // some browsers never answer the lock request: check again once the screen had time to turn
       window.setTimeout(() => { if (isPortrait()) setRotateHint(true); }, 1200);
     };
-    // Maestro app: the phone itself turns sideways and hides its bars (no browser notice at all)
+    // Auxa app: the phone itself turns sideways and hides its bars (no browser notice at all)
     if (native) { native.setPractice(true); return; }
     // installed web app: it is full screen already, so only turn the screen (no browser full-screen notice)
     if (isInstalled()) { landscape(); return; }
