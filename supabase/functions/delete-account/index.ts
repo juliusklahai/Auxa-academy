@@ -1,7 +1,21 @@
 // Delete my account: removes the person's sign-in, profile and saved progress. App stores require that
 // people can do this from inside the app. A card subscription is cancelled first so it stops charging.
 import Stripe from 'npm:stripe@17';
-import { admin, caller, cors, json } from '../_shared/util.ts';
+import { createClient } from 'npm:@supabase/supabase-js@2';
+
+// Helpers kept inside this file so it can be pasted straight into the Supabase dashboard editor.
+const cors = {
+  'Access-Control-Allow-Origin': Deno.env.get('APP_ORIGIN') ?? '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-return-to',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
+const admin = () => createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
+async function caller(req: Request) {
+  const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } }, auth: { persistSession: false } });
+  const { data } = await sb.auth.getUser();
+  return data.user ?? null;
+}
 
 const key = Deno.env.get('STRIPE_SECRET_KEY');
 const stripe = key ? new Stripe(key, { apiVersion: '2025-02-24.acacia' }) : null;
