@@ -16,7 +16,7 @@
 .lp-glow { position: absolute; width: 900px; height: 900px; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; }
 .lp-glow.a { background: var(--glow-a); right: -300px; top: 600px; }
 .lp-glow.b { background: var(--glow-b); left: -300px; top: 2600px; }
-.lp > *:not(.lp-glow):not(.lp-modal) { position: relative; z-index: 1; }
+.lp > *:not(.lp-glow):not(.lp-modal):not(.authpage) { position: relative; z-index: 1; }
 
 /* nav: floating glass bar */
 .lp-nav { position: sticky !important; top: 14px; z-index: 50 !important; margin: 14px auto 0; width: min(1180px, calc(100% - 28px)); display: flex; align-items: center; gap: 12px;

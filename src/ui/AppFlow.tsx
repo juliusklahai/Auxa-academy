@@ -8,6 +8,7 @@ import { ACCOUNTS_ENABLED, MONIME_ENABLED, PLANS, type PlanOption } from '../acc
 import { TIER_NAME } from '../account/gate';
 import { closeUpgrade, refreshProfile, startCheckout, useAccount } from '../account/store';
 import { PERKS, SignInForm } from './Account';
+import { AuthPage } from './AuthPage';
 import { FREE_LINE } from '../account/planCopy';
 import { Icon } from './Icon';
 import { setGuest } from './Landing';
@@ -263,18 +264,7 @@ function BuildPlan({ goal, experience, interests, minutes, name, onDone }: { goa
 
 /** Create an account or sign in (the app's second screen). */
 export function AuthScreen({ onGuest }: { onGuest: () => void }) {
-  return (
-    <div className="ob auth">
-      <div className="ob-top"><span className="lp-logo"><AuxaWord height={24} /></span></div>
-      <div className="ob-slide">
-        <h1>Save your progress</h1>
-        <p>Make a free account so your lessons, songs and scores follow you to every device.</p>
-        <div className="ob-form"><SignInForm start="signup" /></div>
-        <button className="ob-guest" onClick={() => { setGuest(true); onGuest(); }}>Not now, try it first</button>
-        <p className="ob-legal">By continuing you agree to the <a href="#/terms">Terms of Use</a> and <a href="#/privacy">Privacy Policy</a>.</p>
-      </div>
-    </div>
-  );
+  return <AuthPage start="signup" onGuest={() => { setGuest(true); onGuest(); }} />;
 }
 
 /**

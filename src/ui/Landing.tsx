@@ -6,9 +6,9 @@ import { AuxaWord, AuxaMark } from './Brand';
 import { useEffect, useRef, useState } from 'react';
 import { DashField } from './DashField';
 import { PLANS } from '../account/config';
-import { SignInForm } from './Account';
 import { PLAN_ITEMS, PLAN_WHO } from '../account/planCopy';
 import { Icon } from './Icon';
+import { AuthPage } from './AuthPage';
 import { useTheme, setTheme, type Theme } from './theme';
 
 const GUEST = 'maestro.guest.v1';
@@ -141,15 +141,7 @@ export function Landing({ onStart, returning = false }: { onStart: () => void; r
         <small className="lp-copy">© {new Date().getFullYear()} Auxa Academy</small>
       </footer>
 
-      {auth && (
-        <div className="lp-modal" onClick={() => setAuth(false)}>
-          <div className="lp-modal-card" role="dialog" aria-label="Sign in" onClick={(e) => e.stopPropagation()}>
-            <button className="lp-plus close" onClick={() => setAuth(false)} aria-label="Close">×</button>
-            <span className="lp-pill"><i />Welcome</span>
-            <SignInForm key={auth} start={auth} />
-          </div>
-        </div>
-      )}
+      {auth && <AuthPage key={auth} start={auth} onClose={() => setAuth(false)} />}
     </div>
   );
 }
