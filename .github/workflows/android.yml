@@ -15,7 +15,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      START_URL: ${{ github.ref_name == 'main' && 'https://juliusklahai.github.io/maestro-academy/' || 'https://juliusklahai.github.io/maestro-academy/preview/' }}
+      START_URL: ${{ github.ref_name == 'main' && 'https://juliusklahai.github.io/Auxa-Academy/' || 'https://juliusklahai.github.io/Auxa-Academy/preview/' }}
       VERSION_CODE: ${{ github.run_number }}
       VERSION_NAME: 0.1.${{ github.run_number }}
     defaults:

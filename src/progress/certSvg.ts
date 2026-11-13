@@ -13,6 +13,12 @@ export interface CertOpts {
   code?: string;
   seal?: string;
 }
+/** A "line" that is really microscopic text running along a path (prints as a line, zooms into words). */
+function micro(id: string, d: string, text: string, size: number, fill: string, len: number, weight = 600) {
+  const per = size * 0.62;
+  const reps = Math.ceil(len / (per * text.length)) + 1;
+  return `<defs><path id="${id}" d="${d}"/></defs><text font-family="Arial, Helvetica, sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}" letter-spacing="0.15"><textPath href="#${id}">${esc(text.repeat(reps))}</textPath></text>`;
+}
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 function qrSvg(text: string, x: number, y: number, size: number) {
   const q = QRCode.create(text, { errorCorrectionLevel: 'M' });
@@ -26,11 +32,14 @@ export const W = 1600, H = 1130;
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 const longDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
+const SIG_K = 250 / SIG_BOX.w;
 const SCRIPT = "AuxaScript, 'Great Vibes', 'Brush Script MT', cursive";
 
 /** scriptFont: optional data URL of the cursive font, embedded so the PNG export keeps it. */
 export function certificateSvg(name: string, level: number, date: string, scriptFont?: string, opts: CertOpts = {}) {
   const { nameShape, code, seal } = opts;
+  const tag = `m${level}${(seal ?? code ?? 'x').slice(0, 6).replace(/[^a-zA-Z0-9]/g, '')}`;
+  const mt = code ? `AUXA ACADEMY · ${code} · AUTHENTIC CERTIFICATE · ` : 'AUXA ACADEMY · CERTIFICATE OF ACHIEVEMENT · ';
   const topics = certTopics(level);
   const tune = seal ? sealMelody(seal) : [];
   const keys = Array.from({ length: 22 }, (_, i) => `<rect x="${560 + i * 22}" y="1010" width="20" height="56" rx="3" fill="${tune.includes(i) ? '#7fe9e4' : '#fff'}" stroke="#d9d6c8"/>`).join('')
@@ -39,8 +48,8 @@ export function certificateSvg(name: string, level: number, date: string, script
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   ${scriptFont ? `<style>@font-face{font-family:AuxaScript;src:url(${scriptFont}) format("woff2");}</style>` : ''}
   <rect width="${W}" height="${H}" fill="#fbf9f1"/>
-  <rect x="34" y="34" width="${W - 68}" height="${H - 68}" fill="none" stroke="#141414" stroke-width="3"/>
-  <rect x="50" y="50" width="${W - 100}" height="${H - 100}" fill="none" stroke="#0a9fae" stroke-width="2"/>
+  ${micro(`${tag}o`, `M34 36 H${W - 34} V${H - 34} H34 Z`, mt, 5.2, '#141414', 2 * (W + H), 700)}
+  ${micro(`${tag}i`, `M50 52 H${W - 50} V${H - 50} H50 Z`, mt, 3.6, '#047683', 2 * (W + H), 600)}
   <g transform="translate(${W / 2 - (WORD_BOX.w * 0.34) / 2} 104) scale(0.34) translate(${-WORD_BOX.x} ${-WORD_BOX.y})">
     <path fill="#161d26" fill-rule="evenodd" d="${AUXA_PATHS.dark_word}"/><path fill="#0aa5b4" fill-rule="evenodd" d="${AUXA_PATHS.word_cyan}"/>
   </g>
@@ -49,24 +58,24 @@ export function certificateSvg(name: string, level: number, date: string, script
   ${nameShape
     ? (() => { const sc = Math.min(1, 1080 / Math.max(1, nameShape.w)); return `<path transform="translate(${(W / 2 - (nameShape.w * sc) / 2).toFixed(1)} 490) scale(${sc.toFixed(4)})" fill="#141414" d="${nameShape.d}"/>`; })()
     : `<text x="${W / 2}" y="490" text-anchor="middle" font-family="${SCRIPT}" font-size="128" fill="#141414">${esc(name || 'An Auxa learner')}</text>`}
-  <line x1="${W / 2 - 420}" y1="520" x2="${W / 2 + 420}" y2="520" stroke="#141414" stroke-width="1.5"/>
+  ${micro(`${tag}n`, `M${W / 2 - 420} 521 H${W / 2 + 420}`, mt, 3.4, '#141414', 840)}
   <text x="${W / 2}" y="590" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="28" fill="#55554f">has mastered every lesson of</text>
   <text x="${W / 2}" y="670" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="54" font-weight="700" fill="#141414" letter-spacing="-1">Level ${level} · ${esc(LEVEL_NAMES[level] ?? '')}</text>
   <text x="${W / 2}" y="730" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="22" fill="#77776f">${esc(topics)}</text>
   <g transform="translate(240 820)">
-    <line x1="0" y1="60" x2="340" y2="60" stroke="#141414" stroke-width="1.5"/>
+    ${micro(`${tag}d`, 'M0 61 H340', mt, 3.4, '#141414', 340)}
     <text x="170" y="40" text-anchor="middle" font-family="Georgia, serif" font-size="34" font-style="italic" fill="#141414">${esc(longDate(date))}</text>
     <text x="170" y="108" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="22" fill="#77776f">Date</text>
   </g>
   <g transform="translate(${W - 580} 820)">
-    <line x1="0" y1="60" x2="340" y2="60" stroke="#141414" stroke-width="1.5"/>
-    <path transform="translate(${170 - (SIG_BOX.w * 0.105) / 2} ${80 - SIG_BOX.h * 0.105}) scale(0.105)" fill="#141414" fill-rule="evenodd" d="${SIG_PATH}"/>
+    ${micro(`${tag}s`, 'M0 61 H340', mt, 3.4, '#141414', 340)}
+    <path transform="translate(${170 - (SIG_BOX.w * SIG_K) / 2} ${76 - SIG_BOX.h * SIG_K}) scale(${SIG_K})" fill="#141414" stroke="#141414" stroke-width="9" stroke-linejoin="round" fill-rule="evenodd" d="${SIG_PATH}"/>
     <text x="170" y="108" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="22" fill="#77776f">Julius K · CEO, Auxa</text>
   </g>
-  ${seal ? `<g fill="none" stroke="#0a9fae" stroke-width="0.9" opacity="0.75">${guilloche(seal, W / 2, 880, 84, 132).map((d) => `<path d="${d}"/>`).join('')}</g>
-  <defs><path id="ring" d="M ${W / 2 - 92} 880 a 92 92 0 1 1 184 0 a 92 92 0 1 1 -184 0"/></defs>
-  <text font-family="Inter, Helvetica, Arial, sans-serif" font-size="7.4" letter-spacing="1.2" fill="#047683"><textPath href="#ring">${esc(`AUXA ACADEMY · ${code} · ${seal.slice(0, 24).toUpperCase()} · AUTHENTIC · `.repeat(2))}</textPath></text>
-  <g fill="none" stroke="#0a9fae" stroke-width="0.8" opacity="0.8">${[0, 1].map((k) => `<path d="${sealWave(seal, 60, W - 60, 42 + k * 0.01, k)}"/><path d="${sealWave(seal, 60, W - 60, H - 42, k + 2)}"/>`).join('')}</g>
+  ${seal ? `${guilloche(seal, W / 2, 880, 84, 132).map((d, i) => micro(`${tag}g${i}`, d, mt, 2.6, '#0a9fae', 2400, 500)).join('')}
+  <defs><path id="${tag}r" d="M ${W / 2 - 92} 880 a 92 92 0 1 1 184 0 a 92 92 0 1 1 -184 0"/></defs>
+  <text font-family="Inter, Helvetica, Arial, sans-serif" font-size="7.4" letter-spacing="1.2" fill="#047683"><textPath href="#${tag}r">${esc(`AUXA ACADEMY · ${code} · ${seal.slice(0, 24).toUpperCase()} · AUTHENTIC · `.repeat(2))}</textPath></text>
+  ${[0, 1].map((k) => micro(`${tag}w${k}`, sealWave(seal, 60, W - 60, 43, k), mt, 2.8, '#0a9fae', W) + micro(`${tag}v${k}`, sealWave(seal, 60, W - 60, H - 42, k + 2), mt, 2.8, '#0a9fae', W)).join('')}
   ${qrSvg(verifyUrl(code ?? ''), 92, 948, 96)}
   <text x="206" y="982" font-family="Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#141414">Scan to verify</text>
   <text x="206" y="1004" font-family="'Courier New', monospace" font-size="16" fill="#047683" letter-spacing="1">${esc(code ?? '')}</text>

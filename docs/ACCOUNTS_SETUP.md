@@ -15,9 +15,9 @@ Without the `VITE_SUPABASE_*` variables the app runs exactly as before: no sign-
 2. Go to **SQL Editor**, paste in `supabase/migrations/0001_accounts.sql`, and run it. Then do the same with `supabase/migrations/0002_people.sql` (People cards and the `avatars` photo bucket) and `supabase/migrations/0003_classes.sql` (classes, members and assignments for teachers), in that order.
 3. To change the admin email, edit the `insert into admin_emails` line first. That email gets the admin role on first sign-in, with every course unlocked.
 4. Go to **Authentication → URL Configuration**:
-   - Site URL: `https://juliusklahai.github.io/maestro-academy/` (if this is left as `http://localhost:3000`, sign-in and reset-password emails open localhost)
+   - Site URL: `https://juliusklahai.github.io/Auxa-Academy/` (if this is left as `http://localhost:3000`, sign-in and reset-password emails open localhost)
    - Redirect URLs, add all three (the `**` lets the reset link carry `?reset=1` and covers /preview/):
-     - `https://juliusklahai.github.io/maestro-academy/**`
+     - `https://juliusklahai.github.io/Auxa-Academy/**`
      - `io.github.juliusklahai.maestro://**` (the Android app)
      - `http://localhost:5173/**` (only for local development)
 5. Go to **Authentication → Providers**:
@@ -44,7 +44,7 @@ Enter them in **Edge Functions → Secrets**, or with `supabase secrets set NAME
 | MONIME_PRICE_PRO | Pro pass in minor units of SLE: `20000` (SLE 200) |
 | MONIME_PRICE_PLUS | Plus pass in minor units of SLE: `40000` (SLE 400) |
 | MONIME_WEBHOOK_SECRET | Any long random string you make up |
-| APP_URL | `https://juliusklahai.github.io/maestro-academy/` |
+| APP_URL | `https://juliusklahai.github.io/Auxa-Academy/` |
 | APP_ORIGIN | `https://juliusklahai.github.io` |
 
 ## 4. Stripe

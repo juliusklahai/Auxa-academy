@@ -16,7 +16,7 @@ android {
         versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()
         versionName = System.getenv("VERSION_NAME") ?: "0.1.0"
         // The app opens this address (the preview while we test; the live site at launch).
-        buildConfigField("String", "START_URL", "\"${System.getenv("START_URL") ?: "https://juliusklahai.github.io/maestro-academy/preview/"}\"")
+        buildConfigField("String", "START_URL", "\"${System.getenv("START_URL") ?: "https://juliusklahai.github.io/Auxa-Academy/preview/"}\"")
     }
 
     buildFeatures { buildConfig = true }

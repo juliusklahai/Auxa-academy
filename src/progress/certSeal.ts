@@ -72,5 +72,5 @@ export function sealWave(seal: string, x0: number, x1: number, y: number, k: num
 }
 
 /** Verify address for a code. */
-export const SITE = 'https://juliusklahai.github.io/maestro-academy/';
+export const SITE = 'https://juliusklahai.github.io/Auxa-Academy/';
 export const verifyUrl = (code: string) => `${SITE}#/verify/${encodeURIComponent(code)}`;

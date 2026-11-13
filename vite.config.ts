@@ -7,7 +7,7 @@ import type { Plugin } from 'vite';
 
 // Put the latest Android test build next to the site (…/Maestro.apk), so phones download it from the same
 // fast host as the app instead of a redirect. Skipped quietly when offline.
-const APK_URL = 'https://github.com/juliusklahai/maestro-academy/releases/download/android-test/Maestro.apk';
+const APK_URL = 'https://github.com/juliusklahai/Auxa-Academy/releases/download/android-test/Maestro.apk';
 function androidApk(): Plugin {
   let out = 'dist';
   return {
