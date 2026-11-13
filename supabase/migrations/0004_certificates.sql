@@ -62,7 +62,7 @@ begin
 
   insert into public.certificates (code, user_id, name, level, level_name, topics, earned_on, seal)
   values (new_code, uid, nm, p_level, left(coalesce(p_level_name, ''), 80), left(coalesce(p_topics, ''), 300), earned::date,
-          encode(hmac(new_code || '|' || uid::text || '|' || nm || '|' || p_level::text || '|' || earned, (select k from private.cert_key), 'sha256'), 'hex'))
+          encode(hmac(convert_to(new_code || '|' || uid::text || '|' || nm || '|' || p_level::text || '|' || earned, 'UTF8'), (select k from private.cert_key), 'sha256'), 'hex'))
   returning * into c;
   -- an older certificate for this level (another spelling of the name) now points to the new one
   update public.certificates x set replaced_by = c.code where x.user_id = uid and x.level = p_level and x.code <> c.code and x.replaced_by is null;
