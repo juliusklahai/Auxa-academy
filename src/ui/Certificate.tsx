@@ -2,7 +2,7 @@
 // Signed-in learners get a code from the database; the link and QR open the public verify page.
 import { useEffect, useMemo, useState } from 'react';
 import { LEVEL_NAMES } from '../curriculum/levels';
-import { certificateSvg, certTopics, W, H } from '../progress/certSvg';
+import { certificateSvg, certCitation, W, H } from '../progress/certSvg';
 import { verifyUrl } from '../progress/certSeal';
 import { nameShape } from '../progress/nameShape';
 import { canIssue, issueCertificate, type IssuedCert } from '../account/certificates';
@@ -45,7 +45,7 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
     if (!canIssue() || !shown) { setState(canIssue() ? 'idle' : 'offline'); return; }
     setState('issuing'); setCert(null);
     const t = setTimeout(() => {
-      issueCertificate(level, shown, LEVEL_NAMES[level] ?? '', certTopics(level))
+      issueCertificate(level, shown, LEVEL_NAMES[level] ?? '', certCitation(level))
         .then((c) => { setCert(c); setState('idle'); })
         .catch((e: Error) => { setErr(e.message); setState('error'); });
     }, 700);

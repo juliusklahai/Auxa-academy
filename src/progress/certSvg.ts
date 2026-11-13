@@ -48,7 +48,7 @@ export function certificateSvg(name: string, level: number, date: string, script
   const tag = `m${level}${(seal ?? code ?? 'x').slice(0, 6).replace(/[^a-zA-Z0-9]/g, '')}`;
   const border = (code ? `AUXAACADEMY${code.replace(/-/g, '')}AUTHENTIC` : 'AUXAACADEMYCERTIFICATE');
   const mt = code ? `AUXA ACADEMY · ${code} · AUTHENTIC CERTIFICATE · ` : 'AUXA ACADEMY · CERTIFICATE OF ACHIEVEMENT · ';
-  const topics = certTopics(level);
+  const citation = wrap(certCitation(level), 92);
   const tune = seal ? sealMelody(seal) : [];
   const keys = Array.from({ length: 22 }, (_, i) => `<rect x="${560 + i * 22}" y="1010" width="20" height="56" rx="3" fill="${tune.includes(i) ? '#7fe9e4' : '#fff'}" stroke="#d9d6c8"/>`).join('')
     + tune.map((k, j) => `<g transform="translate(${570 + k * 22} ${996 - (tune.slice(0, j).filter((x) => x === k).length) * 15})"><circle r="7" fill="#047683"/><text y="3.5" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="9" font-weight="700" fill="#fff">${j + 1}</text></g>`).join('')
@@ -67,9 +67,9 @@ export function certificateSvg(name: string, level: number, date: string, script
     ? (() => { const sc = Math.min(1, 1080 / Math.max(1, nameShape.w)); return `<path transform="translate(${(W / 2 - (nameShape.w * sc) / 2).toFixed(1)} 490) scale(${sc.toFixed(4)})" fill="#141414" d="${nameShape.d}"/>`; })()
     : `<text x="${W / 2}" y="490" text-anchor="middle" font-family="${SCRIPT}" font-size="128" fill="#141414">${esc(name || 'An Auxa learner')}</text>`}
   ${micro(`${tag}n`, `M${W / 2 - 420} 521 H${W / 2 + 420}`, mt, 3.4, '#141414', 840)}
-  <text x="${W / 2}" y="590" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="28" fill="#55554f">has mastered every lesson of</text>
+  <text x="${W / 2}" y="590" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="28" fill="#55554f">has successfully completed</text>
   <text x="${W / 2}" y="670" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="54" font-weight="700" fill="#141414" letter-spacing="-1">Level ${level} · ${esc(LEVEL_NAMES[level] ?? '')}</text>
-  <text x="${W / 2}" y="730" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="22" fill="#77776f">${esc(topics)}</text>
+  ${citation.map((l, i) => `<text x="${W / 2}" y="${716 + i * 28}" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="22" font-style="italic" fill="#66665f">${esc(l)}</text>`).join('')}
   <g transform="translate(240 820)">
     ${micro(`${tag}d`, 'M0 61 H340', mt, 3.4, '#141414', 340)}
     <text x="170" y="40" text-anchor="middle" font-family="Georgia, serif" font-size="34" font-style="italic" fill="#141414">${esc(longDate(date))}</text>
@@ -80,14 +80,15 @@ export function certificateSvg(name: string, level: number, date: string, script
     <g transform="translate(${170 - (SIG_BOX.w * SIG_K) / 2} ${76 - SIG_BOX.h * SIG_K}) scale(${SIG_K})">${microSignature(tag, 'JULIUSKAUXACEO', SIG_K)}</g>
     <text x="170" y="108" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="22" fill="#77776f">Julius K · CEO, Auxa</text>
   </g>
-  ${seal ? `${guilloche(seal, W / 2, 880, 84, 132).map((d, i) => micro(`${tag}g${i}`, d, mt, 2.6, '#0a9fae', 2400, 500)).join('')}
+  ${seal ? `${guilloche(seal, W / 2, 880, 84, 122).map((d, i) => micro(`${tag}g${i}`, d, mt, 2.6, '#0a9fae', 2400, 500)).join('')}
   <defs><path id="${tag}r" d="M ${W / 2 - 92} 880 a 92 92 0 1 1 184 0 a 92 92 0 1 1 -184 0"/></defs>
   <text font-family="Inter, Helvetica, Arial, sans-serif" font-size="7.4" letter-spacing="1.2" fill="#047683"><textPath href="#${tag}r">${esc(`AUXA ACADEMY · ${code} · ${seal.slice(0, 24).toUpperCase()} · AUTHENTIC · `.repeat(2))}</textPath></text>
   ${[0, 1].map((k) => micro(`${tag}w${k}`, sealWave(seal, 60, W - 60, 43, k), mt, 2.8, '#0a9fae', W) + micro(`${tag}v${k}`, sealWave(seal, 60, W - 60, H - 42, k + 2), mt, 2.8, '#0a9fae', W)).join('')}
   ${qrSvg(verifyUrl(code ?? ''), 92, 948, 96)}
-  <text x="206" y="982" font-family="Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#141414">Scan to verify</text>
-  <text x="206" y="1004" font-family="'Courier New', monospace" font-size="16" fill="#047683" letter-spacing="1">${esc(code ?? '')}</text>
-  <text x="206" y="1026" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12" fill="#77776f">The lit keys play this certificate's melody</text>` : ''}
+  <text x="206" y="989" font-family="Inter, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#141414">Scan to verify</text>
+  <text x="206" y="1010" font-family="'Courier New', monospace" font-size="16" fill="#047683" letter-spacing="1">${esc(code ?? '')}</text>
+  <text x="206" y="1030" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12" fill="#77776f">The lit keys play this certificate's melody</text>` : ''}
+  <text x="${seal ? 206 : 92}" y="${seal ? 966 : 1030}" font-family="Inter, Helvetica, Arial, sans-serif" font-size="18" font-weight="800" letter-spacing="2" fill="#141414">LV-${level}</text>
   <g transform="translate(${W / 2} 880)">
     <circle r="78" fill="#1ee3dc"/><circle r="66" fill="none" stroke="#141414" stroke-width="2" stroke-dasharray="4 6"/>
     <text y="-12" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#141414" letter-spacing="3">LEVEL</text>
@@ -97,6 +98,33 @@ export function certificateSvg(name: string, level: number, date: string, script
 </svg>`;
 }
 
+
+/** What finishing each level shows the learner can do (the certificate's citation). */
+export const CERT_SKILLS: Record<number, string> = {
+  0: 'good posture and hand shape, finding middle C, the notes C to G, the black keys and a steady beat',
+  1: 'reading the treble and bass staves, counting rhythms aloud, and playing first melodies and chords',
+  2: 'independent fingers, thumb-under and cross-over scale technique, staccato and left-hand accompaniment',
+  3: 'reading the grand staff and playing hands together, from a melody over a bass to four voices',
+  4: 'steady rhythm in eighths, dotted notes, rests, syncopation, sixteenths and triplets, in every common time signature',
+  5: 'the keys of C, G, F and D major and A minor, key signatures and the chromatic scale',
+  6: 'primary chords, inversions, minor chords and accompaniment patterns',
+  7: 'expressive dynamics, legato and staccato touch, pedaling and phrasing',
+  8: 'intervals, ledger lines and sight-reading new music',
+  9: 'two-octave scales and arpeggios, seventh chords, octaves, pedal technique and ornaments',
+  10: 'working out the key, melody and chords of a song by ear and playing it in any key',
+  11: 'jazz harmony, swing, the ii–V–I, rootless voicings, the blues, improvisation and playing from a lead sheet',
+  12: 'four-part writing, voice leading, cadences, harmonizing a melody and arranging for choir',
+  13: 'leading congregational singing: hymns in two, three and four parts, chord symbols, keyboard and organ',
+  14: 'pop, blues, ragtime, Latin, gospel, highlife and Afrobeat styles, and accompanying a singer',
+};
+/** The citation sentence for a level. */
+export const certCitation = (level: number) => (CERT_SKILLS[level] ? `Demonstrating ${CERT_SKILLS[level]}.` : '');
+function wrap(text: string, max: number): string[] {
+  const out: string[] = []; let line = '';
+  for (const w of text.split(' ')) { if ((line + ' ' + w).trim().length > max && line) { out.push(line); line = w; } else line = (line + ' ' + w).trim(); }
+  if (line) out.push(line);
+  return out;
+}
 
 /** The level's topics, each starting with a capital letter. */
 export function certTopics(level: number) {

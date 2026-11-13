@@ -2,6 +2,7 @@
 // certificate from what the database holds, security marks included, so anyone can compare.
 import { useEffect, useMemo, useState } from 'react';
 import { verifyCertificate, type CertRecord } from '../account/certificates';
+import { LEVEL_NAMES } from '../curriculum/levels';
 import { certificateSvg } from '../progress/certSvg';
 import { sealTune, SITE } from '../progress/certSeal';
 import { nameShape } from '../progress/nameShape';
@@ -46,7 +47,7 @@ export function VerifyPage({ code }: { code: string }) {
           <>
             <dl className="vf-facts">
               <div><dt>Name</dt><dd>{rec.name}</dd></div>
-              <div><dt>Achievement</dt><dd>Level {rec.level} · {rec.level_name}</dd></div>
+              <div><dt>Achievement</dt><dd>Level {rec.level} · {LEVEL_NAMES[rec.level] ?? rec.level_name}</dd></div>
               <div><dt>Completed</dt><dd>{longDate(rec.earned_on)}</dd></div>
               <div><dt>Issued</dt><dd>{longDate(rec.issued_at)}</dd></div>
             </dl>
