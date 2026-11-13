@@ -1,7 +1,7 @@
 // Privacy policy, terms of use, subscriptions and refunds, and open-source credits.
 // Linkable pages (#/privacy, #/terms, #/subscriptions, #/licenses) that work without signing in, so the
 // app stores and the sign-up screen can point to them.
-import { AuxaLogo } from './Brand';
+import { AuxaWord } from './Brand';
 import { useEffect, useState } from 'react';
 import { Icon } from './Icon';
 
@@ -160,7 +160,7 @@ export function LegalPage({ id }: { id: LegalId }) {
     <div className="legal">
       <header className="legal-top">
         <button className="ob-close" onClick={closeLegal} aria-label="Back"><Icon name="back" size={18} /></button>
-        <span className="lp-logo"><AuxaLogo size={30} /></span>
+        <span className="lp-logo"><AuxaWord height={24} /></span>
       </header>
       <nav className="legal-tabs">{PAGES.map((p) => <a key={p.id} href={`#/${p.id}`} className={p.id === id ? 'on' : ''}>{p.title}</a>)}</nav>
       <article className="legal-body">

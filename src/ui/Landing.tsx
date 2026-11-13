@@ -2,7 +2,7 @@
 // (people can still "Start free" as a guest: the free levels work without an account).
 // Look: charcoal / paper, floating glass nav, Geist headlines with one serif italic word,
 // stacked step cards with phone screens, FAQ card, closing call to action, dotted wordmark.
-import { AuxaLogo, AuxaMark } from './Brand';
+import { AuxaWord, AuxaMark } from './Brand';
 import { useEffect, useRef, useState } from 'react';
 import { DashField } from './DashField';
 import { PLANS } from '../account/config';
@@ -44,7 +44,7 @@ export function Landing({ onStart, returning = false }: { onStart: () => void; r
       <div className="lp-glow a" aria-hidden /><div className="lp-glow b" aria-hidden />
 
       <header className="lp-nav">
-        <span className="lp-logo"><AuxaLogo size={30} /></span>
+        <span className="lp-logo"><AuxaWord height={24} /></span>
         <nav className="lp-links">
           <button onClick={() => go('steps')}>How it works</button>
           <button onClick={() => go('plans')}>Plans</button>
@@ -128,7 +128,7 @@ export function Landing({ onStart, returning = false }: { onStart: () => void; r
 
       <footer className="lp-foot">
         <div className="lp-foot-row">
-          <span className="lp-logo"><AuxaLogo size={30} /></span>
+          <span className="lp-logo"><AuxaWord height={24} /></span>
           <nav>
             <button onClick={() => go('plans')}>Plans</button>
             <button onClick={() => go('faq')}>FAQ</button>

@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react';
 import { LEVEL_NAMES } from '../curriculum/levels';
 import { certificateSvg } from '../progress/certSvg';
+import scriptFont from '@fontsource/great-vibes/files/great-vibes-latin-400-normal.woff2?inline';
 import { useAccount } from '../account/store';
 import { Icon } from './Icon';
 
@@ -21,7 +22,7 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
   const a = useAccount();
   const [name, setName] = useState(() => { try { return localStorage.getItem('maestro.cert.name') ?? ''; } catch { return ''; } });
   const shown = name || a.profile?.display_name || '';
-  const svg = useMemo(() => certificateSvg(shown, level, date), [shown, level, date]);
+  const svg = useMemo(() => certificateSvg(shown, level, date, scriptFont), [shown, level, date]);
   const [busy, setBusy] = useState('');
   const file = `Auxa-Level-${level}-certificate.png`;
   const save = async () => {

@@ -1,11 +1,11 @@
 // Footer wordmark drawn as a field of small dashes. Dashes inside the letters are bright, the rest faint.
 // Near the pointer (mouse or finger) they turn to point away from it, light up and grow, then ease back.
 import { useEffect, useRef } from 'react';
-import { AUXA_PATHS, MARK_BOX, WORD_BOX } from './brandPaths';
+import { AUXA_PATHS, WORD_BOX } from './brandPaths';
 
 const REST = -Math.PI / 3; // "/" at rest
 
-/** text: a word to draw; 'auxa-logo' draws the Auxa mark and wordmark side by side (swoosh dashes in cyan) */
+/** text: a word to draw; 'auxa-logo' draws the Auxa wordmark (swoosh dashes in cyan) */
 export function DashField({ text, dark }: { text: string; dark: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const darkRef = useRef(dark);
@@ -32,22 +32,13 @@ export function DashField({ text, dark }: { text: string; dark: boolean }) {
       off.width = cols; off.height = rows;
       const o = off.getContext('2d')!;
       if (text === 'auxa-logo') {
-        // mark (height h) + gap + wordmark (height 0.5h), centered in the strip
-        const wr = 0.62, gap = 0.14;
-        const unitW = MARK_BOX.w / MARK_BOX.h + gap + (WORD_BOX.w / WORD_BOX.h) * wr;
-        const h = Math.min(rows * 0.86, (cols * 0.9) / unitW);
-        let x = (cols - unitW * h) / 2;
-        const y = (rows - h) / 2;
-        const put = (box: { x: number; y: number; w: number; h: number }, hh: number, yy: number, navy: string[], cyan: string[]) => {
-          const k = hh / box.h;
-          o.setTransform(k, 0, 0, k, x - box.x * k, yy - box.y * k);
-          o.fillStyle = 'rgb(0,0,255)'; for (const d of navy) o.fill(new Path2D(d), 'evenodd');
-          o.fillStyle = 'rgb(255,0,0)'; for (const d of cyan) o.fill(new Path2D(d), 'evenodd');
-          x += box.w * k;
-        };
-        put(MARK_BOX, h, y, [AUXA_PATHS.dark_icon], [AUXA_PATHS.leg, AUXA_PATHS.swoosh]);
-        x += gap * h;
-        put(WORD_BOX, h * wr, y + h * (1 - wr) * 0.78, [AUXA_PATHS.dark_word], [AUXA_PATHS.word_cyan]);
+        // the Auxa wordmark alone, as big as the strip allows
+        const ar = WORD_BOX.w / WORD_BOX.h;
+        const h = Math.min(rows * 0.84, (cols * 0.92) / ar);
+        const x = (cols - ar * h) / 2, y = (rows - h) / 2, k = h / WORD_BOX.h;
+        o.setTransform(k, 0, 0, k, x - WORD_BOX.x * k, y - WORD_BOX.y * k);
+        o.fillStyle = 'rgb(0,0,255)'; o.fill(new Path2D(AUXA_PATHS.dark_word), 'evenodd');
+        o.fillStyle = 'rgb(255,0,0)'; o.fill(new Path2D(AUXA_PATHS.word_cyan), 'evenodd');
         o.setTransform(1, 0, 0, 1, 0, 0);
       } else {
         o.fillStyle = '#000';

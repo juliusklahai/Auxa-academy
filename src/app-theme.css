@@ -1089,3 +1089,16 @@ html.theme-light .pi-back { background: rgba(245,245,243,.45); }
   border: 1px solid var(--hair); background: var(--pillbg); color: var(--ink2); cursor: pointer; }
 @keyframes pi-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pi-pop { from { opacity: 0; transform: translateY(18px) scale(.94); } to { opacity: 1; transform: none; } }
+
+/* Segmented controls never wrap into a lumpy pill */
+.shelf-seg { display: flex; flex-wrap: nowrap; width: fit-content; }
+.shelf-seg button { flex: 1 1 auto; padding: 0 16px; }
+@media (max-width: 640px) {
+  .shelf-seg { width: 100%; }
+  .shelf-seg button { flex: 1 1 0; min-width: max-content; padding: 0 12px; }
+}
+/* Singing level: a tidy grid of tiles, plan badge on its own line */
+.seg.level-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px; width: 100%; padding: 5px; border-radius: 20px; box-shadow: none; }
+.seg.level-grid button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 48px; padding: 8px 10px; border-radius: 15px; font-size: 14px; font-weight: 600; color: var(--ink2); line-height: 1.2; text-align: center; }
+.seg.level-grid button small { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; opacity: .7; }
+@media (max-width: 640px) { .seg.level-grid { grid-template-columns: 1fr 1fr; } }

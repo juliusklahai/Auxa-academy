@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AuxaMark, AuxaWord } from './ui/Brand';
+import { AuxaWord } from './ui/Brand';
 import type { Lesson } from './core/types';
 import { LESSONS } from './curriculum/lessons';
 import { setExpected } from './input/expect';
@@ -141,7 +141,7 @@ export default function App() {
       <div className="device">
         <header className="appbar">
           <button className="app-logo" onClick={goHome} aria-label="Auxa home page" title="Home page">
-            <AuxaMark size={30} /><span className="app-logo-word"><AuxaWord height={19} /></span>
+            <span className="app-logo-word"><AuxaWord height={24} /></span>
           </button>
           {lesson && (
             <div className="app-crumb">

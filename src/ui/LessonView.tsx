@@ -589,7 +589,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocke
           {exercise.voice && (
             <div className="card voice-level">
               <div className="card-head"><b>Singing level</b></div>
-              <div className="seg wide">{VOICE_LEVELS.map((v) => <button key={v.id} className={settings.voiceLevel === v.id ? 'on' : ''} disabled={s.state === 'LISTENING'} onClick={() => { if (!allowVoiceLevel(getAccount().ent, v.id)) { openUpgrade(`${v.label} singing is part of ${TIER_NAME[voiceLevelTier(v.id)]}`); return; } setSettings({ voiceLevel: v.id }); }}>{v.label}{!allowVoiceLevel(getAccount().ent, v.id) ? ` · ${TIER_NAME[voiceLevelTier(v.id)]}` : ''}</button>)}</div>
+              <div className="seg wide level-grid">{VOICE_LEVELS.map((v) => <button key={v.id} className={settings.voiceLevel === v.id ? 'on' : ''} disabled={s.state === 'LISTENING'} onClick={() => { if (!allowVoiceLevel(getAccount().ent, v.id)) { openUpgrade(`${v.label} singing is part of ${TIER_NAME[voiceLevelTier(v.id)]}`); return; } setSettings({ voiceLevel: v.id }); }}><span>{v.label}</span>{!allowVoiceLevel(getAccount().ent, v.id) && <small><Icon name="lock" size={11} />{TIER_NAME[voiceLevelTier(v.id)]}</small>}</button>)}</div>
               <p className="muted small">{VOICE_LEVELS.find((v) => v.id === settings.voiceLevel)?.blurb}</p>
             </div>
           )}

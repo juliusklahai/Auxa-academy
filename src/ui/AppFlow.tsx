@@ -1,6 +1,6 @@
 // The phone app's own start: no web home page. Onboarding (what Auxa does, what you want to learn),
 // then sign up or sign in, then a plans page (as app stores expect), then straight into the lessons.
-import { AuxaLogo } from './Brand';
+import { AuxaWord } from './Brand';
 import { useEffect, useRef, useState } from 'react';
 import { audio } from '../audio/engine';
 import { onBack } from '../native/bridge';
@@ -148,7 +148,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       onTouchEnd={(e) => { const x0 = touch.current; touch.current = null; if (x0 === null || i >= SLIDES.length) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 50) go(i + (dx < 0 ? 1 : -1)); }}>
       <div className="ob-bg" aria-hidden><i /><i /><i /></div>
       <div className="ob-top">
-        <span className="lp-logo"><AuxaLogo size={30} /></span>
+        <span className="lp-logo"><AuxaWord height={24} /></span>
         {i < SLIDES.length && <button className="ob-skip" onClick={() => go(SLIDES.length)}>Skip</button>}
         {q && <span className="ob-step">{i - SLIDES.length + 1} of {QUESTIONS.length}</span>}
       </div>
@@ -264,7 +264,7 @@ function BuildPlan({ goal, experience, interests, minutes, name, onDone }: { goa
 export function AuthScreen({ onGuest }: { onGuest: () => void }) {
   return (
     <div className="ob auth">
-      <div className="ob-top"><span className="lp-logo"><AuxaLogo size={30} /></span></div>
+      <div className="ob-top"><span className="lp-logo"><AuxaWord height={24} /></span></div>
       <div className="ob-slide">
         <h1>Save your progress</h1>
         <p>Make a free account so your lessons, songs and scores follow you to every device.</p>
@@ -297,7 +297,7 @@ export function Paywall({ reason, onClose }: { reason?: string | null; onClose: 
   return (
     <div className="ob paywall">
       <div className="ob-top">
-        <span className="lp-logo"><AuxaLogo size={30} /></span>
+        <span className="lp-logo"><AuxaWord height={24} /></span>
         <button className="ob-close" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
       </div>
       <div className="ob-slide pw">
