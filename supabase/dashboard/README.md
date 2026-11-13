@@ -39,7 +39,7 @@ MONIME_SPACE_ID          spc-k6WbE8dEk5g4mAdq9fsFYzoKk8h
 MONIME_PRICE_PRO         20000
 MONIME_PRICE_PLUS        40000
 MONIME_WEBHOOK_SECRET    any long random text you make up
-APP_URL                  https://juliusklahai.github.io/Auxa-Academy/
+APP_URL                  https://juliusklahai.github.io/Auxa-academy/
 APP_ORIGIN               https://juliusklahai.github.io
 ```
 
@@ -57,8 +57,8 @@ APP_ORIGIN               https://juliusklahai.github.io
 ## 5. Sign-in
 
 1. Go to Authentication → URL Configuration.
-   - Site URL: `https://juliusklahai.github.io/Auxa-Academy/`
-   - Redirect URLs: add `https://juliusklahai.github.io/Auxa-Academy/**`
+   - Site URL: `https://juliusklahai.github.io/Auxa-academy/`
+   - Redirect URLs: add `https://juliusklahai.github.io/Auxa-academy/**`
 2. Optional: turn on Google under Authentication → Providers.
 
 These files are generated from `supabase/functions` by `node scripts/bundle-functions.mjs`.

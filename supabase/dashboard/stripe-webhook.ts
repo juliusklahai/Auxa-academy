@@ -22,7 +22,7 @@ async function caller(req: Request) {
   return data.user ?? null;
 }
 
-const BASE_URL = Deno.env.get('APP_URL') ?? 'https://juliusklahai.github.io/Auxa-Academy/';
+const BASE_URL = Deno.env.get('APP_URL') ?? 'https://juliusklahai.github.io/Auxa-academy/';
 /** Where to send people back to: the page they came from (live or /preview/), but only inside our own site. */
 const APP_URL = (req?: Request) => {
   const r = req?.headers.get('x-return-to') ?? '';

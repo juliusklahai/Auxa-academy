@@ -15,7 +15,7 @@ const GUEST = 'maestro.guest.v1';
 export const isGuest = () => { try { return localStorage.getItem(GUEST) === '1'; } catch { return false; } };
 export const setGuest = (on: boolean) => { try { if (on) localStorage.setItem(GUEST, '1'); else localStorage.removeItem(GUEST); } catch { /* private mode */ } };
 
-const ANDROID_APK = 'https://github.com/juliusklahai/Auxa-Academy/releases/download/android-test/Maestro.apk';
+const ANDROID_APK = 'https://github.com/juliusklahai/Auxa-academy/releases/download/android-test/Maestro.apk';
 const price = (id: string) => PLANS.find((p) => p.id === id)?.price ?? '';
 
 const FAQ: [string, string][] = [
