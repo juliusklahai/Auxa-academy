@@ -1207,7 +1207,7 @@ html.theme-light .pi-back { background: rgba(245,245,243,.45); }
 .ap-side li { display: flex; gap: 12px; align-items: center; line-height: 1.4; }
 .ap-side li span { width: 34px; height: 34px; flex: none; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--lime) 18%, transparent); color: var(--ink); }
 .ap-note { margin: 0; font-size: 14px; }
-.ap-legal { display: grid; gap: 10px; padding-top: 14px; border-top: 1px solid var(--hair); font-size: 13px; line-height: 1.5; color: var(--muted); }
+.ap-legal { display: grid; gap: 10px; font-size: 13px; line-height: 1.5; color: var(--muted); }
 .ap-legal p { margin: 0; }
 .ap-legal nav { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 @media (max-width: 860px) {

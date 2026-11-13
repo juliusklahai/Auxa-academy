@@ -1,15 +1,9 @@
-// Sign in / create an account as a full page (no card): the form on the left, what you get and the legal
-// links on the right. Phones get one compact column that fits on one screen.
+// Sign in / create an account as a full page (no card): the form on the left, the legal links on the right. Phones get one compact column that fits on one screen.
 import { SignInForm } from './Account';
 import { AuxaWord } from './Brand';
 import { Icon } from './Icon';
 
 type Mode = 'signin' | 'signup';
-const PERKS = [
-  ['path', 'Your lessons, songs and scores on every device'],
-  ['award', 'Certificates with a verify link when you finish a level'],
-  ['people', 'Classes with your teacher, and a profile card if you want one'],
-] as const;
 
 export function AuthPage({ start = 'signup', onGuest, onClose, title, sub }: { start?: Mode; onGuest?: () => void; onClose?: () => void; title?: string; sub?: string }) {
   return (
@@ -27,9 +21,6 @@ export function AuthPage({ start = 'signup', onGuest, onClose, title, sub }: { s
           <p className="ap-legal-sm">By continuing you agree to the <a href="#/terms">Terms</a> and <a href="#/privacy">Privacy Policy</a>.</p>
         </main>
         <aside className="ap-side">
-          <b>With an Auxa account</b>
-          <ul>{PERKS.map(([ic, t]) => <li key={t}><span><Icon name={ic} size={16} /></span>{t}</li>)}</ul>
-          <p className="ap-note">Free forever for the basics. Pro and Plus unlock more, cancel any time.</p>
           <div className="ap-legal">
             <p>By continuing you agree to the Auxa Terms of Use and Privacy Policy. Your microphone is only used on your device to hear what you play.</p>
             <nav><a href="#/terms">Terms of Use</a><a href="#/privacy">Privacy Policy</a><a href="#/subscriptions">Subscriptions and refunds</a></nav>
