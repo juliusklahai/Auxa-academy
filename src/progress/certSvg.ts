@@ -14,10 +14,18 @@ export interface CertOpts {
   seal?: string;
 }
 /** A "line" that is really microscopic text running along a path (prints as a line, zooms into words). */
-function micro(id: string, d: string, text: string, size: number, fill: string, len: number, weight = 600) {
+function micro(id: string, d: string, text: string, size: number, fill: string, len: number, weight = 600, fit = false) {
   const per = size * 0.62;
-  const reps = Math.ceil(len / (per * text.length)) + 1;
-  return `<defs><path id="${id}" d="${d}"/></defs><text font-family="Arial, Helvetica, sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}" letter-spacing="0.15"><textPath href="#${id}">${esc(text.repeat(reps))}</textPath></text>`;
+  const reps = Math.ceil(len / (per * text.length)) + (fit ? 0 : 1);
+  // fit: stretch the text to exactly the path length, so a closed frame has no gap where it meets itself
+  const tl = fit ? ` textLength="${len}" lengthAdjust="spacing"` : '';
+  return `<defs><path id="${id}" d="${d}"/></defs><text font-family="Arial, Helvetica, sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}" letter-spacing="0.15"><textPath href="#${id}"${tl}>${esc(text.repeat(reps))}</textPath></text>`;
+}
+/** The signature written in microtext: text runs along both edges of every pen stroke. */
+function microSignature(tag: string, text: string, k: number) {
+  const parts = SIG_PATH.split(/(?=M)/).filter((x) => x.length > 20);
+  const size = 3.8 / k; // under 4 px on the certificate
+  return parts.map((d, i) => micro(`${tag}sg${i}`, d, text, size, '#141414', 4000, 800)).join('');
 }
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 function qrSvg(text: string, x: number, y: number, size: number) {
@@ -39,6 +47,7 @@ const SCRIPT = "AuxaScript, 'Great Vibes', 'Brush Script MT', cursive";
 export function certificateSvg(name: string, level: number, date: string, scriptFont?: string, opts: CertOpts = {}) {
   const { nameShape, code, seal } = opts;
   const tag = `m${level}${(seal ?? code ?? 'x').slice(0, 6).replace(/[^a-zA-Z0-9]/g, '')}`;
+  const border = (code ? `AUXAACADEMY${code.replace(/-/g, '')}AUTHENTIC` : 'AUXAACADEMYCERTIFICATE');
   const mt = code ? `AUXA ACADEMY · ${code} · AUTHENTIC CERTIFICATE · ` : 'AUXA ACADEMY · CERTIFICATE OF ACHIEVEMENT · ';
   const topics = certTopics(level);
   const tune = seal ? sealMelody(seal) : [];
@@ -48,7 +57,7 @@ export function certificateSvg(name: string, level: number, date: string, script
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   ${scriptFont ? `<style>@font-face{font-family:AuxaScript;src:url(${scriptFont}) format("woff2");}</style>` : ''}
   <rect width="${W}" height="${H}" fill="#fbf9f1"/>
-  ${micro(`${tag}o`, `M34 36 H${W - 34} V${H - 34} H34 Z`, mt, 5.2, '#141414', 2 * (W + H), 700)}
+  ${micro(`${tag}o`, `M34 36 H${W - 34} V${H - 34} H34 Z`, border, 5.2, '#141414', 2 * (W - 68) + 2 * (H - 70), 700, true)}
   ${micro(`${tag}i`, `M50 52 H${W - 50} V${H - 50} H50 Z`, mt, 3.6, '#047683', 2 * (W + H), 600)}
   <g transform="translate(${W / 2 - (WORD_BOX.w * 0.34) / 2} 104) scale(0.34) translate(${-WORD_BOX.x} ${-WORD_BOX.y})">
     <path fill="#161d26" fill-rule="evenodd" d="${AUXA_PATHS.dark_word}"/><path fill="#0aa5b4" fill-rule="evenodd" d="${AUXA_PATHS.word_cyan}"/>
@@ -69,7 +78,7 @@ export function certificateSvg(name: string, level: number, date: string, script
   </g>
   <g transform="translate(${W - 580} 820)">
     ${micro(`${tag}s`, 'M0 61 H340', mt, 3.4, '#141414', 340)}
-    <path transform="translate(${170 - (SIG_BOX.w * SIG_K) / 2} ${76 - SIG_BOX.h * SIG_K}) scale(${SIG_K})" fill="#141414" stroke="#141414" stroke-width="9" stroke-linejoin="round" fill-rule="evenodd" d="${SIG_PATH}"/>
+    <g transform="translate(${170 - (SIG_BOX.w * SIG_K) / 2} ${76 - SIG_BOX.h * SIG_K}) scale(${SIG_K})">${microSignature(tag, 'JULIUSKAUXACEO', SIG_K)}</g>
     <text x="170" y="108" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="22" fill="#77776f">Julius K · CEO, Auxa</text>
   </g>
   ${seal ? `${guilloche(seal, W / 2, 880, 84, 132).map((d, i) => micro(`${tag}g${i}`, d, mt, 2.6, '#0a9fae', 2400, 500)).join('')}
