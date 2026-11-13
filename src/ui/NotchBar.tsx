@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from './Icon';
 
 /* Phone tab bar with a liquid notch: the bar's top edge dips into a smooth U under the active tab, the
-   active icon rises into a lime disc sitting in the dip, and the dip glides to the next tab when you tap. */
+   active icon rises into a cyan disc sitting in the dip, and the dip glides to the next tab when you tap. */
 export type NotchItem = { id: string; icon: string; label: string };
 
 const R = 33;   // half-width of the dip

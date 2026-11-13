@@ -1,5 +1,6 @@
 import { PageHead } from './PageHead';
 import { Glossary } from './Glossary';
+import { PlaceInvite } from './PlaceInvite';
 import { CertShelf } from './Certificate';
 import { getProfile, INTEREST_TRACK } from './learnerProfile';
 import { certLevels, earned } from '../progress/certs';
@@ -169,16 +170,7 @@ export function Dashboard({ openLesson }: { openLesson: (l: Lesson, ex?: number)
           </div>
         </section>
       ) : <section className="card up-next"><div className="up-text"><h1>Every lesson mastered</h1><p>Play songs in My Music or free play in the Piano Studio.</p></div></section>}
-      {showPlacement && (
-        <section className="card place-invite">
-          <span className="cert-seal"><Icon name="award" size={18} /></span>
-          <div><b>{plays ? 'You already play: skip ahead' : 'Already play a little?'}</b><p className="muted">{plays ? 'A 5-minute placement test opens your path at your level.' : 'Take the 5-minute placement test and start at your level.'}</p></div>
-          <div className="place-invite-actions">
-            <button className="btn lime" onClick={() => window.dispatchEvent(new CustomEvent('maestro:placement'))}>Take the test</button>
-            <button className="link" onClick={() => { progress.data.placementSkipped = true; progress.save(); bumpProgress(); }}>No thanks</button>
-          </div>
-        </section>
-      )}
+      {showPlacement && <PlaceInvite plays={plays} onSkip={() => { progress.data.placementSkipped = true; progress.save(); bumpProgress(); }} />}
       {myTracks.length > 0 && (
         <section className="card my-tracks">
           <div className="card-head"><b>Your tracks</b><span className="muted">From what you told us</span></div>

@@ -21,7 +21,7 @@ export function certificateSvg(name: string, level: number, date: string) {
     <g transform="translate(-318 -226)"><path fill="#161d26" fill-rule="evenodd" d="${AUXA_PATHS.dark_icon}"/><path fill="url(#cl)" fill-rule="evenodd" d="${AUXA_PATHS.leg}"/><path fill="url(#cs)" fill-rule="evenodd" d="${AUXA_PATHS.swoosh}"/></g>
     <g transform="translate(560 -620) scale(0.95)"><path fill="#161d26" fill-rule="evenodd" d="${AUXA_PATHS.dark_word}"/><path fill="url(#cs)" fill-rule="evenodd" d="${AUXA_PATHS.word_cyan}"/></g>
   </g>
-  <text x="${W / 2}" y="290" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="30" letter-spacing="10" fill="#556b00">CERTIFICATE OF ACHIEVEMENT</text>
+  <text x="${W / 2}" y="290" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="30" letter-spacing="10" fill="#047683">CERTIFICATE OF ACHIEVEMENT</text>
   <text x="${W / 2}" y="370" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="28" fill="#55554f">This certifies that</text>
   <text x="${W / 2}" y="490" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="96" font-style="italic" fill="#141414">${esc(name || 'A Auxa learner')}</text>
   <line x1="${W / 2 - 420}" y1="520" x2="${W / 2 + 420}" y2="520" stroke="#141414" stroke-width="1.5"/>
@@ -39,7 +39,7 @@ export function certificateSvg(name: string, level: number, date: string) {
     <text x="170" y="96" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="22" fill="#77776f">${lessons.length} lessons mastered</text>
   </g>
   <g transform="translate(${W / 2} 880)">
-    <circle r="78" fill="#e3f53a"/><circle r="66" fill="none" stroke="#141414" stroke-width="2" stroke-dasharray="4 6"/>
+    <circle r="78" fill="#1ee3dc"/><circle r="66" fill="none" stroke="#141414" stroke-width="2" stroke-dasharray="4 6"/>
     <text y="-12" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#141414" letter-spacing="3">LEVEL</text>
     <text y="40" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="58" font-weight="800" fill="#141414">${level}</text>
   </g>

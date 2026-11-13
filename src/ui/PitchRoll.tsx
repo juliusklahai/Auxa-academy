@@ -71,7 +71,7 @@ export function PitchRoll({ targets, hold, octaveFree = true, height = 170, tole
         // targets
         const bar = (m: number, a: number, b: number, live: boolean) => {
           const y = ty(m), bh = Math.max(8, H / span * 0.9);
-          x.fillStyle = live ? 'rgba(227,245,58,.85)' : 'rgba(31,31,29,.12)';
+          x.fillStyle = live ? 'rgba(30,227,220,.85)' : 'rgba(31,31,29,.12)';
           x.strokeStyle = 'rgba(31,31,29,.55)';
           const r = bh / 2;
           x.beginPath(); x.roundRect?.(a, y - r, Math.max(bh, b - a), bh, r); x.fill(); x.stroke();
