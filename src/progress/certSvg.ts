@@ -2,6 +2,7 @@
 import { LEVEL_NAMES } from '../curriculum/levels';
 import { LESSONS } from '../curriculum/lessons';
 import { AUXA_PATHS, WORD_BOX } from '../ui/brandPaths';
+import { SIG_BOX, SIG_PATH } from './signature';
 
 export const W = 1600, H = 1130;
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
@@ -37,8 +38,8 @@ export function certificateSvg(name: string, level: number, date: string, script
   </g>
   <g transform="translate(${W - 580} 820)">
     <line x1="0" y1="60" x2="340" y2="60" stroke="#141414" stroke-width="1.5"/>
-    <text x="170" y="40" text-anchor="middle" font-family="${SCRIPT}" font-size="58" fill="#141414">Julius K</text>
-    <text x="170" y="96" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="22" fill="#77776f">CEO, Auxa</text>
+    <path transform="translate(${170 - (SIG_BOX.w * 0.21) / 2} ${70 - SIG_BOX.h * 0.21}) scale(0.21)" fill="#141414" fill-rule="evenodd" d="${SIG_PATH}"/>
+    <text x="170" y="96" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="22" fill="#77776f">Julius K · CEO, Auxa</text>
   </g>
   <g transform="translate(${W / 2} 880)">
     <circle r="78" fill="#1ee3dc"/><circle r="66" fill="none" stroke="#141414" stroke-width="2" stroke-dasharray="4 6"/>
