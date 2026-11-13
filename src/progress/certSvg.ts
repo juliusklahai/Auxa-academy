@@ -37,8 +37,8 @@ export function certificateSvg(name: string, level: number, date: string, script
   </g>
   <g transform="translate(${W - 580} 820)">
     <line x1="0" y1="60" x2="340" y2="60" stroke="#141414" stroke-width="1.5"/>
-    <text x="170" y="40" text-anchor="middle" font-family="${SCRIPT}" font-size="50" fill="#141414">Auxa Coach</text>
-    <text x="170" y="96" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="22" fill="#77776f">${lessons.length} lessons mastered</text>
+    <text x="170" y="40" text-anchor="middle" font-family="${SCRIPT}" font-size="58" fill="#141414">Julius K</text>
+    <text x="170" y="96" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="22" fill="#77776f">CEO, Auxa</text>
   </g>
   <g transform="translate(${W / 2} 880)">
     <circle r="78" fill="#1ee3dc"/><circle r="66" fill="none" stroke="#141414" stroke-width="2" stroke-dasharray="4 6"/>
