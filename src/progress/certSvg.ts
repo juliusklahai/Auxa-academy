@@ -2,7 +2,7 @@
 import { LEVEL_NAMES } from '../curriculum/levels';
 import { LESSONS } from '../curriculum/lessons';
 import { AUXA_PATHS, WORD_BOX } from '../ui/brandPaths';
-import { SIG_BOX, SIG_PATH } from './signature';
+import { SIG_BOX, SIG_STROKES } from './signature';
 import QRCode from 'qrcode';
 import { guilloche, sealMelody, sealWave, verifyUrl } from './certSeal';
 
@@ -14,18 +14,17 @@ export interface CertOpts {
   seal?: string;
 }
 /** A "line" that is really microscopic text running along a path (prints as a line, zooms into words). */
-function micro(id: string, d: string, text: string, size: number, fill: string, len: number, weight = 600, fit = false) {
+function micro(id: string, d: string, text: string, size: number, fill: string, len: number, weight = 600, fit = false, centre = false) {
   const per = size * 0.62;
   const reps = Math.ceil(len / (per * text.length)) + (fit ? 0 : 1);
   // fit: stretch the text to exactly the path length, so a closed frame has no gap where it meets itself
   const tl = fit ? ` textLength="${len}" lengthAdjust="spacing"` : '';
-  return `<defs><path id="${id}" d="${d}"/></defs><text font-family="Arial, Helvetica, sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}" letter-spacing="0.15"><textPath href="#${id}"${tl}>${esc(text.repeat(reps))}</textPath></text>`;
+  return `<defs><path id="${id}" d="${d}"/></defs><text font-family="Arial, Helvetica, sans-serif" font-size="${size}" font-weight="${weight}" fill="${fill}" letter-spacing="0.15"${centre ? ' dominant-baseline="central"' : ''}><textPath href="#${id}"${tl}>${esc(text.repeat(reps))}</textPath></text>`;
 }
-/** The signature written in microtext: text runs along both edges of every pen stroke. */
+/** The signature written in microtext: one line of text runs down the middle of every pen stroke. */
 function microSignature(tag: string, text: string, k: number) {
-  const parts = SIG_PATH.split(/(?=M)/).filter((x) => x.length > 20);
-  const size = 3.8 / k; // under 4 px on the certificate
-  return parts.map((d, i) => micro(`${tag}sg${i}`, d, text, size, '#141414', 4000, 800)).join('');
+  const size = 4.6 / k; // about 4.6 px on the certificate
+  return SIG_STROKES.map((d, i) => micro(`${tag}sg${i}`, d, text, size, '#141414', 3000, 900, false, true)).join('');
 }
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 function qrSvg(text: string, x: number, y: number, size: number) {
