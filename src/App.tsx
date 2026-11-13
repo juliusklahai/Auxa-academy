@@ -25,6 +25,8 @@ import { PlacementTest } from './ui/Placement';
 import { checkCerts } from './progress/certs';
 import { LESSONS as ALL_LESSONS, lessonById } from './curriculum/lessons';
 import { readRoute, writeRoute } from './ui/route';
+import { stopSpeaking } from './ui/voice';
+import { audio } from './audio/engine';
 import { ACCOUNTS_ENABLED } from './account/config';
 import { getAccount, initAccount, openUpgrade, useAccount, useUpgrade } from './account/store';
 import { allowLesson, lessonTier, TIER_NAME } from './account/gate';
@@ -68,6 +70,14 @@ export default function App() {
   const [tab, setTab] = useState<Tab>(() => (saved?.tab as Tab) ?? (isNativeApp ? (appGoal() === 'voice' ? 'voice' : 'learn') : 'home'));
   const [lesson, setLesson] = useState<Lesson | null>(() => (saved?.lesson ? lessonById(saved.lesson) ?? null : null));
   useEffect(() => writeRoute({ tab, lesson: lesson?.id ?? null }), [tab, lesson]);
+  // moving to another page or lesson silences the coach and any notes still sounding
+  const firstNav = useRef(true);
+  useEffect(() => { if (firstNav.current) { firstNav.current = false; return; } stopSpeaking(); audio.stopAll(); }, [tab, lesson?.id]);
+  useEffect(() => {
+    const hide = () => { if (document.hidden) { stopSpeaking(); audio.stopAll(); } };
+    document.addEventListener('visibilitychange', hide);
+    return () => document.removeEventListener('visibilitychange', hide);
+  }, []);
   const [exStart, setExStart] = useState<number | undefined>(undefined);
   const [singPart, setSingPart] = useState<'S' | 'A' | 'T' | 'B' | null>(null);
   const [songId, setSongId] = useState<string | null>(null);

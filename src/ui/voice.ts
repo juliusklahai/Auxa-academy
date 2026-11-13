@@ -61,6 +61,7 @@ function recordings(): Promise<Set<string>> {
 }
 if (typeof window !== 'undefined') setTimeout(() => void recordings(), 1500); // warm up
 let player: HTMLAudioElement | null = null;
+let gen = 0;
 let playing: ((ok: boolean) => void) | null = null;
 function playRecording(key: string): Promise<boolean> {
   return new Promise((res) => {
@@ -83,12 +84,15 @@ export function say(text: string, opts: { force?: boolean } = {}): Promise<void>
   const line = speakable(text);
   if (!line) return Promise.resolve();
   stopSpeaking();
+  const g = ++gen; // anything that stops the voice bumps gen, so a line still loading never starts late
   // a natural recorded voice when this line has been recorded, the device's speech otherwise
   const key = lineKey(line);
-  return recordings().then((have) => (have.has(key) ? playRecording(key) : Promise.resolve(false))).then((ok) => (ok ? undefined : speakLive(line)));
+  return recordings()
+    .then((have) => (g !== gen ? true : have.has(key) ? playRecording(key) : false))
+    .then((ok) => (ok || g !== gen ? undefined : speakLive(line, g)));
 }
 
-function speakLive(line: string): Promise<void> {
+function speakLive(line: string, g: number): Promise<void> {
   const n = native;
   if (n?.speak) {
     const id = `s${++seq}`;
@@ -96,6 +100,7 @@ function speakLive(line: string): Promise<void> {
   }
   if (typeof speechSynthesis === 'undefined') return Promise.resolve();
   return voicesReady().then(() => new Promise<void>((res) => {
+    if (g !== gen) { res(); return; }
     const v = bestVoice();
     // no English voice on this device: stay quiet rather than read English with another language's voice
     if (!v) { setSilent(true); res(); return; }
@@ -139,9 +144,24 @@ export async function canSpeak(): Promise<boolean> {
 }
 
 export function stopSpeaking() {
+  gen++;
   if (player) { player.onended = null; player.onerror = null; player.pause(); }
   if (playing) { const f = playing; playing = null; f(true); } // stopped on purpose: do not fall back to speech
   waiting.forEach((f) => f()); waiting.clear();
   native?.stopSpeaking?.();
   if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+}
+
+/* Stop on its own when the learner moves on: leaving the page or app, switching tabs or lessons
+   (App calls stopSpeaking), or pressing any control (Start, Demo, Listen, Next, a piano key...).
+   Buttons that should not cut the voice carry data-keep-voice. */
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stopSpeaking(); });
+  window.addEventListener('pagehide', () => stopSpeaking());
+  window.addEventListener('popstate', () => stopSpeaking());
+  document.addEventListener('pointerdown', (e) => {
+    const b = (e.target as Element | null)?.closest?.('button, a, [role="button"], [role="tab"], .key, .wk, .bk');
+    if (b && !b.closest('[data-keep-voice]')) stopSpeaking();
+  }, true);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' || e.key === ' ' || e.key === 'Enter') stopSpeaking(); }, true);
 }
