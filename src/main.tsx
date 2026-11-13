@@ -21,6 +21,7 @@ try {
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
 
 // Offline support when served over http(s) (npm run build / preview). The single-file build needs no service worker.
-if ('serviceWorker' in navigator && location.protocol.startsWith('http') && !import.meta.env.DEV) {
+// (not inside the phone app: it carries its own copy of every file)
+if ('serviceWorker' in navigator && location.protocol.startsWith('http') && !import.meta.env.DEV && !location.hostname.startsWith('appassets.')) {
   fetch('./sw.js', { method: 'HEAD' }).then((r) => { if (r.ok) navigator.serviceWorker.register('./sw.js').catch(() => {}); }).catch(() => {});
 }

@@ -23,6 +23,7 @@ import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -211,6 +212,23 @@ class MainActivity : Activity() {
             return true
         }
 
+        // the bundled web app: https://appassets.androidplatform.net/www/... is read from assets/www
+        override fun shouldInterceptRequest(view: WebView, req: WebResourceRequest): WebResourceResponse? {
+            val u = req.url
+            if (u.host != ASSET_HOST) return null
+            var path = (u.path ?: "/").removePrefix("/")
+            if (path.isEmpty() || path.endsWith("/")) path += "index.html"
+            return try {
+                val ext = path.substringAfterLast('.', "").lowercase()
+                val mime = MIME[ext] ?: "application/octet-stream"
+                val res = WebResourceResponse(mime, if (mime.startsWith("text/") || ext == "js" || ext == "json" || ext == "svg") "utf-8" else null, assets.open(path))
+                res.responseHeaders = mapOf("Cache-Control" to "no-cache", "Access-Control-Allow-Origin" to "*")
+                res
+            } catch (_: java.io.IOException) {
+                WebResourceResponse("text/plain", "utf-8", 404, "Not found", emptyMap(), java.io.ByteArrayInputStream(ByteArray(0)))
+            }
+        }
+
         override fun onPageFinished(view: WebView, url: String) { hideOffline(); sendInsets() }
 
         override fun onReceivedError(view: WebView, req: WebResourceRequest, err: WebResourceError) {
@@ -326,6 +344,11 @@ class MainActivity : Activity() {
     }
 
     companion object {
+        const val ASSET_HOST = "appassets.androidplatform.net"
+        val MIME = mapOf("html" to "text/html", "js" to "text/javascript", "mjs" to "text/javascript", "css" to "text/css", "json" to "application/json",
+            "svg" to "image/svg+xml", "png" to "image/png", "jpg" to "image/jpeg", "jpeg" to "image/jpeg", "webp" to "image/webp", "ico" to "image/x-icon",
+            "mp3" to "audio/mpeg", "wav" to "audio/wav", "ogg" to "audio/ogg", "woff" to "font/woff", "woff2" to "font/woff2", "ttf" to "font/ttf",
+            "xml" to "application/xml", "musicxml" to "application/xml", "mxl" to "application/vnd.recordare.musicxml", "webmanifest" to "application/manifest+json", "wasm" to "application/wasm", "txt" to "text/plain")
         const val SCHEME = "io.github.juliusklahai.maestro"
         private const val REQ_MIC = 1
         private const val REQ_FILES = 2

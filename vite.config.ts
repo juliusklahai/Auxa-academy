@@ -14,7 +14,7 @@ function androidApk(): Plugin {
     name: 'maestro-android-apk', apply: 'build',
     configResolved(c) { out = c.build.outDir; },
     async closeBundle() {
-      if (process.env.MAESTRO_APK !== '1' && !process.env.GITHUB_ACTIONS) return;
+      if (process.env.MAESTRO_NO_APK === '1' || (process.env.MAESTRO_APK !== '1' && !process.env.GITHUB_ACTIONS)) return;
       try {
         const r = await fetch(APK_URL, { redirect: 'follow' });
         if (!r.ok) return;

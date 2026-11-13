@@ -1,8 +1,8 @@
 name: Android app
 on:
+  # every deploy force-pushes the native branch: rebuild the app with the latest web app inside
   push:
-    branches: [native, accounts, main]
-    paths: ['native/android/**', '.github/workflows/android.yml']
+    branches: [native]
   workflow_dispatch:
 permissions:
   contents: write
@@ -15,7 +15,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      START_URL: ${{ github.ref_name == 'main' && 'https://juliusklahai.github.io/Auxa-academy/' || 'https://juliusklahai.github.io/Auxa-academy/preview/' }}
       VERSION_CODE: ${{ github.run_number }}
       VERSION_NAME: 0.1.${{ github.run_number }}
     defaults:
@@ -23,6 +22,18 @@ jobs:
         working-directory: native/android
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Bundle the web app into the Android app (assets/www)
+        working-directory: .
+        env:
+          MAESTRO_NO_APK: '1'
+        run: |
+          npm ci
+          npx vite build --outDir native/android/app/src/main/assets/www --emptyOutDir
+          rm -f native/android/app/src/main/assets/www/sw.js
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -37,13 +48,17 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --no-daemon
-      - name: Name the file
-        run: cp app/build/outputs/apk/release/app-release.apk Maestro.apk
+        run: ./gradlew assembleRelease bundleRelease --no-daemon
+      - name: Name the files
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk Maestro.apk
+          cp app/build/outputs/bundle/release/app-release.aab Auxa.aab
       - uses: actions/upload-artifact@v4
         with:
           name: Maestro-android
-          path: native/android/Maestro.apk
+          path: |
+            native/android/Maestro.apk
+            native/android/Auxa.aab
       - name: Publish a download link (test build)
         if: github.ref_name == 'native' || github.event_name == 'workflow_dispatch'
         env:
@@ -51,8 +66,8 @@ jobs:
         run: |
           TAG=android-test
           gh release view $TAG >/dev/null 2>&1 || gh release create $TAG --prerelease --title "Auxa for Android (test build)" --notes "Test build of the Auxa Android app. Download Maestro.apk on your phone and open it to install."
-          gh release upload $TAG Maestro.apk --clobber
-          gh release edit $TAG --notes "Test build $VERSION_NAME of the Maestro Android app (opens $START_URL). Download Maestro.apk on your phone and open it to install."
+          gh release upload $TAG Maestro.apk Auxa.aab --clobber
+          gh release edit $TAG --notes "Test build $VERSION_NAME of the Auxa Android app (com.auxa.academy, works offline). Download Maestro.apk on your phone to install; Auxa.aab is the bundle for Google Play."
       - name: Refresh the site copy of the APK (…/preview/Maestro.apk)
         if: github.ref_name == 'native' || github.event_name == 'workflow_dispatch'
         env:

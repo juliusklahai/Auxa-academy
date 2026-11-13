@@ -2,3 +2,4 @@ node_modules
 dist
 dist-single
 tools/preview/*.js
+native/android/app/src/main/assets/www/
