@@ -226,6 +226,16 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
     return () => ro.disconnect();
   }, [height]);
 
+  // the strip's position: set directly (not through React) so a running playhead can glide every frame
+  const following = useRef(false);
+  const place = (off: number, glide: boolean) => {
+    const el = strip.current;
+    if (!el) return;
+    el.style.transition = glide ? '' : 'none';
+    el.style.transform = `translate(${(-off * fitRef.current).toFixed(2)}px, ${fit.top}px) scale(${fitRef.current})`;
+  };
+  useLayoutEffect(() => { if (!following.current) place(offset, true); }, [offset, fit]); // eslint-disable-line
+
   // page turning
   const ensureVisible = (beat: number) => {
     const v = view.current, L = layout.current;
@@ -262,7 +272,10 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
       const beat = playhead.current;
       const el = head.current;
       if (el) {
-        if (beat === null || beat === undefined) el.style.opacity = '0';
+        if (beat === null || beat === undefined) {
+          el.style.opacity = '0';
+          if (following.current) { following.current = false; setOffset(offsetRef.current); }
+        }
         else {
           const L = layout.current;
           let x = L.ex[0] ?? 0;
@@ -273,7 +286,22 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
             const nextX = i < events.length - 1 ? L.ex[i + 1] : (L.mx[L.mx.length - 1]?.[1] ?? L.ex[i]) - 8;
             const nextBeat = i < events.length - 1 ? events[i + 1].beat : e.beat + e.beats;
             x = L.ex[i] + (nextX - L.ex[i]) * Math.min(1, (beat - e.beat) / Math.max(1e-6, nextBeat - e.beat));
-            ensureVisible(beat);
+            // timed play: the music scrolls smoothly under a playhead that stays a third of the way in,
+            // so the next notes are always in view (no page jumps)
+            const v = view.current;
+            if (v) {
+              const vw = v.clientWidth / fitRef.current;
+              const maxOff = Math.max(0, L.total - vw);
+              const want = Math.max(0, Math.min(maxOff, x - vw * 0.32));
+              const cur = offsetRef.current;
+              const off = cur + (want - cur) * 0.25; // a touch of easing on top of the steady motion
+              offsetRef.current = off;
+              following.current = true;
+              place(off, false);
+            }
+          } else if (beat < 0 && offsetRef.current !== 0) {
+            // count-in: back to the start
+            offsetRef.current = 0; following.current = true; place(0, true);
           }
           el.style.opacity = '1';
           el.style.transform = `translateX(${x}px)`;
@@ -287,7 +315,7 @@ export function Staff({ events, clef, timeSig, statuses, current = -1, playhead,
 
   return (
     <div className="staff-view" ref={view} aria-label={`${clef} clef notation`}>
-      <div className="staff-strip" ref={strip} style={{ transform: `translate(${-offset * fit.s}px, ${fit.top}px) scale(${fit.s})`, transformOrigin: '0 0', height }}>
+      <div className="staff-strip" ref={strip} style={{ transformOrigin: '0 0', height }}>
         {glow !== null && <div className="note-glow" style={{ left: glow }} />}
         <div ref={svgHost} className="staff-svg" />
         {playhead && <div className="playhead" ref={head} />}

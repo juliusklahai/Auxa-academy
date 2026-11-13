@@ -396,9 +396,19 @@ class AudioEngine {
     o.connect(g).connect(this.limiter);
     o.start(t);
     o.stop(t + 0.06);
+    // remember it, so stopAll() can cancel clicks already scheduled for later (restart, exit)
+    this.clicks.add(o);
+    o.onended = () => { this.clicks.delete(o); try { g.disconnect(); } catch { /* gone */ } };
+  }
+  private clicks = new Set<OscillatorNode>();
+  /** Cancel every metronome click scheduled for the future. */
+  stopClicks() {
+    this.clicks.forEach((o) => { try { o.stop(0); o.disconnect(); } catch { /* already done */ } });
+    this.clicks.clear();
   }
 
   stopAll() {
+    this.stopClicks();
     this.stopScheduled();
     this.timers.forEach(clearTimeout);
     this.timers = [];

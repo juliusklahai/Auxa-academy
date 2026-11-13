@@ -308,6 +308,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocke
   const [nice, setNice] = useState<{ id: number; text: string } | null>(null);
   const streak = useRef(0);
   const timers = useRef<number[]>([]);
+  const starts = useRef(0);
   const fid = useRef(0);
   const s = session.current;
   const latest = useRef<{ handleFeedback: (fb: Feedback | null) => void; finishIfDone: () => void; start: (fresh?: boolean) => void; playBacking: (a: number, b: number, at?: number) => void }>(null!);
@@ -447,7 +448,8 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocke
     const mspb = msPerBeat(bpm);
     // clicks follow the time signature's bottom number (eighths in 6/8, halves in 2/2); count in one bar
     const cbpm = clickBpm(bpm, exercise.timeSig), cms = msPerBeat(cbpm);
-    const countIn = exercise.timeSig[0];
+    // first go: a full bar of count-in; restarts get going quickly with two beats
+    const countIn = starts.current++ > 0 ? Math.min(2, exercise.timeSig[0]) : exercise.timeSig[0];
     const inMs = countIn * cms;
     const last = exercise.events[exercise.events.length - 1];
     const totalMs = beatToMs(last.beat + last.beats, bpm);
