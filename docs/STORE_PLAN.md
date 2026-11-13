@@ -9,7 +9,7 @@ Last updated: 13 November 2026
 
 ## Decisions to make first (they cannot be changed later)
 
-1. **App ID (package name).** The current test app is `io.github.juliusklahai.maestro`. Once an app is published on Play, its package name is permanent. Pick the final one now, for example `com.auxa.academy`, and use the same ID for iOS (bundle ID).
+1. **App ID (package name).** Once an app is published on Play, its package name is permanent. Pick the final one now, for example `com.auxa.academy`, and use the same ID for iOS (bundle ID).
 2. **Developer account type.**
    - *Personal account*: $25 once. New personal accounts must run a **closed test with at least 12 testers, opted in for 14 days in a row**, before they can apply for production. Plan about 3 weeks for the first launch.
    - *Organization account*: skips the 12-tester rule, but needs a D-U-N-S number (can take up to ~30 days). Worth it if Auxa is or will be a registered company.

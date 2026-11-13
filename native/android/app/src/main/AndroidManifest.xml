@@ -37,7 +37,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="io.github.juliusklahai.maestro" android:host="auth" />
+                <data android:scheme="com.auxa.academy" android:host="auth" />
             </intent-filter>
         </activity>
     </application>

@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "io.github.juliusklahai.maestro"
+    namespace = "com.auxa.academy"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "io.github.juliusklahai.maestro"
+        applicationId = "com.auxa.academy"
         minSdk = 26
         targetSdk = 36
         versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()

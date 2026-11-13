@@ -1,4 +1,4 @@
-package io.github.juliusklahai.maestro
+package com.auxa.academy
 
 import android.content.pm.PackageManager
 import android.media.midi.MidiDevice

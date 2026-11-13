@@ -1,4 +1,4 @@
-package io.github.juliusklahai.maestro
+package com.auxa.academy
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -90,7 +90,7 @@ class MainActivity : Activity() {
         else web.loadUrl(startUrlFor(intent))
     }
 
-    // ---------- sign-in links: io.github.juliusklahai.maestro://auth?code=... ----------
+    // ---------- sign-in links: com.auxa.academy://auth?code=... ----------
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -349,7 +349,7 @@ class MainActivity : Activity() {
             "svg" to "image/svg+xml", "png" to "image/png", "jpg" to "image/jpeg", "jpeg" to "image/jpeg", "webp" to "image/webp", "ico" to "image/x-icon",
             "mp3" to "audio/mpeg", "wav" to "audio/wav", "ogg" to "audio/ogg", "woff" to "font/woff", "woff2" to "font/woff2", "ttf" to "font/ttf",
             "xml" to "application/xml", "musicxml" to "application/xml", "mxl" to "application/vnd.recordare.musicxml", "webmanifest" to "application/manifest+json", "wasm" to "application/wasm", "txt" to "text/plain")
-        const val SCHEME = "io.github.juliusklahai.maestro"
+        const val SCHEME = "com.auxa.academy"
         private const val REQ_MIC = 1
         private const val REQ_FILES = 2
         private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT

@@ -1,4 +1,4 @@
 # The web page calls these methods by name.
--keepclassmembers class io.github.juliusklahai.maestro.NativeBridge {
+-keepclassmembers class com.auxa.academy.NativeBridge {
     @android.webkit.JavascriptInterface <methods>;
 }

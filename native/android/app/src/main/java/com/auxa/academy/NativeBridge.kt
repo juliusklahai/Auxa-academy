@@ -1,4 +1,4 @@
-package io.github.juliusklahai.maestro
+package com.auxa.academy
 
 import android.webkit.JavascriptInterface
 

@@ -39,7 +39,7 @@ export const nativePlatform = native?.platform() ?? 'web';
 const hooks = () => (window.__maestroNative ??= {});
 
 /** Where sign-in emails and Google send people back to: the app itself when running inside it. */
-export const AUTH_RETURN = isNativeApp ? 'io.github.juliusklahai.maestro://auth' : '';
+export const AUTH_RETURN = isNativeApp ? 'com.auxa.academy://auth' : '';
 
 /** Android back button: higher priority first (full-screen views before page navigation), then newest. */
 const backStack: { f: () => boolean; p: number; n: number }[] = [];
