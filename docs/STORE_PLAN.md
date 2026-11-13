@@ -2,6 +2,11 @@
 
 Last updated: 13 November 2026
 
+## Decided
+- App ID: **com.auxa.academy** (set in the Android build, 13 Nov 2026). Use the same bundle ID on iOS.
+- Play account: **personal**, so the closed test (12+ testers, 14 days in a row) is required before production.
+- The Android app now carries the web app inside it (works offline) and CI builds `Auxa.aab` with every release.
+
 ## Decisions to make first (they cannot be changed later)
 
 1. **App ID (package name).** The current test app is `io.github.juliusklahai.maestro`. Once an app is published on Play, its package name is permanent. Pick the final one now, for example `com.auxa.academy`, and use the same ID for iOS (bundle ID).
