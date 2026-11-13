@@ -1,6 +1,7 @@
 import { PageHead } from './PageHead';
 import { Glossary } from './Glossary';
 import { CertShelf } from './Certificate';
+import { getProfile, INTEREST_TRACK } from './learnerProfile';
 import { certLevels, earned } from '../progress/certs';
 import { Games } from './Games';
 import { Composer } from './Composer';
@@ -141,7 +142,10 @@ export function Dashboard({ openLesson }: { openLesson: (l: Lesson, ex?: number)
   const today = progress.data.practiceLog[dayKey(Date.now())] ?? 0;
   const weakest = Object.entries(comps).sort((a, b) => a[1]! - b[1]!)[0];
   const doneCount = PIANO_LESSONS.filter((l) => progress.lessonComplete(l)).length;
+  const prof = getProfile();
+  const plays = prof?.experience === 'comfortable' || prof?.experience === 'advanced';
   const showPlacement = progress.data.placedLevel === undefined && !progress.data.placementSkipped && doneCount < 6;
+  const myTracks = [...new Set((prof?.interests ?? []).map((x) => INTEREST_TRACK[x]))];
   const nextCert = certLevels(LESSONS).find((lv) => !progress.data.certs?.[lv]) ?? null;
   const certLs = nextCert === null ? [] : PIANO_LESSONS.filter((l) => l.level === nextCert);
   const nextCertFrac = certLs.length ? certLs.filter((l) => progress.lessonComplete(l)).length / certLs.length : 0;
@@ -154,13 +158,13 @@ export function Dashboard({ openLesson }: { openLesson: (l: Lesson, ex?: number)
             {due.length > 0 && <button className="un-chip" onClick={() => { const l = LESSONS.find((x) => x.exercises.some((e) => e.id === due[0]))!; openLesson(l, l.exercises.findIndex((e) => e.id === due[0])); }}>Review {due.length}<Icon name="restart" size={13} /></button>}
           </div>
           <div className="un-mid">
-            <small>Up next <i>· {Math.round(lessonFrac(next) * 100)}% done</i></small>
+            <small>{prof?.name ? `${prof.name}, up next` : 'Up next'} <i>· {Math.round(lessonFrac(next) * 100)}% done</i></small>
             <h1>{next.title}</h1>
             <div className="un-tags"><span>Level {next.level}</span><span>{LEVEL_NAME[next.level]}</span><span>{next.exercises.length} exercises</span></div>
             <p>{next.summary}</p>
           </div>
           <div className="un-foot">
-            <div className="un-stat"><b>{progress.streak()} day streak</b><i>{Math.round(today / 60)} min today</i></div>
+            <div className="un-stat"><b>{progress.streak()} day streak</b><i>{Math.round(today / 60)}{prof ? ` of ${prof.minutes}` : ''} min today</i></div>
             <button className="btn lime" onClick={() => openLesson(next)}><Icon name="play" size={15} />Continue</button>
           </div>
         </section>
@@ -168,11 +172,21 @@ export function Dashboard({ openLesson }: { openLesson: (l: Lesson, ex?: number)
       {showPlacement && (
         <section className="card place-invite">
           <span className="cert-seal"><Icon name="award" size={18} /></span>
-          <div><b>Already play a little?</b><p className="muted">Take the 5-minute placement test and start at your level.</p></div>
+          <div><b>{plays ? 'You already play: skip ahead' : 'Already play a little?'}</b><p className="muted">{plays ? 'A 5-minute placement test opens your path at your level.' : 'Take the 5-minute placement test and start at your level.'}</p></div>
           <div className="place-invite-actions">
             <button className="btn lime" onClick={() => window.dispatchEvent(new CustomEvent('maestro:placement'))}>Take the test</button>
             <button className="link" onClick={() => { progress.data.placementSkipped = true; progress.save(); bumpProgress(); }}>No thanks</button>
           </div>
+        </section>
+      )}
+      {myTracks.length > 0 && (
+        <section className="card my-tracks">
+          <div className="card-head"><b>Your tracks</b><span className="muted">From what you told us</span></div>
+          <div className="cert-row">{myTracks.map((t) => (
+            <button key={t} className="cert-chip" onClick={() => { try { sessionStorage.setItem('maestro.lessonsTab', t); } catch { /* */ } window.dispatchEvent(new CustomEvent('maestro:tab', { detail: 'learn' })); }}>
+              <span className="game-ic"><Icon name={t === 'Church' ? 'people' : t === 'Jazz' ? 'wave' : t === 'Play by ear' ? 'ear' : t === 'Arranging' ? 'doc' : 'chord'} size={17} /></span><span><b>{t}</b><small>{PIANO_LESSONS.filter((l) => LEVEL_GROUP[l.level] === t).length || ''} lessons</small></span>
+            </button>
+          ))}</div>
         </section>
       )}
       <PathTimeline lessons={PIANO_LESSONS} openLesson={openLesson} />
@@ -203,19 +217,40 @@ export function LearnList({ openLesson, openSong, openScore }: { openLesson: (l:
   useProgressVersion();
   const groups = [...new Set(PIANO_LESSONS.map((l) => LEVEL_GROUP[l.level] ?? 'More'))];
   const nextAll = PIANO_LESSONS.find((l) => !progress.lessonComplete(l) && progress.lessonUnlocked(l, LESSONS));
-  const tabs = [...groups, ...(openSong ? ['Songs'] : []), 'Singing', 'Games', 'Create', 'Glossary'];
+  // three shelves: the main path (levels 0 to 9), specialty tracks, and practice tools
+  const PATH = ['Beginner', 'Elementary', 'Intermediate', 'Advanced'];
+  const SHELVES: Record<string, string[]> = {
+    'Learning path': PATH.filter((g) => groups.includes(g)),
+    Specialties: [...groups.filter((g) => !PATH.includes(g)), 'Singing'],
+    Practice: [...(openSong ? ['Songs'] : []), 'Games', 'Create', 'Glossary'],
+  };
+  const tabs = Object.values(SHELVES).flat();
   const [tab, setTab] = useState(() => { try { const t = sessionStorage.getItem('maestro.lessonsTab'); if (t && tabs.includes(t)) return t; } catch { /* */ } return LEVEL_GROUP[nextAll?.level ?? 0] ?? groups[0]; });
   const pick = (t: string) => { setTab(t); try { sessionStorage.setItem('maestro.lessonsTab', t); } catch { /* */ } };
+  const shelf = Object.keys(SHELVES).find((k) => SHELVES[k].includes(tab)) ?? 'Learning path';
   const done = LESSONS.filter((l) => progress.lessonComplete(l)).length;
   const levels = [...new Set(PIANO_LESSONS.filter((l) => (LEVEL_GROUP[l.level] ?? 'More') === tab).map((l) => l.level))];
+  const ABOUT: Record<string, string> = {
+    'Play by ear': 'Hear a song, find its key, melody and chords, and play it without sheet music.',
+    Jazz: 'Seventh chords, swing, ii-V-I, voicings, blues, improvising and lead sheets.',
+    Arranging: 'Write for four voices: ranges, voice leading, cadences, harmonizing and choir arranging.',
+    Church: 'Hymns in two, three and four parts, introductions and Amens, chord symbols, keyboard and organ.',
+    Styles: 'Pop grooves, blues and boogie, ragtime, Latin, gospel, highlife and Afrobeat, accompanying singers.',
+    Singing: 'Sing with the microphone: match notes, solfege, leaps and sight-singing.',
+  };
   return (
     <div className="page">
       <section className="ex-head">
         <small>{done} of {LESSONS.length} lessons mastered · pass with 80% to unlock the next one</small>
         <h2>Lessons</h2>
       </section>
-      <Select className="only-phone tab-select" value={tab} aria-label="Section" onChange={(e) => pick(e.target.value)}>{tabs.map((t) => <option key={t} value={t}>{t}</option>)}</Select>
-      <div className="seg tab-seg only-wide">{tabs.map((t) => <button key={t} className={t === tab ? 'on' : ''} onClick={() => pick(t)}>{t}</button>)}</div>
+      <div className="seg shelf-seg" role="tablist">{Object.keys(SHELVES).map((k) => <button key={k} role="tab" aria-selected={shelf === k} className={shelf === k ? 'on' : ''} onClick={() => pick(SHELVES[k].includes(tab) ? tab : SHELVES[k][0])}>{k}</button>)}</div>
+      <div className="chip-row shelf-chips">{SHELVES[shelf].map((t) => {
+        const ls = t === 'Singing' ? VOICE_LESSONS : PIANO_LESSONS.filter((l) => (LEVEL_GROUP[l.level] ?? 'More') === t);
+        const n = ls.filter((l) => progress.lessonComplete(l)).length;
+        return <button key={t} className={`chip ${t === tab ? 'on' : ''}`} onClick={() => pick(t)}>{t}{shelf !== 'Practice' && <small className="chip-count">{n}/{ls.length}</small>}</button>;
+      })}</div>
+      {ABOUT[tab] && <p className="shelf-about muted">{ABOUT[tab]}</p>}
       {levels.map((lv) => (
         <section key={lv} className="level">
           <div className="level-head"><b>Level {lv}</b><span className="muted">{LEVEL_NAME[lv]}</span></div>
@@ -230,7 +265,7 @@ export function LearnList({ openLesson, openSong, openScore }: { openLesson: (l:
       {tab === 'Songs' && openSong && <section className="level"><div className="level-head"><b>Songs</b><span className="muted">Right hand, left hand or both, with instruments playing along</span></div><SongShelf onOpen={openSong} /></section>}
       {tab === 'Singing' && (
         <section className="level">
-          <div className="level-head"><b>Sight-singing</b><span className="muted">Sing with the microphone. Any octave counts.</span></div>
+          <div className="level-head"><b>Singing</b><span className="muted">Any octave counts.</span></div>
           <div className="tile-grid">{VOICE_LESSONS.map((l, i) => <LessonTile key={l.id} n={i + 1} l={l} onOpen={() => openLesson(l)} />)}</div>
         </section>
       )}

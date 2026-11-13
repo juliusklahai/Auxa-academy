@@ -9,5 +9,6 @@
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
     <color name="bg">#FF14161C</color>
+    <color name="icon_bg">#FFFFFFFF</color>
     <color name="lime">#FFDDF35C</color>
 </resources>

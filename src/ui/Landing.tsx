@@ -2,6 +2,7 @@
 // (people can still "Start free" as a guest: the free levels work without an account).
 // Look: charcoal / paper, floating glass nav, Geist headlines with one serif italic word,
 // stacked step cards with phone screens, FAQ card, closing call to action, dotted wordmark.
+import { AuxaLogo, AuxaMark } from './Brand';
 import { useEffect, useRef, useState } from 'react';
 import { DashField } from './DashField';
 import { PLANS } from '../account/config';
@@ -43,7 +44,7 @@ export function Landing({ onStart, returning = false }: { onStart: () => void; r
       <div className="lp-glow a" aria-hidden /><div className="lp-glow b" aria-hidden />
 
       <header className="lp-nav">
-        <span className="lp-logo"><span className="lp-mark" aria-hidden><i /><i /><i /></span>auxa</span>
+        <span className="lp-logo"><AuxaLogo size={30} /></span>
         <nav className="lp-links">
           <button onClick={() => go('steps')}>How it works</button>
           <button onClick={() => go('plans')}>Plans</button>
@@ -112,7 +113,7 @@ export function Landing({ onStart, returning = false }: { onStart: () => void; r
       </section>
 
       <section className="lp-final">
-        <span className="lp-app-icon" aria-hidden><span className="lp-mark big"><i /><i /><i /></span></span>
+        <span className="lp-app-icon" aria-hidden><AuxaMark size={56} /></span>
         <span className="lp-pill"><i />Get the app</span>
         <h2>Play a note. <em>Hear</em> it right.</h2>
         <p>Phone, tablet or computer. Your progress follows you.</p>
@@ -127,14 +128,14 @@ export function Landing({ onStart, returning = false }: { onStart: () => void; r
 
       <footer className="lp-foot">
         <div className="lp-foot-row">
-          <span className="lp-logo"><span className="lp-mark" aria-hidden><i /><i /><i /></span>auxa</span>
+          <span className="lp-logo"><AuxaLogo size={30} /></span>
           <nav>
             <button onClick={() => go('plans')}>Plans</button>
             <button onClick={() => go('faq')}>FAQ</button>
             {returning ? <button onClick={start}>Open app</button> : <button onClick={() => setAuth('signin')}>Sign in</button>}
           </nav>
         </div>
-        <div className="lp-field"><DashField text="auxa" dark={theme === 'dark'} /></div>
+        <div className="lp-field"><DashField text="auxa-logo" dark={theme === 'dark'} /></div>
         <nav className="lp-legal"><a href="#/privacy">Privacy</a><a href="#/terms">Terms</a><a href="#/subscriptions">Subscriptions and refunds</a><a href="#/licenses">Credits</a></nav>
         <small className="lp-copy">© {new Date().getFullYear()} Auxa Academy</small>
       </footer>

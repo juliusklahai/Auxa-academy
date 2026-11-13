@@ -41,6 +41,21 @@ export function speakable(t: string): string {
     seq.split(/\s*[–—-]\s*/).map((tk) => romanWords(tk) ?? tk).join(', '));
   x = x.replace(/(?<![A-Za-z'])((?:b|♭)?(?:vii|iii|ii|iv|vi|VII|III|II|IV|VI|V)(?:°|ø)?(?:maj7|7b9|7|64|6|9)?)(?![A-Za-z'])/g, (tk) => romanWords(tk) ?? tk);
   x = x.replace(/(?<![A-Za-z'])(I)(maj7|7|64|6)(?![A-Za-z'])/g, (tk) => romanWords(tk) ?? tk);
+  // spoken music words the voice would spell out or misread
+  const NUM = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+  x = x.replace(/\b([A-G])(sus|add)(\d)\b/g, (_m, l: string, k: string, n: string) => `${l} ${k === 'sus' ? 'sus' : 'add'} ${NUM[+n]}`)
+    .replace(/\b(\d)(?:-\d)+\b/g, (m) => m.split('-').map((d) => NUM[+d]).join(', '))      // fingers 1-3-5, 2-5-1
+    .replace(/\b([A-G])(?:-[A-G])+\b/g, (m) => m.split('-').join(', '))                      // C-E-G
+    .replace(/\b([B-G])s\b/g, "$1's")                                                         // the Cs and Es -> C's, E's ("sees", "ees")
+    .replace(/\bFine\b/g, 'fee-nay')
+    .replace(/\b(ONE|TWO|STRONG|LOUD|SOFT)\b/g, (w) => w.toLowerCase())
+    // rhythm syllables, written the way they are said
+    .replace(/\b[Tt]a-a-a-a\b/g, 'tah-ah-ah-ah').replace(/\b[Tt]a-a-a\b/g, 'tah-ah-ah').replace(/\b[Tt]a-a\b/g, 'tah-ah').replace(/\b[Tt]a\b/g, 'tah')
+    .replace(/\b[Tt]i-ka-ti-ka\b/g, 'tee kah tee kah').replace(/\b[Tt]i-ka-ti\b/g, 'tee kah tee').replace(/\b[Tt]i-tika\b/g, 'tee, tee kah').replace(/\b[Tt]ika-ti\b/g, 'tee kah, tee')
+    .replace(/\b[Tt]i-ti\b/g, 'tee tee').replace(/\b[Tt]ri-po-let\b/g, 'tree poh let').replace(/\bsh\b/g, 'shush')
+    .replace(/\boom-pah-pah\b/g, 'oom pah pah').replace(/\boom-pah\b/gi, 'oom pah')
+    .replace(/\b(one|two)-and-a\b/g, '$1 and a').replace(/\band-of-(\d)\b/g, (_m, n: string) => `and of ${NUM[+n]}`)
+    .replace(/è/g, 'e').replace(/;/g, ',');
   // punctuation that reads badly
   x = x.replace(/\s+-\s+/g, ', ').replace(/[–—]/g, ', ').replace(/\s*·\s*/g, ', ').replace(/[()[\]{}"“”]/g, ' ').replace(/\s*:\s*/g, ', ').replace(/\s*\/\s*/g, ' or ')
     .replace(/\s*\|\s*/g, ', ').replace(/\+/g, ' and ').replace(/\.\.\./g, ',').replace(/\s*,\s*(,\s*)+/g, ', ').replace(/\s+([,.!?])/g, '$1');

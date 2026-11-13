@@ -1,5 +1,6 @@
 // The phone app's own start: no web home page. Onboarding (what Auxa does, what you want to learn),
 // then sign up or sign in, then a plans page (as app stores expect), then straight into the lessons.
+import { AuxaLogo } from './Brand';
 import { useEffect, useRef, useState } from 'react';
 import { audio } from '../audio/engine';
 import { onBack } from '../native/bridge';
@@ -9,6 +10,7 @@ import { closeUpgrade, refreshProfile, startCheckout, useAccount } from '../acco
 import { PERKS, SignInForm } from './Account';
 import { Icon } from './Icon';
 import { setGuest } from './Landing';
+import { INTEREST_LABEL, INTEREST_TRACK, saveProfile, type Experience, type Interest } from './learnerProfile';
 
 const ONBOARDED = 'maestro.app.onboarded';
 const PAYWALL_SEEN = 'maestro.app.paywallSeen';
@@ -115,49 +117,145 @@ function Art({ kind }: { kind: string }) {
 const Words = ({ text }: { text: string }) => <>{text.split(' ').map((w, i) => <span key={i} className="w" style={{ animationDelay: `${0.12 + i * 0.05}s` }}>{w} </span>)}</>;
 
 /** Three short animated screens and one question, then on to the account. */
+const QUESTIONS = ['goal', 'experience', 'interests', 'minutes', 'name'] as const;
+type Q = (typeof QUESTIONS)[number];
+
 export function Onboarding({ onDone }: { onDone: () => void }) {
   const [i, setI] = useState(0);
   const [dir, setDir] = useState<1 | -1>(1);
   const [goal, setGoal] = useState<Goal>('piano');
-  const last = i === SLIDES.length;
-  const go = (n: number) => { if (n < 0 || n > SLIDES.length) return; setDir(n > i ? 1 : -1); setI(n); };
+  const [experience, setExperience] = useState<Experience>('new');
+  const [interests, setInterests] = useState<Interest[]>([]);
+  const [minutes, setMinutes] = useState(10);
+  const [name, setName] = useState('');
+  const total = SLIDES.length + QUESTIONS.length; // then the plan is built
+  const q: Q | null = i >= SLIDES.length && i < total ? QUESTIONS[i - SLIDES.length] : null;
+  const building = i >= total;
+  const go = (n: number) => { if (n < 0 || n > total) return; setDir(n > i ? 1 : -1); setI(n); };
   useEffect(() => onBack(() => { if (i > 0) { go(i - 1); return true; } return false; }, 30), [i]); // eslint-disable-line
-  const finish = () => { put(GOAL, goal); put(ONBOARDED, '1'); onDone(); };
-  // swipe between screens
+  const finish = () => { put(GOAL, goal); put(ONBOARDED, '1'); saveProfile({ experience, interests, minutes, name: name.trim() }); onDone(); };
+  // swipe between the intro screens (not while answering)
   const touch = useRef<number | null>(null);
+  const choice = (on: boolean, k: number, onClick: () => void, icon: string, title: string, sub?: string, multi = false) => (
+    <button key={title} className={`ob-choice ${on ? 'on' : ''}`} style={{ animationDelay: `${0.2 + k * 0.06}s` }} onClick={onClick} aria-pressed={on}>
+      <span className="ob-ic"><Icon name={icon} size={20} /></span>
+      <span><b>{title}</b>{sub && <small>{sub}</small>}</span>
+      <span className={multi ? 'ob-check' : 'ob-radio'}>{multi && on && <Icon name="check" size={13} />}</span>
+    </button>
+  );
   return (
     <div className="ob onb" onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
-      onTouchEnd={(e) => { const x0 = touch.current; touch.current = null; if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 50) go(i + (dx < 0 ? 1 : -1)); }}>
+      onTouchEnd={(e) => { const x0 = touch.current; touch.current = null; if (x0 === null || i >= SLIDES.length) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 50) go(i + (dx < 0 ? 1 : -1)); }}>
       <div className="ob-bg" aria-hidden><i /><i /><i /></div>
       <div className="ob-top">
-        <span className="lp-logo"><span className="lp-mark" aria-hidden><i /><i /><i /></span>auxa</span>
-        {!last && <button className="ob-skip" onClick={() => go(SLIDES.length)}>Skip</button>}
+        <span className="lp-logo"><AuxaLogo size={30} /></span>
+        {i < SLIDES.length && <button className="ob-skip" onClick={() => go(SLIDES.length)}>Skip</button>}
+        {q && <span className="ob-step">{i - SLIDES.length + 1} of {QUESTIONS.length}</span>}
       </div>
-      {!last ? (
+      {i < SLIDES.length && (
         <div className={`ob-slide ${dir > 0 ? 'in-r' : 'in-l'}`} key={i}>
           <Art kind={SLIDES[i].art} />
           <h1><Words text={SLIDES[i].title} /></h1>
           <p className="fade">{SLIDES[i].body}</p>
         </div>
-      ) : (
+      )}
+      {q === 'goal' && (
         <div className={`ob-slide ${dir > 0 ? 'in-r' : 'in-l'}`} key="goal">
           <h1><Words text="What would you like to learn?" /></h1>
-          <p className="fade">You can do both any time. This only decides where you start.</p>
+          <p className="fade">You can do both any time. This decides where you start.</p>
           <div className="ob-choices">
-            {([['piano', 'Piano', 'Read music and play with both hands', 'piano'], ['voice', 'Singing', 'Sing in tune, read and write melodies', 'mic'], ['both', 'Both', 'Piano lessons plus the voice studio', 'note']] as const).map(([id, t, d, ic], k) => (
-              <button key={id} className={`ob-choice ${goal === id ? 'on' : ''}`} style={{ animationDelay: `${0.25 + k * 0.08}s` }} onClick={() => setGoal(id)}>
-                <span className="ob-ic"><Icon name={ic} size={20} /></span>
-                <span><b>{t}</b><small>{d}</small></span>
-                <span className="ob-radio" />
-              </button>
-            ))}
+            {([['piano', 'Piano', 'Read music and play with both hands', 'piano'], ['voice', 'Singing', 'Sing in tune, read and write melodies', 'mic'], ['both', 'Both', 'Piano lessons plus the voice studio', 'note']] as const).map(([id, t, d, ic], k) => choice(goal === id, k, () => setGoal(id), ic, t, d))}
           </div>
         </div>
       )}
-      <div className="ob-foot">
-        <div className="ob-dots">{[...SLIDES, null].map((_, k) => <button key={k} className={k === i ? 'on' : ''} onClick={() => go(k)} aria-label={`Screen ${k + 1}`} />)}</div>
-        <button className="btn lime ob-next" onClick={() => (last ? finish() : go(i + 1))}>{last ? 'Continue' : 'Next'}<Icon name="next" size={16} /></button>
-      </div>
+      {q === 'experience' && (
+        <div className={`ob-slide ${dir > 0 ? 'in-r' : 'in-l'}`} key="exp">
+          <h1><Words text="How much do you play already?" /></h1>
+          <p className="fade">Be honest: it only sets your starting point.</p>
+          <div className="ob-choices">
+            {([['new', 'Brand new', 'I have never really played', 'star'], ['little', 'A little', 'I know some notes or a few songs', 'note'], ['comfortable', 'Comfortable', 'I read music and use both hands', 'piano'], ['advanced', 'Advanced', 'Scales, chords and pieces are easy', 'award']] as const).map(([id, t, d, ic], k) => choice(experience === id, k, () => setExperience(id), ic, t, d))}
+          </div>
+        </div>
+      )}
+      {q === 'interests' && (
+        <div className={`ob-slide ${dir > 0 ? 'in-r' : 'in-l'}`} key="int">
+          <h1><Words text="What music do you want to play?" /></h1>
+          <p className="fade">Pick as many as you like.</p>
+          <div className="ob-choices grid2">
+            {(Object.keys(INTEREST_LABEL) as Interest[]).map((id, k) => choice(interests.includes(id), k, () => setInterests((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id])), ({ church: 'people', pop: 'chord', classical: 'doc', jazz: 'wave', gospel: 'mic', afro: 'clap', choir: 'people', ear: 'ear' } as Record<Interest, string>)[id], INTEREST_LABEL[id], undefined, true))}
+          </div>
+        </div>
+      )}
+      {q === 'minutes' && (
+        <div className={`ob-slide ${dir > 0 ? 'in-r' : 'in-l'}`} key="min">
+          <h1><Words text="How long can you practise a day?" /></h1>
+          <p className="fade">A little every day beats a lot once a week.</p>
+          <div className="ob-choices grid2">
+            {([[5, 'Casual'], [10, 'Regular'], [20, 'Serious'], [30, 'Intense']] as const).map(([m, t], k) => choice(minutes === m, k, () => setMinutes(m), 'clock', `${m} minutes`, t))}
+          </div>
+        </div>
+      )}
+      {q === 'name' && (
+        <div className={`ob-slide ${dir > 0 ? 'in-r' : 'in-l'}`} key="name">
+          <h1><Words text="What should we call you?" /></h1>
+          <p className="fade">For your welcome and your certificates. You can skip this.</p>
+          <input className="ob-name" value={name} maxLength={40} autoFocus placeholder="Your first name" onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') go(total); }} />
+        </div>
+      )}
+      {building && <BuildPlan key="build" goal={goal} experience={experience} interests={interests} minutes={minutes} name={name.trim()} onDone={finish} />}
+      {!building && (
+        <div className="ob-foot">
+          <div className="ob-dots">{Array.from({ length: total }, (_, k) => <button key={k} className={k === i ? 'on' : ''} onClick={() => k <= i && go(k)} aria-label={`Screen ${k + 1}`} />)}</div>
+          <button className="btn lime ob-next" onClick={() => go(i + 1)}>{q === 'name' ? (name.trim() ? 'Build my plan' : 'Skip and build my plan') : 'Next'}<Icon name="next" size={16} /></button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** "Building your plan": a few seconds of visible work, then a summary of what we set up. */
+function BuildPlan({ goal, experience, interests, minutes, name, onDone }: { goal: Goal; experience: Experience; interests: Interest[]; minutes: number; name: string; onDone: () => void }) {
+  const tracks = [...new Set(interests.map((x) => INTEREST_TRACK[x]))];
+  const steps = [
+    'Reading your answers',
+    experience === 'new' ? 'Starting you from the very first key' : experience === 'little' ? 'Setting your starting level' : 'Preparing a placement test to skip ahead',
+    tracks.length ? `Adding ${tracks.slice(0, 2).join(' and ')} lessons to your path` : 'Laying out your lesson path',
+    goal === 'voice' ? 'Warming up the voice studio' : 'Choosing songs for your first week',
+    'Tuning your coach\'s voice',
+    `Setting a daily goal of ${minutes} minutes`,
+  ];
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (n >= steps.length) return;
+    const t = window.setTimeout(() => { setN((x) => x + 1); try { audio.click(false, true, 0); } catch { /* audio not started */ } }, n === 0 ? 700 : 850 + Math.random() * 350);
+    return () => clearTimeout(t);
+  }, [n]); // eslint-disable-line react-hooks/exhaustive-deps
+  const done = n >= steps.length;
+  const pct = Math.round((Math.min(n, steps.length) / steps.length) * 100);
+  const start = experience === 'new' || experience === 'little' ? 'Level 0 · Foundations' : 'Your level, after a 5-minute test';
+  return (
+    <div className="ob-slide ob-build" key="b">
+      {!done ? (
+        <>
+          <div className="ob-ring" style={{ ['--p' as string]: `${pct}%` }}><span>{pct}%</span></div>
+          <h1 className="ob-build-title">{name ? `Building your plan, ${name}` : 'Building your plan'}</h1>
+          <ul className="ob-steps">
+            {steps.map((s, k) => <li key={s} className={k < n ? 'done' : k === n ? 'now' : ''}><span className="ob-tick">{k < n ? <Icon name="check" size={12} /> : <i />}</span>{s}</li>)}
+          </ul>
+        </>
+      ) : (
+        <>
+          <span className="ob-ready"><Icon name="check" size={26} /></span>
+          <h1><Words text={name ? `You're all set, ${name}!` : "You're all set!"} /></h1>
+          <div className="ob-plan fade">
+            <div><small>Start</small><b>{start}</b></div>
+            <div><small>Daily goal</small><b>{minutes} minutes</b></div>
+            <div><small>Learning</small><b>{goal === 'both' ? 'Piano and singing' : goal === 'voice' ? 'Singing' : 'Piano'}</b></div>
+            {tracks.length > 0 && <div><small>Your tracks</small><b>{tracks.join(', ')}</b></div>}
+          </div>
+          <button className="btn lime ob-go" onClick={onDone}>Let's go<Icon name="next" size={16} /></button>
+        </>
+      )}
     </div>
   );
 }
@@ -166,7 +264,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 export function AuthScreen({ onGuest }: { onGuest: () => void }) {
   return (
     <div className="ob auth">
-      <div className="ob-top"><span className="lp-logo"><span className="lp-mark" aria-hidden><i /><i /><i /></span>auxa</span></div>
+      <div className="ob-top"><span className="lp-logo"><AuxaLogo size={30} /></span></div>
       <div className="ob-slide">
         <h1>Save your progress</h1>
         <p>Make a free account so your lessons, songs and scores follow you to every device.</p>
@@ -199,7 +297,7 @@ export function Paywall({ reason, onClose }: { reason?: string | null; onClose: 
   return (
     <div className="ob paywall">
       <div className="ob-top">
-        <span className="lp-logo"><span className="lp-mark" aria-hidden><i /><i /><i /></span>auxa</span>
+        <span className="lp-logo"><AuxaLogo size={30} /></span>
         <button className="ob-close" onClick={onClose} aria-label="Close"><Icon name="close" size={18} /></button>
       </div>
       <div className="ob-slide pw">

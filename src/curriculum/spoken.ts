@@ -1,11 +1,18 @@
 // Every line the voice coach says, in one place, so each can be recorded ahead of time with a natural
 // voice (scripts/voice). Lines not recorded fall back to the device's own speech.
+import { HUB_SPOKEN } from './hubSpoken';
 import type { DrillSpec, Exercise, Lesson } from '../core/types';
 import { NARRATION } from './narration';
 
-export const hubLine = (l: Lesson) => `${l.title}. ${l.summary}`;
+/** what the coach says when a lesson opens: its own spoken welcome, written to be heard */
+export const hubLine = (l: Lesson) => HUB_SPOKEN[l.id] ?? `${l.title}. ${l.summary}`;
 export const stepLine = (l: Lesson, i: number) => NARRATION[`${l.id}#${i}`] ?? `${l.teach[i].title}. ${l.teach[i].body.replace(/\n+/g, ' ')}`;
-export const exerciseLine = (e: Exercise) => `${e.title}. ${e.objective} ${e.byEar ? 'Press listen first.' : e.drill ? 'Listen, then answer.' : 'Press start when you are ready.'}`;
+/** said when an exercise opens: what it is, then how this kind of exercise works */
+export const exerciseLine = (e: Exercise) => `Next up: ${e.title}. ${e.objective} ${
+  e.byEar ? 'Press listen first, then play what you hear.'
+    : e.drill ? 'Listen, then pick your answer.'
+      : e.mode === 'wait' ? 'Take your time. The music waits for you on every note.'
+        : 'Press start. You will hear a count in, then play along with the click.'}`;
 export const RESULT_LINES = {
   passedMore: 'Well done! You passed. On to the next one when you are ready.',
   passedLast: 'Well done! You passed every exercise in this lesson.',

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { AuxaMark, AuxaWord } from './ui/Brand';
 import type { Lesson } from './core/types';
 import { LESSONS } from './curriculum/lessons';
 import { setExpected } from './input/expect';
@@ -22,7 +23,8 @@ import { PeopleView } from './ui/People';
 import { CertificateSheet } from './ui/Certificate';
 import { PlacementTest } from './ui/Placement';
 import { checkCerts } from './progress/certs';
-import { LESSONS as ALL_LESSONS } from './curriculum/lessons';
+import { LESSONS as ALL_LESSONS, lessonById } from './curriculum/lessons';
+import { readRoute, writeRoute } from './ui/route';
 import { ACCOUNTS_ENABLED } from './account/config';
 import { getAccount, initAccount, openUpgrade, useAccount, useUpgrade } from './account/store';
 import { allowLesson, lessonTier, TIER_NAME } from './account/gate';
@@ -61,8 +63,11 @@ function InputPills({ openSetup }: { openSetup: () => void }) {
 
 export default function App() {
   // the phone app opens on the lessons (or the voice studio for singers); the website on the overview
-  const [tab, setTab] = useState<Tab>(() => (isNativeApp ? (appGoal() === 'voice' ? 'voice' : 'learn') : 'home'));
-  const [lesson, setLesson] = useState<Lesson | null>(null);
+  // a refresh brings you back where you were (this browser tab only)
+  const [saved] = useState(readRoute);
+  const [tab, setTab] = useState<Tab>(() => (saved?.tab as Tab) ?? (isNativeApp ? (appGoal() === 'voice' ? 'voice' : 'learn') : 'home'));
+  const [lesson, setLesson] = useState<Lesson | null>(() => (saved?.lesson ? lessonById(saved.lesson) ?? null : null));
+  useEffect(() => writeRoute({ tab, lesson: lesson?.id ?? null }), [tab, lesson]);
   const [exStart, setExStart] = useState<number | undefined>(undefined);
   const [singPart, setSingPart] = useState<'S' | 'A' | 'T' | 'B' | null>(null);
   const [songId, setSongId] = useState<string | null>(null);
@@ -79,7 +84,7 @@ export default function App() {
   }), []);
   // The logo, from any screen: the Auxa home page (landing). Without accounts: the Overview.
   const [landing, setLanding] = useState(false);
-  const [pastLanding, setPastLanding] = useState(false);
+  const [pastLanding, setPastLanding] = useState(!!saved);
   const [acctOpen, setAcctOpen] = useState(false);
   const [cert, setCert] = useState<{ level: number; date: string; fresh?: boolean } | null>(null);
   const [placing, setPlacing] = useState(false);
@@ -93,6 +98,7 @@ export default function App() {
     return () => { window.removeEventListener('maestro:cert', c); window.removeEventListener('maestro:placement', p); };
   }, []);
   useEffect(() => { const f = () => setAcctOpen(true); window.addEventListener('maestro:account', f); return () => window.removeEventListener('maestro:account', f); }, []);
+  useEffect(() => { const f = (e: Event) => { setTab((e as CustomEvent).detail as Tab); setLesson(null); window.scrollTo({ top: 0 }); }; window.addEventListener('maestro:tab', f); return () => window.removeEventListener('maestro:tab', f); }, []);
   useEffect(() => onGoHome(() => {
     setLesson(null); setSongId(null); setTab('home');
     if (ACCOUNTS_ENABLED && !isNativeApp) setLanding(true); // the app has no web home page
@@ -135,7 +141,7 @@ export default function App() {
       <div className="device">
         <header className="appbar">
           <button className="app-logo" onClick={goHome} aria-label="Auxa home page" title="Home page">
-            <span className="lp-mark" aria-hidden><i /><i /><i /></span><span className="app-logo-word">auxa</span>
+            <AuxaMark size={30} /><span className="app-logo-word"><AuxaWord height={19} /></span>
           </button>
           {lesson && (
             <div className="app-crumb">

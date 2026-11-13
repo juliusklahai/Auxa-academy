@@ -1,9 +1,11 @@
 // Footer wordmark drawn as a field of small dashes. Dashes inside the letters are bright, the rest faint.
 // Near the pointer (mouse or finger) they turn to point away from it, light up and grow, then ease back.
 import { useEffect, useRef } from 'react';
+import { AUXA_PATHS, MARK_BOX, WORD_BOX } from './brandPaths';
 
 const REST = -Math.PI / 3; // "/" at rest
 
+/** text: a word to draw; 'auxa-logo' draws the Auxa mark and wordmark side by side (swoosh dashes in cyan) */
 export function DashField({ text, dark }: { text: string; dark: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const darkRef = useRef(dark);
@@ -29,17 +31,38 @@ export function DashField({ text, dark }: { text: string; dark: boolean }) {
       const off = document.createElement('canvas');
       off.width = cols; off.height = rows;
       const o = off.getContext('2d')!;
-      o.fillStyle = '#000';
-      let size = rows * 0.92;
-      o.font = `600 ${size}px Geist, 'Helvetica Neue', Arial, sans-serif`;
-      const wGoal = cols * 0.92;
-      const m = o.measureText(text).width;
-      if (m > wGoal) { size *= wGoal / m; o.font = `600 ${size}px Geist, 'Helvetica Neue', Arial, sans-serif`; }
-      o.textAlign = 'center'; o.textBaseline = 'alphabetic';
-      o.fillText(text, cols / 2, rows * 0.5 + size * 0.36);
+      if (text === 'auxa-logo') {
+        // mark (height h) + gap + wordmark (height 0.5h), centered in the strip
+        const wr = 0.62, gap = 0.14;
+        const unitW = MARK_BOX.w / MARK_BOX.h + gap + (WORD_BOX.w / WORD_BOX.h) * wr;
+        const h = Math.min(rows * 0.86, (cols * 0.9) / unitW);
+        let x = (cols - unitW * h) / 2;
+        const y = (rows - h) / 2;
+        const put = (box: { x: number; y: number; w: number; h: number }, hh: number, yy: number, navy: string[], cyan: string[]) => {
+          const k = hh / box.h;
+          o.setTransform(k, 0, 0, k, x - box.x * k, yy - box.y * k);
+          o.fillStyle = 'rgb(0,0,255)'; for (const d of navy) o.fill(new Path2D(d), 'evenodd');
+          o.fillStyle = 'rgb(255,0,0)'; for (const d of cyan) o.fill(new Path2D(d), 'evenodd');
+          x += box.w * k;
+        };
+        put(MARK_BOX, h, y, [AUXA_PATHS.dark_icon], [AUXA_PATHS.leg, AUXA_PATHS.swoosh]);
+        x += gap * h;
+        put(WORD_BOX, h * wr, y + h * (1 - wr) * 0.78, [AUXA_PATHS.dark_word], [AUXA_PATHS.word_cyan]);
+        o.setTransform(1, 0, 0, 1, 0, 0);
+      } else {
+        o.fillStyle = '#000';
+        let size = rows * 0.92;
+        o.font = `600 ${size}px Geist, 'Helvetica Neue', Arial, sans-serif`;
+        const wGoal = cols * 0.92;
+        const m = o.measureText(text).width;
+        if (m > wGoal) { size *= wGoal / m; o.font = `600 ${size}px Geist, 'Helvetica Neue', Arial, sans-serif`; }
+        o.textAlign = 'center'; o.textBaseline = 'alphabetic';
+        o.fillText(text, cols / 2, rows * 0.5 + size * 0.36);
+      }
       const px = o.getImageData(0, 0, cols, rows).data;
       inside = new Uint8Array(cols * rows);
-      for (let i = 0; i < cols * rows; i++) inside[i] = px[i * 4 + 3] > 110 ? 1 : 0;
+      // 1 = ink (navy) part, 2 = the cyan swoosh
+      for (let i = 0; i < cols * rows; i++) inside[i] = px[i * 4 + 3] > 110 ? (px[i * 4] > 140 ? 2 : 1) : 0;
       ang = new Float32Array(cols * rows).fill(REST);
       glow = new Float32Array(cols * rows);
       draw(true);
@@ -49,6 +72,7 @@ export function DashField({ text, dark }: { text: string; dark: boolean }) {
      *  brightness levels and each level is drawn as ONE path (thousands of strokes → ~16). */
     const LEVELS = 16;
     const paths: Path2D[] = Array.from({ length: LEVELS }, () => new Path2D());
+    const cyanPaths: Path2D[] = Array.from({ length: LEVELS }, () => new Path2D());
     const draw = (force = false) => {
       const dk = darkRef.current;
       const ink = dk ? '255,255,255' : '24,24,27';
@@ -56,7 +80,7 @@ export function DashField({ text, dark }: { text: string; dark: boolean }) {
       const R = Math.max(110, Math.min(200, W * 0.13));
       const R2 = R * R;
       let moving = force;
-      for (let k = 0; k < LEVELS; k++) paths[k] = new Path2D();
+      for (let k = 0; k < LEVELS; k++) { paths[k] = new Path2D(); cyanPaths[k] = new Path2D(); }
       const half = cell * 0.24;        // short dashes at rest
       const grow = cell * 0.1;         // a little longer near the pointer
       for (let r = 0; r < rows; r++) {
@@ -81,7 +105,7 @@ export function DashField({ text, dark }: { text: string; dark: boolean }) {
           if (a < 0.03) continue;
           const len = half + gl * grow;
           const cx = Math.cos(ang[i]) * len, cy = Math.sin(ang[i]) * len;
-          const path = paths[Math.min(LEVELS - 1, Math.round(a * (LEVELS - 1)))];
+          const path = (inside[i] === 2 ? cyanPaths : paths)[Math.min(LEVELS - 1, Math.round(a * (LEVELS - 1)))];
           path.moveTo(x - cx, y - cy); path.lineTo(x + cx, y + cy);
         }
       }
@@ -90,6 +114,8 @@ export function DashField({ text, dark }: { text: string; dark: boolean }) {
       for (let k = 1; k < LEVELS; k++) {
         ctx.strokeStyle = `rgba(${ink},${(k / (LEVELS - 1)).toFixed(3)})`;
         ctx.stroke(paths[k]);
+        ctx.strokeStyle = `rgba(${dk ? '20,226,220' : '0,150,170'},${Math.min(1, (k / (LEVELS - 1)) * 1.15).toFixed(3)})`;
+        ctx.stroke(cyanPaths[k]);
       }
       return moving;
     };

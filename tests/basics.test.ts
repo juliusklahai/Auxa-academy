@@ -89,3 +89,20 @@ describe('staff spelling', () => {
     expect(keyAlter(0, 'b')).toBe(0);
   });
 });
+
+import { HUB_SPOKEN } from '../src/curriculum/hubSpoken';
+import { LESSONS as ALL } from '../src/curriculum/lessons';
+import { speakable } from '../src/ui/speechText';
+describe('the coach script', () => {
+  it('every lesson has its own spoken welcome', () => {
+    for (const l of ALL) expect(HUB_SPOKEN[l.id], l.id).toBeTruthy();
+  });
+  it('says music words the way people say them', () => {
+    expect(speakable('Find all the Cs and Es')).toBe("Find all the C's and E's");
+    expect(speakable('Fingers 1-3-5, then 2-5-1.')).toBe('Fingers one, three, five, then two, five, one.');
+    expect(speakable('Say ta, ta-a and ti-ti.')).toBe('Say tah, tah-ah and tee tee.');
+    expect(speakable('D.C. al Fine')).toContain('fee-nay');
+    expect(speakable('Csus4 to C, then Cadd2')).toContain('C add two');
+    expect(speakable('As you play')).toBe('As you play');
+  });
+});

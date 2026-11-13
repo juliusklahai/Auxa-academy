@@ -23,6 +23,7 @@ import { VoiceHelp } from './VoiceHelp';
 import { PitchRoll } from './PitchRoll';
 import { carryFocus, isPhone, useFocusMode } from './focus';
 import { RhythmTap } from './RhythmTap';
+import { readPlace, writePlace } from './route';
 import { FocusBar, FloatHead, RotateHint } from './FocusBar';
 
 function rangeFor(pitches: number[]): [number, number] {
@@ -93,12 +94,19 @@ function LessonHub({ lesson, onLearn, onExercise }: { lesson: Lesson; onLearn: (
 }
 
 export function LessonView({ lesson, onNextLesson, nextLocked, initialExercise }: { lesson: Lesson; onNextLesson?: () => void; nextLocked?: boolean; initialExercise?: number }) {
-  const [phase, setPhase] = useState<'hub' | 'teach' | 'practice'>(initialExercise !== undefined ? 'practice' : 'hub');
-  const [step, setStep] = useState(0);
-  const [exIdx, setExIdx] = useState(initialExercise ?? 0);
+  const [place0] = useState(() => (initialExercise === undefined ? readPlace(lesson.id) : null));
+  const [phase, setPhase] = useState<'hub' | 'teach' | 'practice'>(place0?.phase ?? (initialExercise !== undefined ? 'practice' : 'hub'));
+  const [step, setStep] = useState(place0?.step ?? 0);
+  const [exIdx, setExIdx] = useState(place0?.ex ?? initialExercise ?? 0);
   const ex = lesson.exercises[exIdx];
   useProgressVersion();
-  useEffect(() => { setPhase(initialExercise !== undefined ? 'practice' : 'hub'); setExIdx(initialExercise ?? 0); setStep(0); }, [lesson.id]); // eslint-disable-line
+  const firstId = useRef(lesson.id);
+  useEffect(() => {
+    if (firstId.current === lesson.id) return; // first open: keep the restored place
+    firstId.current = lesson.id;
+    setPhase(initialExercise !== undefined ? 'practice' : 'hub'); setExIdx(initialExercise ?? 0); setStep(0);
+  }, [lesson.id]); // eslint-disable-line
+  useEffect(() => writePlace({ id: lesson.id, phase, ex: exIdx, step }), [lesson.id, phase, exIdx, step]);
   useEffect(() => { window.scrollTo({ top: 0 }); }, [phase, exIdx]);
 
   // compact step strip: back to the lesson, then a small ring per step

@@ -303,6 +303,8 @@ piano = after(piano, 'L9-4', CRAFT_LESSONS.map(pa));
 // from here on, key lessons show their key signature
 for (const l of piano) if (l.id === 'L5-3') l.exercises.forEach((e) => { if (!e.drill && e.fifths === undefined) e.fifths = 2; });
 piano = after(piano, 'L4-5', RHYTHM_LESSONS.map(pa));
+// teaching order: level by level (lessons added later to an earlier level slot in at the end of that level)
+piano = piano.map((l, i) => [l, i] as const).sort((a, b) => a[0].level - b[0].level || a[1] - b[1]).map(([l]) => l);
 export const LESSONS: Lesson[] = [...piano, ...BASE_LESSONS.filter((l) => l.track === 'voice')];
 
 export const lessonById = (id: string) => LESSONS.find((l) => l.id === id);

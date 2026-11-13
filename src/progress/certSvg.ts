@@ -1,6 +1,7 @@
 // The certificate artwork as an SVG string (also used for the PNG download).
 import { LEVEL_NAMES } from '../curriculum/levels';
 import { LESSONS } from '../curriculum/lessons';
+import { AUXA_PATHS } from '../ui/brandPaths';
 
 export const W = 1600, H = 1130;
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
@@ -15,11 +16,10 @@ export function certificateSvg(name: string, level: number, date: string) {
   <rect width="${W}" height="${H}" fill="#fbf9f1"/>
   <rect x="34" y="34" width="${W - 68}" height="${H - 68}" fill="none" stroke="#141414" stroke-width="3"/>
   <rect x="50" y="50" width="${W - 100}" height="${H - 100}" fill="none" stroke="#9cb400" stroke-width="2"/>
-  <g transform="translate(${W / 2 - 150} 110)">
-    <rect width="64" height="64" rx="16" fill="#141414"/>
-    <rect x="15" y="16" width="8" height="32" rx="4" fill="#fff"/><rect x="28" y="16" width="8" height="32" rx="4" fill="#fff"/><rect x="41" y="16" width="8" height="32" rx="4" fill="#e3f53a"/>
-    <text x="84" y="46" font-family="Inter, Helvetica, Arial, sans-serif" font-size="40" font-weight="700" fill="#141414" letter-spacing="-1">auxa</text>
-    <text x="246" y="46" font-family="Inter, Helvetica, Arial, sans-serif" font-size="40" font-weight="300" fill="#141414">academy</text>
+  <g transform="translate(${W / 2 - 118} 92) scale(0.16)">
+    <defs><linearGradient id="cl" x1="700" y1="520" x2="900" y2="760" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#034f63"/><stop offset=".45" stop-color="#0494c9"/><stop offset="1" stop-color="#00e5f5"/></linearGradient><linearGradient id="cs" x1="330" y1="700" x2="860" y2="470" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1fe6c8"/><stop offset="1" stop-color="#0ff4f7"/></linearGradient></defs>
+    <g transform="translate(-318 -226)"><path fill="#161d26" fill-rule="evenodd" d="${AUXA_PATHS.dark_icon}"/><path fill="url(#cl)" fill-rule="evenodd" d="${AUXA_PATHS.leg}"/><path fill="url(#cs)" fill-rule="evenodd" d="${AUXA_PATHS.swoosh}"/></g>
+    <g transform="translate(560 -620) scale(0.95)"><path fill="#161d26" fill-rule="evenodd" d="${AUXA_PATHS.dark_word}"/><path fill="url(#cs)" fill-rule="evenodd" d="${AUXA_PATHS.word_cyan}"/></g>
   </g>
   <text x="${W / 2}" y="290" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="30" letter-spacing="10" fill="#556b00">CERTIFICATE OF ACHIEVEMENT</text>
   <text x="${W / 2}" y="370" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="28" fill="#55554f">This certifies that</text>
