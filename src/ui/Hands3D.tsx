@@ -31,6 +31,8 @@ export interface Hands3DProps {
   show: 'both' | Hand;
   showFingering: boolean;
   onFail: () => void;
+  /** demonstrations: lift the whole hand above the keys (mm) at time t */
+  lift?: (h: Hand, t: number) => number;
 }
 
 const smooth = (x: number) => { const t = Math.max(0, Math.min(1, x)); return t * t * (3 - 2 * t); };
@@ -51,7 +53,11 @@ export default function Hands3D(p: Hands3DProps) {
     [p.events, p.fingering, p.timeKey, p.g.width, H, p.g.whites[0]],
   );
   const posers = useRef({ RH: new HandPoser(), LH: new HandPoser() });
-  const state = useRef({ tv: -1, phase: 0, last: performance.now(), settled: 0 });
+  const state = useRef({ tv: -1, phase: 0, last: performance.now(), settled: 0, t0: 0, life: 0 });
+  // when a looping demonstration wraps around, the hands glide back instead of jumping
+  const carry = useRef<Record<Hand, { x: number; y: number; lx: number; ly: number; seen: boolean }>>({
+    RH: { x: 0, y: 0, lx: 0, ly: 0, seen: false }, LH: { x: 0, y: 0, lx: 0, ly: 0, seen: false },
+  });
 
   // create the WebGL scene once
   useEffect(() => {
@@ -91,6 +97,9 @@ export default function Hands3D(p: Hands3DProps) {
       let t = P.clock();
       let pulse = 0;
       const running = t !== null;
+      st.life += dt;
+      const wrapped = running && t! < st.t0 - 0.5;
+      if (running) st.t0 = t!;
       const evIdx = Math.max(0, Math.min(P.index, P.events.length - 1));
       const evT = bridge.timeOfEvent(evIdx) ?? 0;
       if (t === null) {
@@ -114,14 +123,28 @@ export default function Hands3D(p: Hands3DProps) {
       (['RH', 'LH'] as Hand[]).forEach((h) => {
         if (!showHand(h)) { sc.update(h, null); if (lab) for (let f = 0; f < 5; f++) (lab.children[(h === 'RH' ? 0 : 5) + f] as HTMLElement).style.opacity = '0'; return; }
         const a = bridge.at(h, t!);
+        // a living hand is never perfectly still: a slow, tiny drift of the wrist (well under a millimetre or two)
+        const ph = h === 'RH' ? 0 : 1.7, L = st.life;
+        a.x += Math.sin(L * 0.83 + ph) * 0.5 + Math.sin(L * 0.31 + ph * 2) * 0.4;
+        a.y += Math.sin(L * 0.57 + ph) * 0.45;
+        const lift = P.lift ? Math.max(0, P.lift(h, t!)) : 0;
+        a.z = lift + Math.sin(L * 1.1 + ph) * 0.35;
+        const c = carry.current[h];
+        if (wrapped && c.seen) { c.x += c.lx - a.x; c.y += c.ly - a.y; }
+        const fade = Math.exp(-dt * 4.5);
+        c.x *= fade; c.y *= fade;
+        c.lx = a.x; c.ly = a.y; c.seen = true;
+        a.x += c.x; a.y += c.y;
         const cur = new Set(bridge.notes[h].filter((n) => n.ev === evIdx).map((n) => n.finger));
         if (pulse > 0) a.fingers.forEach((f, i) => {
           if (!cur.has(i + 1) || f.w < 0.5) return;
           f.press = Math.max(f.press, pulse);
           f.target = [f.target[0], f.target[1], f.target[2] - (HOVER + KEY_DIP) * pulse];
         });
-        const pose = posers.current[h].pose(a, running ? 0.35 : 0.3);
-        sc.update(h, pose, a.yaw);
+        // follow rate in "per second" terms, so the hands move the same on a 30 Hz phone and a 120 Hz screen
+        const follow = 1 - Math.exp(-dt * (running ? 26 : 21));
+        const pose = posers.current[h].pose(a, follow);
+        sc.update(h, pose, a.yaw, lift);
         const fix = [0, 1, 2, 3, 4].map((i) => (P.correction && cur.has(i + 1) ? 0.75 + 0.25 * pulse : 0));
         sc.setHighlight(h, pose.press.map((x, i) => (fix[i] ? 0 : x)), fix);
         if (lab) a.fingers.forEach((f, i) => {

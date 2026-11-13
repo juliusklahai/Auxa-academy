@@ -31,10 +31,12 @@ export const HOVER = 6;        // fingertip hover above a key it is about to pla
 
 export interface BridgeNote { midi: number; finger: number; on: number; off: number; ev: number }
 export interface FingerAnim { target: V3; w: number; press: number; midi?: number }
-export interface HandAnim { x: number; y: number; yaw: number; fingers: FingerAnim[] }
+export interface HandAnim { x: number; y: number; yaw: number; fingers: FingerAnim[]; /** extra height of the whole hand above the keys, mm */ z?: number }
 
 const smooth = (e0: number, e1: number, x: number) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0 || 1e-6))); return t * t * (3 - 2 * t); };
 const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
+/** quintic ease: no jolt at the start or end of a move (zero velocity and acceleration) */
+const glide = (e0: number, e1: number, x: number) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0 || 1e-6))); return t * t * t * (t * (t * 6 - 15) + 10); };
 
 // comfortable reach of each fingertip around its relaxed spot across the keys (mm): [toward -x, toward +x]
 const REACH: [number, number][] = [[12, 42], [11, 9], [9, 9], [9, 10], [9, 12]];
@@ -146,7 +148,7 @@ export class AnimationBridge {
       const hold = Math.abs(b.x - a.x) > 10 ? Math.min(a.free - 0.07, b.t - 0.06) : -Infinity;
       const start = Math.max(a.t + 0.02, b.t - 0.04 - move, hold), arrive = start + Math.min(move, Math.max(0.12, b.t + 0.1 - start));
       if (t <= start) break;
-      const u = smooth(start, arrive, t);
+      const u = glide(start, arrive, t);
       x = a.x + (b.x - a.x) * u; y = a.y + (b.y - a.y) * u;
       if (t < arrive) break;
     }

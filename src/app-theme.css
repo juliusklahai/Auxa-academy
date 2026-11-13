@@ -1113,3 +1113,14 @@ html.theme-light .pi-back { background: rgba(245,245,243,.45); }
   .setup-head, .setup-body { width: 100%; max-width: 860px; margin-inline: auto; box-sizing: border-box; }
   .page > .setup-head, .setup-head { justify-content: space-between !important; }
 }
+
+/* Hand demonstrations in teaching steps */
+.demo-note { display: grid; gap: 8px; justify-items: start; }
+.demo-note b { font-size: 15px; }
+.demo-note p { margin: 0; color: var(--ink2); line-height: 1.5; }
+.teach-demo .piano-scroll { display: flex; justify-content: safe center; }
+.teach-demo-cap { display: none; margin: 2px 4px 10px; font-size: 14px; line-height: 1.45; color: var(--ink2); }
+@media (max-width: 760px) {
+  .teach-demo-cap { display: block; }
+  .staff-card:has(.demo-note) { display: none; }
+}

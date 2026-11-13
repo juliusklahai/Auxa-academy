@@ -26,7 +26,7 @@ export class HandPoser {
     this.dip += (maxPress * 1.5 - this.dip) * follow;
     const rollT = HAND_ROLL + 0.16 * (w[4] + 0.4 * w[3] - w[0] - 0.35 * w[1]) / Math.max(1, w.reduce((s, x) => s + x, 0) * 0.6);
     this.roll += (rollT - this.roll) * follow;
-    const frame = frameFor(a.x + this.adj[0], a.y + this.adj[1], a.yaw, 1.5 - this.dip + this.adj[2], this.roll);
+    const frame = frameFor(a.x + this.adj[0], a.y + this.adj[1], a.yaw, 1.5 - this.dip + this.adj[2] + (a.z ?? 0), this.roll);
     const tips: V3[] = [], press: number[] = [], err: number[] = [];
     const res: V3 = [0, 0, 0];
     let ws = 0;

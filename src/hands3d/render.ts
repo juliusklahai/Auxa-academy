@@ -173,8 +173,9 @@ class HandView {
     this.group.position.set(0, -H, 0);
   }
 
-  apply(p: HandPose, yaw: number) {
+  apply(p: HandPose, yaw: number, lift = 0) {
     this.root.position.set(p.frame.pos[0], p.frame.pos[1], p.frame.pos[2]);
+    this.root.scale.setScalar(1 + Math.max(0, lift) / 320);
     this.root.quaternion.set(p.frame.rot[0], p.frame.rot[1], p.frame.rot[2], p.frame.rot[3]);
     p.bones.forEach((q: Q, i) => { if (i > 0) this.bones[i].quaternion.set(q[0], q[1], q[2], q[3]); });
     // forearm: level with the keys, turned toward the player's body
@@ -229,10 +230,10 @@ export class HandScene {
     return [x * this.k, this.H - p[1] * this.k];
   }
 
-  update(h: Hand, pose: HandPose | null, yaw = 0) {
+  update(h: Hand, pose: HandPose | null, yaw = 0, lift = 0) {
     const v = this.views[h];
     v.visible = !!pose;
-    if (pose) v.apply(pose, yaw);
+    if (pose) v.apply(pose, yaw, lift);
   }
   /** per-finger highlight (index 0 = thumb) spread onto that finger's bones */
   setHighlight(h: Hand, hi: number[], fix: number[]) {

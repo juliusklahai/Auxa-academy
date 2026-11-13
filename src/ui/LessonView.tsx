@@ -18,6 +18,9 @@ import { bumpProgress, progress, setSettings, useProgressVersion, useSettings } 
 import { Staff } from './Staff';
 import { EarDrill } from './EarDrill';
 import { coachOn, say, stopSpeaking } from './voice';
+import { demoFor } from '../curriculum/teachDemos';
+import { demoScript } from '../hands3d/demos';
+import { TeachDemo, playDemo } from './TeachDemo';
 import { exerciseLine, hubLine, RESULT_LINES, stepLine } from '../curriculum/spoken';
 import { VoiceHelp } from './VoiceHelp';
 import { PitchRoll } from './PitchRoll';
@@ -185,7 +188,10 @@ function TeachPanel({ lesson, step, setStep, onDone, chips }: { lesson: Lesson; 
     const b = beatsOf(q) * 480;
     audio.playNotes(q.flatMap((c, i) => c.map((m) => ({ midi: m, startMs: i * b, durMs: b * 0.94 }))));
   };
+  const demoId = demoFor(lesson.id, step);
+  const [restart, setRestart] = useState(0);
   const play = () => {
+    if (demoId && !seq && !s.play) { setRestart((n) => n + 1); return playDemo(demoId); }
     if (seq) return playSeq(seq);
     if (!s.play) return;
     audio.stopAll();
@@ -197,7 +203,7 @@ function TeachPanel({ lesson, step, setStep, onDone, chips }: { lesson: Lesson; 
     let live = true;
     if (voiceOn) {
       const text = stepLine(lesson, step);
-      void say(text).then(() => { if (live && (seq || s.play)) window.setTimeout(() => { if (live) play(); }, 250); });
+      void say(text).then(() => { if (live && (seq || s.play || demoId)) window.setTimeout(() => { if (live) play(); }, 250); });
     }
     return () => { live = false; stopSpeaking(); };
   }, [step, voiceOn]); // eslint-disable-line
@@ -208,6 +214,7 @@ function TeachPanel({ lesson, step, setStep, onDone, chips }: { lesson: Lesson; 
     return s.sequential || show.length > 4 ? notes.map((m, i) => ({ pitches: [m], beat: i, beats: 1 })) : [{ pitches: notes, beat: 0, beats: 4 }];
   }, [step]); // eslint-disable-line
   const allStaff = staffEvents.flatMap((e) => e.pitches);
+  const allStaffNotes = staffEvents.length > 0 && allStaff.length > 0;
   const grand = allStaff.some((m) => m < 57) && allStaff.some((m) => m > 64);
   const clef = allStaff.length && Math.max(...allStaff) < 60 ? 'bass' : 'treble';
   const paras = s.body.split(/\n\n+/);
@@ -231,17 +238,18 @@ function TeachPanel({ lesson, step, setStep, onDone, chips }: { lesson: Lesson; 
           )}
         </div>
         <div className="card staff-card">
-          <div className="card-head"><b>On the staff</b></div>
+          <div className="card-head"><b>{demoId && !allStaffNotes ? 'Demonstration' : 'On the staff'}</b></div>
           {staffEvents.length > 0 && allStaff.length > 0
             ? <Staff events={staffEvents} clef={clef} grand={grand} timeSig={[4, 4]} highContrast={settings.highContrast} measureWidth={staffEvents.length > 1 ? 210 : 160} showTime={false} height={grand ? 260 : undefined} />
+            : demoId ? <div className="demo-note"><b>Watch the hands</b><p>{demoScript(demoId).caption}</p><button className="btn" onClick={play}><Icon name="play" size={14} />Play it with sound</button></div>
             : <p className="muted">This step is about listening and thinking. No notation needed.</p>}
         </div>
       </section>
       <section className="card keys-card">
-        <Piano lo={lo} hi={hi} marks={marks} labels={settings.labels} scrollTo={show[0]} />
+        {demoId && !seq && !s.play ? <TeachDemo id={demoId} restart={restart} /> : <Piano lo={lo} hi={hi} marks={marks} labels={settings.labels} scrollTo={show[0]} />}
       </section>
       <div className="dock">
-        <button className="dock-btn lime" onClick={play} disabled={!s.play && !seq}><Icon name="play" size={18} /></button>
+        <button className="dock-btn lime" onClick={play} disabled={!s.play && !seq && !demoId}><Icon name="play" size={18} /></button>
         <span className="dock-label">Hear it</span>
         <span className="dock-sep" />
         <div className="dock-steps">
