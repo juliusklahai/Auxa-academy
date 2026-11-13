@@ -1148,3 +1148,7 @@ html.theme-light .pi-back { background: rgba(245,245,243,.45); }
 @media (max-width: 760px) {
   .app-crumb .title-text { display: none; }
 }
+.cert-status.verify { align-items: flex-start; }
+.cert-verify { display: grid; gap: 6px; }
+.cert-verify ul { margin: 2px 0 0; padding-left: 18px; display: grid; gap: 3px; }
+.cert-verify small { color: var(--muted); }

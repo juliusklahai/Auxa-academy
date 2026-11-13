@@ -84,3 +84,14 @@ describe('certificate seal', async () => {
     expect(certTopics(0).split('  ·  ').every((t) => t[0] === t[0].toUpperCase())).toBe(true);
   });
 });
+
+describe('server exercise catalog', async () => {
+  const { catalogSql, exerciseCatalog } = await import('../src/progress/exerciseCatalog');
+  const { readFileSync } = await import('fs');
+  it('matches the curriculum (run: npx vite-node scripts/exerciseCatalog.ts)', () => {
+    expect(readFileSync('supabase/migrations/0009_exercise_catalog.sql', 'utf8')).toBe(catalogSql());
+  });
+  it('every exercise has a sensible minimum time and note count', () => {
+    for (const r of exerciseCatalog()) { expect(r.minMs).toBeGreaterThanOrEqual(1500); expect(r.groups).toBeGreaterThan(0); }
+  });
+});

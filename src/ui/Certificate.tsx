@@ -7,6 +7,8 @@ import { verifyUrl } from '../progress/certSeal';
 import { nameShape } from '../progress/nameShape';
 import { canIssue, issueCertificate, type IssuedCert } from '../account/certificates';
 import { useAccount } from '../account/store';
+import { levelVerification, type LevelCheck } from '../account/witness';
+import { lessonById } from '../curriculum/lessons';
 import { Icon } from './Icon';
 
 export async function certToPng(svg: string, scale = 1): Promise<Blob> {
@@ -30,6 +32,20 @@ export async function certToPdf(svg: string): Promise<Blob> {
   return doc.output('blob');
 }
 
+/** Lessons that still need a witnessed pass, with how many exercises are left in each. */
+function todoLessons(rows: LevelCheck[]) {
+  const by = new Map<string, LevelCheck[]>();
+  rows.forEach((r) => by.set(r.lesson_id, [...(by.get(r.lesson_id) ?? []), r]));
+  const out: { id: string; title: string; left: number }[] = [];
+  by.forEach((list, id) => {
+    const core = list.filter((r) => !r.piece && r.passes < r.required).length;
+    const pieces = list.filter((r) => r.piece);
+    const left = core + (pieces.length && !pieces.some((r) => r.passes >= r.required) ? 1 : 0);
+    if (left) out.push({ id, title: lessonById(id)?.title ?? id, left });
+  });
+  return out;
+}
+
 export function CertificateSheet({ level, date, onClose, fresh }: { level: number; date: string; onClose: () => void; fresh?: boolean }) {
   const a = useAccount();
   const [name, setName] = useState(() => { try { return localStorage.getItem('maestro.cert.name') ?? ''; } catch { return ''; } });
@@ -38,7 +54,8 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
   useEffect(() => { let live = true; void nameShape(shown).then((x) => { if (live) setShape(x); }); return () => { live = false; }; }, [shown]);
   // verified copy from the database, re-issued (after a pause) when the name changes
   const [cert, setCert] = useState<IssuedCert | null>(null);
-  const [state, setState] = useState<'idle' | 'issuing' | 'error' | 'offline'>(canIssue() ? 'issuing' : 'offline');
+  const [todo, setTodo] = useState<LevelCheck[]>([]);
+  const [state, setState] = useState<'idle' | 'issuing' | 'error' | 'offline' | 'verify'>(canIssue() ? 'issuing' : 'offline');
   const [err, setErr] = useState('');
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
@@ -47,7 +64,11 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
     const t = setTimeout(() => {
       issueCertificate(level, shown, LEVEL_NAMES[level] ?? '', certCitation(level))
         .then((c) => { setCert(c); setState('idle'); })
-        .catch((e: Error) => { setErr(e.message); setState('error'); });
+        .catch((e: Error) => {
+          const m = /^VERIFY:(\d+)\s*(.*)$/s.exec(e.message);
+          if (m) { setErr(m[2]); setState('verify'); void levelVerification(level).then(setTodo); }
+          else { setErr(e.message); setState('error'); }
+        });
     }, 700);
     return () => clearTimeout(t);
   }, [shown, level, a.user?.id, attempt]);
@@ -72,6 +93,7 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
           {cert ? <><Icon name="check" size={14} /><span>Verified by Auxa · <b>{cert.code}</b></span></>
             : state === 'issuing' ? <span>Sealing your certificate…</span>
             : state === 'error' ? <><span>{err}</span><button className="link-btn" onClick={() => setAttempt((n) => n + 1)}>Try again</button></>
+            : state === 'verify' ? <div className="cert-verify"><span>{err}</span>{todoLessons(todo).length > 0 && <ul>{todoLessons(todo).map((x) => <li key={x.id}><b>{x.title}</b> <small>{x.left} to play</small></li>)}</ul>}<button className="link-btn" onClick={() => setAttempt((n) => n + 1)}>Check again</button></div>
             : <span>Sign in to get a verified certificate with its own code, QR and seal.</span>}
         </div>
         <label className="cert-name">Name on the certificate<input value={name} maxLength={40} placeholder={a.profile?.display_name || 'Your name'} onChange={(e) => { setName(e.target.value); try { localStorage.setItem('maestro.cert.name', e.target.value); } catch { /* private mode */ } }} /></label>

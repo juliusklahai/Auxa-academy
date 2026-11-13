@@ -30,6 +30,8 @@ export class ProgressStore {
   unlockAll = false;
   /** called after each save (account sync) */
   onSave: (() => void) | null = null;
+  /** told about every finished attempt (the server witnesses it, see account/witness) */
+  onRecord: ((r: AssessmentReport) => void) | null = null;
   constructor(private kv: KV) {
     this.data = this.load();
   }
@@ -64,6 +66,7 @@ export class ProgressStore {
     p.reviewDue = now + LEITNER_DAYS[p.box] * DAY;
     this.data.exercises[report.exerciseId] = p;
     this.save();
+    this.onRecord?.(report);
   }
 
   logPractice(seconds: number, now = Date.now()) {

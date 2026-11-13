@@ -10,6 +10,7 @@ import { Staff } from './Staff';
 import { Piano, type KeyMark } from './Piano';
 import { bumpProgress, progress, useSettings } from './settings';
 import { say, stopSpeaking } from './voice';
+import { witnessStart } from '../account/witness';
 import { DRILL_LINES } from '../curriculum/spoken';
 
 type Mark = 'right' | 'wrong';
@@ -24,6 +25,7 @@ export function EarDrill({ exercise, onNext }: { exercise: Exercise; onNext?: ()
   const [marks, setMarks] = useState<(Mark | null)[]>([]);
   const [tries, setTries] = useState<Record<string, Mark>>({});
   const [done, setDone] = useState(false);
+  useEffect(() => { if (round === 0 && !done) witnessStart(exercise.id); }, [round, done, exercise.id]);
   const [score, setScore] = useState(0);
   const [glow, setGlow] = useState<number | null>(null);
   const points = useRef(0);

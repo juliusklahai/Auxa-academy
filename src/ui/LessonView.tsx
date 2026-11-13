@@ -19,6 +19,7 @@ import { Staff } from './Staff';
 import { EarDrill } from './EarDrill';
 import { coachOn, say, stopSpeaking } from './voice';
 import { demoFor } from '../curriculum/teachDemos';
+import { witnessStart } from '../account/witness';
 import { demoScript } from '../hands3d/demos';
 import { TeachDemo, playDemo } from './TeachDemo';
 import { exerciseLine, hubLine, RESULT_LINES, stepLine } from '../curriculum/spoken';
@@ -432,6 +433,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocke
     }
     const cur = session.current;
     cur.begin();
+    witnessStart(exercise.id); // the server's clock starts for this attempt
     audio.ensure();
     if (exercise.mode === 'wait') {
       t0.current = performance.now();
