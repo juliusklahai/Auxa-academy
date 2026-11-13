@@ -4,7 +4,7 @@
 -- microtext and melody, so a forged or edited certificate cannot match the verify page.
 -- Run once in the Supabase SQL editor.
 
-create extension if not exists pgcrypto;
+create extension if not exists pgcrypto with schema extensions;
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 
@@ -32,7 +32,7 @@ create policy "own certificates" on public.certificates for select using (auth.u
 
 create or replace function public.issue_certificate(p_level int, p_name text, p_level_name text, p_topics text)
 returns table (code text, seal text, issued_at timestamptz, earned_on date)
-language plpgsql security definer set search_path = public, private as $$
+language plpgsql security definer set search_path = public, private, extensions as $$
 #variable_conflict use_column
 declare
   uid uuid := auth.uid();

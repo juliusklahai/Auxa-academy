@@ -10,7 +10,7 @@ export const canIssue = () => ACCOUNTS_ENABLED && !!getAccount().user;
 export async function issueCertificate(level: number, name: string, levelName: string, topics: string): Promise<IssuedCert> {
   const sb = await supabase();
   const { data, error } = await sb.rpc('issue_certificate', { p_level: level, p_name: name, p_level_name: levelName, p_topics: topics });
-  if (error) throw new Error(/function .* does not exist|schema cache/i.test(error.message) ? 'Verified certificates are being set up. Please try again later.' : error.message);
+  if (error) throw new Error(/issue_certificate|schema cache/i.test(error.message) && /does not exist|could not find|schema cache/i.test(error.message) ? 'Verified certificates are being set up. Please try again later.' : error.message);
   const row = (data as IssuedCert[] | null)?.[0];
   if (!row) throw new Error('Could not issue the certificate.');
   return row;

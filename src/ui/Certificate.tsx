@@ -40,6 +40,7 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
   const [cert, setCert] = useState<IssuedCert | null>(null);
   const [state, setState] = useState<'idle' | 'issuing' | 'error' | 'offline'>(canIssue() ? 'issuing' : 'offline');
   const [err, setErr] = useState('');
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!canIssue() || !shown) { setState(canIssue() ? 'idle' : 'offline'); return; }
     setState('issuing'); setCert(null);
@@ -49,7 +50,7 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
         .catch((e: Error) => { setErr(e.message); setState('error'); });
     }, 700);
     return () => clearTimeout(t);
-  }, [shown, level, a.user?.id]);
+  }, [shown, level, a.user?.id, attempt]);
   const svg = useMemo(() => certificateSvg(shown, level, cert?.earned_on ?? date, undefined, { nameShape: shape ?? undefined, code: cert?.code, seal: cert?.seal }), [shown, level, date, shape, cert]);
   const [busy, setBusy] = useState('');
   const [note, setNote] = useState('');
@@ -70,7 +71,7 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
         <div className={`cert-status ${cert ? 'ok' : state}`}>
           {cert ? <><Icon name="check" size={14} /><span>Verified by Auxa · <b>{cert.code}</b></span></>
             : state === 'issuing' ? <span>Sealing your certificate…</span>
-            : state === 'error' ? <span>{err}</span>
+            : state === 'error' ? <><span>{err}</span><button className="link-btn" onClick={() => setAttempt((n) => n + 1)}>Try again</button></>
             : <span>Sign in to get a verified certificate with its own code, QR and seal.</span>}
         </div>
         <label className="cert-name">Name on the certificate<input value={name} maxLength={40} placeholder={a.profile?.display_name || 'Your name'} onChange={(e) => { setName(e.target.value); try { localStorage.setItem('maestro.cert.name', e.target.value); } catch { /* private mode */ } }} /></label>
