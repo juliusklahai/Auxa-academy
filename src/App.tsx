@@ -14,6 +14,7 @@ import { VoiceStudio } from './ui/VoiceStudio';
 import { AccountSheet, AdminView, ResetPasswordSheet, UpgradeSheet, UserMenu } from './ui/Account';
 import { isGuest, Landing, Splash } from './ui/Landing';
 import { LegalPage, useLegalRoute } from './ui/Legal';
+import { VerifyPage, useVerifyRoute } from './ui/VerifyCert';
 import { appGoal, AppUpgrade, AuthScreen, markPaywallSeen, onboarded, Onboarding, Paywall, paywallSeen } from './ui/AppFlow';
 import { goHome, onGoHome } from './ui/nav';
 import { isNativeApp, onBack } from './native/bridge';
@@ -128,8 +129,10 @@ export default function App() {
 
   const upgradeReason = useUpgrade();
   const legal = useLegalRoute();
+  const verifyCode = useVerifyRoute();
   // Legal pages open on top of everything, signed in or not (app stores link to them).
   if (legal) return <LegalPage id={legal} />;
+  if (verifyCode) return <VerifyPage code={verifyCode} />;
   // The website starts with its home page; "Start free" / "Open app" continues into the same start as
   // the phone app. The phone app starts there directly.
   if (ACCOUNTS_ENABLED && !isNativeApp && (landing || (!account.user && !isGuest() && !pastLanding))) {

@@ -46,7 +46,7 @@ export function TeachDemo({ id, restart }: { id: DemoId; restart: number }) {
   return (
     <div className="teach-demo">
       <p className="teach-demo-cap"><b>Watch the hands.</b> {d.caption}</p>
-      <Piano lo={d.lo} hi={d.hi} scrollTo={Math.round((d.lo + d.hi) / 2)} marks={marks} labels={s.labels} maxKeyWidth={58} minKeyWidth={20}
+      <Piano lo={d.lo} hi={d.hi} scrollTo={Math.round((d.lo + d.hi) / 2)} marks={marks} labels={s.labels} maxKeyWidth={40} minKeyWidth={20}
         below={webgl ? (w) => handsBelow(w) : 0} minAspect={webgl ? HANDS_MIN_ASPECT : 0}
         overlay={webgl ? (g) => (
           <Suspense fallback={null}>

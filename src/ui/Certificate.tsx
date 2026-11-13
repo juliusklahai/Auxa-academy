@@ -1,53 +1,85 @@
-// A printable, shareable certificate for finishing a level. Drawn as SVG, saved as a PNG.
-import { useMemo, useState } from 'react';
+// A printable, shareable, verifiable certificate for finishing a level. Drawn as SVG; saved as PNG or PDF.
+// Signed-in learners get a code from the database; the link and QR open the public verify page.
+import { useEffect, useMemo, useState } from 'react';
 import { LEVEL_NAMES } from '../curriculum/levels';
-import { certificateSvg } from '../progress/certSvg';
-import scriptFont from '@fontsource/great-vibes/files/great-vibes-latin-400-normal.woff2?inline';
+import { certificateSvg, certTopics, W, H } from '../progress/certSvg';
+import { verifyUrl } from '../progress/certSeal';
+import { nameShape } from '../progress/nameShape';
+import { canIssue, issueCertificate, type IssuedCert } from '../account/certificates';
 import { useAccount } from '../account/store';
 import { Icon } from './Icon';
 
-const W = 1600, H = 1130;
-async function toPng(svg: string): Promise<Blob> {
+export async function certToPng(svg: string, scale = 1): Promise<Blob> {
   const img = new Image();
   const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
   try {
     await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error('Could not draw the certificate.')); img.src = url; });
-    const c = document.createElement('canvas'); c.width = W; c.height = H;
-    c.getContext('2d')!.drawImage(img, 0, 0);
+    const c = document.createElement('canvas'); c.width = W * scale; c.height = H * scale;
+    c.getContext('2d')!.drawImage(img, 0, 0, W * scale, H * scale);
     return await new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('Could not save the image.'))), 'image/png'));
   } finally { URL.revokeObjectURL(url); }
+}
+const download = (b: Blob, file: string) => { const u = URL.createObjectURL(b); const el = document.createElement('a'); el.href = u; el.download = file; el.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); };
+export async function certToPdf(svg: string): Promise<Blob> {
+  const png = await certToPng(svg, 2);
+  const dataUrl = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(png); });
+  const { jsPDF } = await import('jspdf');
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pw = 297, ph = 210, iw = pw, ih = (H / W) * pw;
+  doc.addImage(dataUrl, 'PNG', 0, (ph - ih) / 2, iw, ih);
+  return doc.output('blob');
 }
 
 export function CertificateSheet({ level, date, onClose, fresh }: { level: number; date: string; onClose: () => void; fresh?: boolean }) {
   const a = useAccount();
   const [name, setName] = useState(() => { try { return localStorage.getItem('maestro.cert.name') ?? ''; } catch { return ''; } });
-  const shown = name || a.profile?.display_name || '';
-  const svg = useMemo(() => certificateSvg(shown, level, date, scriptFont), [shown, level, date]);
+  const shown = (name || a.profile?.display_name || '').trim();
+  const [shape, setShape] = useState<{ d: string; w: number } | null>(null);
+  useEffect(() => { let live = true; void nameShape(shown).then((x) => { if (live) setShape(x); }); return () => { live = false; }; }, [shown]);
+  // verified copy from the database, re-issued (after a pause) when the name changes
+  const [cert, setCert] = useState<IssuedCert | null>(null);
+  const [state, setState] = useState<'idle' | 'issuing' | 'error' | 'offline'>(canIssue() ? 'issuing' : 'offline');
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    if (!canIssue() || !shown) { setState(canIssue() ? 'idle' : 'offline'); return; }
+    setState('issuing'); setCert(null);
+    const t = setTimeout(() => {
+      issueCertificate(level, shown, LEVEL_NAMES[level] ?? '', certTopics(level))
+        .then((c) => { setCert(c); setState('idle'); })
+        .catch((e: Error) => { setErr(e.message); setState('error'); });
+    }, 700);
+    return () => clearTimeout(t);
+  }, [shown, level, a.user?.id]);
+  const svg = useMemo(() => certificateSvg(shown, level, cert?.earned_on ?? date, undefined, { nameShape: shape ?? undefined, code: cert?.code, seal: cert?.seal }), [shown, level, date, shape, cert]);
   const [busy, setBusy] = useState('');
-  const file = `Auxa-Level-${level}-certificate.png`;
-  const save = async () => {
-    setBusy('save');
-    try { const b = await toPng(svg); const u = URL.createObjectURL(b); const el = document.createElement('a'); el.href = u; el.download = file; el.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); } finally { setBusy(''); }
-  };
-  const share = async () => {
-    setBusy('share');
-    try {
-      const b = await toPng(svg); const f = new File([b], file, { type: 'image/png' });
-      const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean };
-      if (nav.canShare?.({ files: [f] })) await navigator.share({ files: [f], title: `Level ${level} certificate`, text: `I finished Level ${level} on Auxa Academy!` });
-      else await save();
-    } catch { /* closed the share sheet */ } finally { setBusy(''); }
-  };
+  const [note, setNote] = useState('');
+  const base = `Auxa-Level-${level}-certificate`;
+  const run = async (k: string, f: () => Promise<void>) => { setBusy(k); setNote(''); try { await f(); } catch (e) { if ((e as Error).name !== 'AbortError') setNote((e as Error).message); } finally { setBusy(''); } };
+  const link = cert ? verifyUrl(cert.code) : '';
+  const shareLink = () => run('link', async () => {
+    const text = `I finished Level ${level} (${LEVEL_NAMES[level]}) on Auxa Academy. Check my certificate, and learn piano with a teacher that listens:`;
+    if (navigator.share) { await navigator.share({ title: `Level ${level} certificate`, text, url: link }); return; }
+    await navigator.clipboard.writeText(`${text} ${link}`);
+    setNote('Link copied. Paste it anywhere to share.');
+  });
   return (
     <div className="sheet-back" onClick={onClose}>
       <div className="sheet cert-sheet" role="dialog" aria-label={`Level ${level} certificate`} onClick={(e) => e.stopPropagation()}>
         <div className="sheet-head"><div><small className="muted">{fresh ? 'Well done!' : 'Certificate'}</small><b>{fresh ? `You finished Level ${level}` : `Level ${level}`}</b></div><button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="close" size={16} /></button></div>
         <div className="cert-view" dangerouslySetInnerHTML={{ __html: svg }} />
+        <div className={`cert-status ${cert ? 'ok' : state}`}>
+          {cert ? <><Icon name="check" size={14} /><span>Verified by Auxa · <b>{cert.code}</b></span></>
+            : state === 'issuing' ? <span>Sealing your certificate…</span>
+            : state === 'error' ? <span>{err}</span>
+            : <span>Sign in to get a verified certificate with its own code, QR and seal.</span>}
+        </div>
         <label className="cert-name">Name on the certificate<input value={name} maxLength={40} placeholder={a.profile?.display_name || 'Your name'} onChange={(e) => { setName(e.target.value); try { localStorage.setItem('maestro.cert.name', e.target.value); } catch { /* private mode */ } }} /></label>
         <div className="cert-actions">
-          <button className="btn lime" onClick={() => void share()} disabled={!!busy}><Icon name="share" size={15} />{busy === 'share' ? 'Preparing…' : 'Share'}</button>
-          <button className="btn" onClick={() => void save()} disabled={!!busy}><Icon name="download" size={15} />{busy === 'save' ? 'Saving…' : 'Save image'}</button>
+          <button className="btn lime" onClick={() => void shareLink()} disabled={!!busy || !cert}><Icon name="share" size={15} />{busy === 'link' ? 'Sharing…' : 'Share link'}</button>
+          <button className="btn" onClick={() => void run('png', async () => download(await certToPng(svg, 2), `${base}.png`))} disabled={!!busy}><Icon name="download" size={15} />{busy === 'png' ? 'Saving…' : 'PNG'}</button>
+          <button className="btn" onClick={() => void run('pdf', async () => download(await certToPdf(svg), `${base}.pdf`))} disabled={!!busy}><Icon name="download" size={15} />{busy === 'pdf' ? 'Saving…' : 'PDF'}</button>
         </div>
+        {note && <p className="muted small">{note}</p>}
       </div>
     </div>
   );

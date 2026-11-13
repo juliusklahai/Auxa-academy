@@ -63,3 +63,24 @@ describe('classes', () => {
     expect(summarize(null, []).done).toBe(0);
   });
 });
+
+describe('certificate seal', async () => {
+  const { sealMelody, guilloche, verifyUrl } = await import('../src/progress/certSeal');
+  const { certificateSvg: svgOf, certTopics } = await import('../src/progress/certSvg');
+  const seal = 'a3f19c0b7e5d22481f9a6c3e0d7b5a4c2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b';
+  it('the same seal always gives the same marks, another seal different ones', () => {
+    expect(sealMelody(seal)).toEqual(sealMelody(seal));
+    expect(sealMelody(seal)).not.toEqual(sealMelody('00' + seal.slice(2)));
+    expect(guilloche(seal, 0, 0, 80, 130)[0]).not.toEqual(guilloche('ff' + seal.slice(2), 0, 0, 80, 130)[0]);
+    expect(sealMelody(seal).every((k) => k >= 2 && k <= 19)).toBe(true);
+  });
+  it('a sealed certificate carries its code, a QR and the verify link', () => {
+    const s = svgOf('Ama', 2, '2026-11-12', undefined, { code: 'AUX-AAAAA-BBBBB', seal });
+    expect(s).toContain('AUX-AAAAA-BBBBB');
+    expect(s).toContain('Scan to verify');
+    expect(verifyUrl('AUX-AAAAA-BBBBB')).toMatch(/#\/verify\/AUX-AAAAA-BBBBB$/);
+  });
+  it('topics start with a capital letter', () => {
+    expect(certTopics(0).split('  ·  ').every((t) => t[0] === t[0].toUpperCase())).toBe(true);
+  });
+});
