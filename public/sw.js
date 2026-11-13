@@ -1,8 +1,8 @@
 // Offline cache. Pages: network first (so updates show at once), cache when offline.
 // Built assets (hashed file names): cache first.
-const CACHE = 'maestro-v2';
+const CACHE = 'auxa-v2';
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './icon.svg', './manifest.webmanifest'])).catch(() => {}));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './icon.svg?v=auxa', './manifest.webmanifest'])).catch(() => {}));
   self.skipWaiting();
 });
 self.addEventListener('activate', (e) => {
