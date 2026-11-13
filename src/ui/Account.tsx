@@ -9,6 +9,7 @@ import {
   adminGrant, adminPayments, adminSearch, adminSetRole, authMessage, closeUpgrade, endRecovery, openBillingPortal, openUpgrade, refreshProfile,
   deleteAccount, sendPasswordReset, signInWithEmail, signInWithGoogle, signInWithPassword, signOut, signUp, startCheckout, updatePassword, useAccount, useUpgrade, type Profile,
 } from '../account/store';
+import { FREE_LINE, PLAN_ITEMS } from '../account/planCopy';
 import { Icon } from './Icon';
 
 const fmtDate = (s: string | null) => (s ? new Date(s).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
@@ -184,10 +185,7 @@ export function AccountSheet({ onClose }: { onClose: () => void }) {
   );
 }
 
-export const PERKS: Record<'pro' | 'plus', string[]> = {
-  pro: ['Levels 3 to 6: two hands, rhythm, keys and scales, chords', 'The church musician path: hymns in four parts, chord symbols, keyboard and organ', 'The whole song library', 'Standard singing coach', 'Progress saved on all your devices'],
-  plus: ['Everything in Pro', 'Levels 7 to 12: sight-reading, play by ear, jazz, arranging', 'Strict and Pro singing coach, Sing to score in four parts', 'Your own MusicXML and choir (SATB) scores', 'Classes for teachers: assign lessons and follow every learner'],
-};
+export const PERKS: Record<'pro' | 'plus', readonly string[]> = { pro: PLAN_ITEMS.pro, plus: PLAN_ITEMS.plus };
 
 /** The paywall: Pro and Plus, each by card (Stripe, renews monthly) or mobile money (Monime, 1-month pass). */
 export function UpgradeSheet() {
@@ -226,7 +224,7 @@ export function UpgradeSheet() {
           })}
         </div>
         {err && <p className="err small">{err}</p>}
-        <p className="muted small">{a.user ? 'Card plans renew monthly and can be cancelled any time. Mobile money passes last 1 month and never auto-renew.' : 'Sign in first, then pick a plan.'} Levels 0 to 2, beginner songs and Easy singing stay free.</p>
+        <p className="muted small">{a.user ? 'Card plans renew monthly and can be cancelled any time. Mobile money passes last 1 month and never auto-renew.' : 'Sign in first, then pick a plan.'} {FREE_LINE}</p>
       </div>
     </div>
   );

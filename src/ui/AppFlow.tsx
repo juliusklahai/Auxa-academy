@@ -8,6 +8,7 @@ import { ACCOUNTS_ENABLED, MONIME_ENABLED, PLANS, type PlanOption } from '../acc
 import { TIER_NAME } from '../account/gate';
 import { closeUpgrade, refreshProfile, startCheckout, useAccount } from '../account/store';
 import { PERKS, SignInForm } from './Account';
+import { FREE_LINE } from '../account/planCopy';
 import { Icon } from './Icon';
 import { setGuest } from './Landing';
 import { INTEREST_LABEL, INTEREST_TRACK, saveProfile, type Experience, type Interest } from './learnerProfile';
@@ -326,7 +327,7 @@ export function Paywall({ reason, onClose }: { reason?: string | null; onClose: 
       </div>
       <div className="ob-foot col">
         <button className="btn ghost ob-free" onClick={onClose}>Continue with Free</button>
-        <p className="pw-fine">Free always includes Levels 0 to 2, beginner songs and Easy singing. Monthly plans renew until cancelled; passes never renew. <button onClick={() => void restore()} disabled={busy === 'restore'}>{busy === 'restore' ? 'Checking…' : 'Restore purchases'}</button> · <a href="#/terms">Terms</a> · <a href="#/privacy">Privacy</a> · <a href="#/subscriptions">Subscriptions and refunds</a></p>
+        <p className="pw-fine">{FREE_LINE} Monthly plans renew until cancelled; passes never renew. <button onClick={() => void restore()} disabled={busy === 'restore'}>{busy === 'restore' ? 'Checking…' : 'Restore purchases'}</button> · <a href="#/terms">Terms</a> · <a href="#/privacy">Privacy</a> · <a href="#/subscriptions">Subscriptions and refunds</a></p>
       </div>
     </div>
   );

@@ -1,8 +1,9 @@
 // Where you are in the app, kept for this browser tab so a refresh lands in the same place.
 const KEY = 'auxa.route';
 export interface Route { tab: string; lesson: string | null }
+const TABS = ['home', 'learn', 'music', 'voice', 'studio', 'people', 'settings', 'admin'];
 export function readRoute(): Route | null {
-  try { const r = JSON.parse(sessionStorage.getItem(KEY) ?? 'null'); return r && typeof r.tab === 'string' ? r : null; } catch { return null; }
+  try { const r = JSON.parse(sessionStorage.getItem(KEY) ?? 'null'); return r && TABS.includes(r.tab) ? r : null; } catch { return null; }
 }
 export function writeRoute(r: Route) { try { sessionStorage.setItem(KEY, JSON.stringify(r)); } catch { /* private mode */ } }
 

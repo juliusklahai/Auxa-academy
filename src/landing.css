@@ -253,3 +253,5 @@
 @media (prefers-reduced-motion: reduce) { .lp-dev, .lp-glass { animation: none; } }
 .lp.dark .lp-glass { background: linear-gradient(135deg, rgba(40,40,44,.62), rgba(20,20,22,.42)); border-color: rgba(255,255,255,.22); }
 .lp.dark .lg-alert-btns, .lp.dark .lg-alert-btns span + span { border-color: rgba(255,255,255,.16); }
+.lp-plan-who { margin: 6px 0 2px; font-size: 15px; line-height: 1.4; font-weight: 500; color: inherit; }
+.lp-plan ul { align-content: start; justify-content: start; }

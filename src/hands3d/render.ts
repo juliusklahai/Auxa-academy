@@ -70,7 +70,7 @@ function geometries() {
 // ---------- materials ----------
 class Materials {
   readonly u = {
-    uOutline: { value: 0.9 }, uStroke: { value: 0.45 }, uHi: { value: new Array(17).fill(0) }, uHiColor: { value: new THREE.Color('#d7f23a') },
+    uOutline: { value: 0.9 }, uStroke: { value: 0.45 }, uHi: { value: new Array(17).fill(0) }, uHiColor: { value: new THREE.Color('#1ee3dc') },
     uFix: { value: new Array(17).fill(0) }, uFixColor: { value: new THREE.Color('#ff8a3d') }, uHatchPx: { value: 5 },
   };
   readonly depth = new THREE.MeshBasicMaterial({ colorWrite: false });

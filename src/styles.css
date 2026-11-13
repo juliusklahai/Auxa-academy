@@ -62,7 +62,7 @@ select { border: 0; background: var(--white); border-radius: 999px; padding: 8px
 .id-card small { color: var(--muted); font-size: 11.5px; display: block; }
 .id-card b { font-size: 16px; font-weight: 600; display: block; line-height: 1.2; }
 .avatar { width: 62px; height: 62px; flex: none; border-radius: 18px; display: grid; place-items: center; color: var(--ink);
-  background: radial-gradient(120% 120% at 20% 10%, #fff 0, #f6f3d0 40%, #1ee3dc 100%); box-shadow: 0 6px 14px rgba(160,170,20,.25); }
+  background: radial-gradient(120% 120% at 20% 10%, #fff 0, #d9f8f6 40%, #1ee3dc 100%); box-shadow: 0 6px 14px rgba(10,160,170,.25); }
 .avatar.you { font-weight: 700; font-size: 15px; background: radial-gradient(120% 120% at 25% 15%, #fff 0, #f4e6dc 45%, #e9c8b4 100%); box-shadow: 0 6px 14px rgba(150,100,70,.2); }
 .metrics { display: flex; gap: 34px; align-items: flex-end; flex-wrap: wrap; min-width: 0; }
 .metric small { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 2px; }
@@ -267,8 +267,8 @@ div.next span { font-size: 12px; color: #cfcec8; }
 .key .mark { font-weight: 800; font-size: 15px; margin-bottom: 2px; position: relative; z-index: 4; }
 .key .kbd { font-size: 10px; color: #999; border: 1px solid #ccc; border-radius: 4px; padding: 0 3px; margin-bottom: 3px; position: relative; z-index: 4; }
 .key.black .kbd { color: #bbb; border-color: #555; }
-.key.white.target { background: linear-gradient(#fbfee0, #eef98a 70%, #1ee3dc); } .key.black.target { background: linear-gradient(#1ee3dc, #a9b81c); }
-.key.white.show { background: linear-gradient(#fdfdf0, #f2f8b8); } .key.black.show { background: linear-gradient(#b8c62a, #6f7a10); }
+.key.white.target { background: linear-gradient(#e8fdfb, #8ef0ea 70%, #1ee3dc); } .key.black.target { background: linear-gradient(#1ee3dc, #0aa5b4); }
+.key.white.show { background: linear-gradient(#f0fdfc, #c4f4f0); } .key.black.show { background: linear-gradient(#0aa5b4, #6f7a10); }
 .key.white.demo { background: linear-gradient(#e9fbf8, #99eadf); } .key.black.demo { background: linear-gradient(#2dd4bf, #0f766e); }
 .key.white.played { background: linear-gradient(#efeee9, #dddbd4); } .key.black.played { background: #555; }
 .key.white.correct { background: linear-gradient(#e7f7ec, #a8e2bd); color: var(--ok); } .key.black.correct { background: var(--ok); }
@@ -570,13 +570,13 @@ select.inst { font-size: 11.5px; padding: 2px 6px; border-radius: 8px; box-shado
 .pro-list li svg { flex-shrink: 0; margin-top: 3px; }
 .tier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
 .tier { border: 1px solid var(--line, rgba(0,0,0,.1)); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px; background: rgba(255,255,255,.5); }
-.tier.plus { border-color: #b7d94a; box-shadow: 0 0 0 1px #b7d94a inset; }
+.tier.plus { border-color: #0aa5b4; box-shadow: 0 0 0 1px #0aa5b4 inset; }
 .tier-head { display: flex; align-items: center; justify-content: space-between; font-size: 17px; }
-.tier .tag { font-size: 11px; background: #d4f06a; color: #1a1a1a; border-radius: 99px; padding: 2px 8px; }
+.tier .tag { font-size: 11px; background: #1ee3dc; color: #1a1a1a; border-radius: 99px; padding: 2px 8px; }
 .tier .pro-list { font-size: 13px; flex: 1; }
 .tier-buy { display: grid; gap: 6px; }
 .tier-buy .btn { justify-content: center; width: 100%; }
-.pro-tag.plus { background: #d4f06a; color: #1a1a1a; }
+.pro-tag.plus { background: #1ee3dc; color: #1a1a1a; }
 
 /* ---------- Landing ---------- */
 .landing { min-height: 100vh; max-width: 1120px; margin: 0 auto; padding: 18px 20px 40px; display: flex; flex-direction: column; gap: 56px; }
@@ -624,7 +624,7 @@ select.inst { font-size: 11.5px; padding: 2px 6px; border-radius: 8px; box-shado
 .auth-title { font-size: 20px; }
 .auth label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; }
 .auth input { height: 46px; border-radius: 14px; border: 1px solid var(--line2); padding: 0 14px; font: inherit; font-weight: 400; font-size: 15px; background: #fff; width: 100%; box-sizing: border-box; }
-.auth input:focus { outline: 2px solid var(--lime2, #b7d94a); border-color: transparent; }
+.auth input:focus { outline: 2px solid var(--lime2, #0aa5b4); border-color: transparent; }
 .auth-pw { position: relative; display: block; }
 .auth-pw input { padding-right: 60px; }
 .auth-pw .link { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); }

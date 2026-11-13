@@ -107,7 +107,7 @@ function Subscriptions() {
     <>
       <h3>Plans</h3>
       <ul>
-        <li><b>Free:</b> Levels 0 to 2, beginner songs and Easy singing, always free.</li>
+        <li><b>Free:</b> the basics (Levels 0 to 2), beginner songs and Easy singing, always free.</li>
         <li><b>Pro</b> and <b>Plus:</b> more levels, the full song library and stricter singing coaches. What each includes is shown on the plans page before you pay.</li>
       </ul>
       <h3>Card plans (monthly)</h3>

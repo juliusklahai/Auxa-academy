@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { DashField } from './DashField';
 import { PLANS } from '../account/config';
 import { SignInForm } from './Account';
+import { PLAN_ITEMS, PLAN_WHO } from '../account/planCopy';
 import { Icon } from './Icon';
 import { useTheme, setTheme, type Theme } from './theme';
 
@@ -22,7 +23,7 @@ const FAQ: [string, string][] = [
   ['How does it hear me?', 'Your phone’s microphone. Auxa picks out the notes you play, even softly, and tells you right away which were right.'],
   ['I have never played before. Is that fine?', 'Yes. Level 0 starts with finding middle C. Every new key comes with short songs where the band plays and you add just that key.'],
   ['Can I learn to sing too?', 'Yes. The singing coach starts gentle and encouraging, and gets strict about pitch only when you ask it to.'],
-  ['What is free?', `Levels 0 to 2, the beginner songs and the Easy singing coach. Pro is ${price('pro') || 'monthly'}, or ${price('pass_pro') || 'a monthly pass'} by mobile money.`],
+  ['What is free?', `Everything you need to start: the basics, beginner songs and the Easy singing coach. Pro is ${price('pro') || 'monthly'}, or ${price('pass_pro') || 'a monthly pass'} by mobile money.`],
   ['Can I pay with Orange Money or Afrimoney?', 'Yes. Mobile money buys a one-month pass that never renews by itself. Cards renew monthly and you can cancel any time.'],
   ['Does it work offline?', 'Once opened, lessons keep working without data. Your progress syncs when you are back online.'],
 ];
@@ -89,9 +90,9 @@ export function Landing({ onStart, returning = false }: { onStart: () => void; r
           <h2>Start free. <em>Grow</em> when ready.</h2>
         </div>
         <div className="lp-plans">
-          <Plan name="Free" price="SLE 0" note="For good" items={['Levels 0 to 2', 'Beginner songs', 'Easy singing coach']} onPick={start} cta="Start free" />
-          <Plan name="Pro" price={price('pro')} note={`or ${price('pass_pro')} a month by mobile money`} items={['Levels 3 to 6', 'Every song', 'Standard singing coach', 'Progress on all devices']} onPick={() => setAuth('signup')} cta="Get Pro" />
-          <Plan name="Plus" price={price('plus')} note={`or ${price('pass_plus')} a month by mobile money`} items={['Everything in Pro', 'Levels 7 to 9', 'Pro singing coach', 'Your own scores and choir parts']} onPick={() => setAuth('signup')} cta="Get Plus" best />
+          <Plan name="Free" price="SLE 0" note="Free for good" who={PLAN_WHO.free} items={PLAN_ITEMS.free} onPick={start} cta="Start free" />
+          <Plan name="Pro" price={price('pro')} note={`or ${price('pass_pro')} a month by mobile money`} who={PLAN_WHO.pro} items={PLAN_ITEMS.pro} onPick={() => setAuth('signup')} cta="Get Pro" />
+          <Plan name="Plus" price={price('plus')} note={`or ${price('pass_plus')} a month by mobile money`} who={PLAN_WHO.plus} items={PLAN_ITEMS.plus} onPick={() => setAuth('signup')} cta="Get Plus" best />
         </div>
       </section>
 
@@ -206,12 +207,13 @@ function Step({ n, kicker, title, text, screen }: { n: string; kicker: string; t
   );
 }
 
-function Plan({ name, price: p, note, items, onPick, cta, best }: { name: string; price: string; note: string; items: string[]; onPick: () => void; cta: string; best?: boolean }) {
+function Plan({ name, price: p, note, who, items, onPick, cta, best }: { name: string; price: string; note: string; who: string; items: readonly string[]; onPick: () => void; cta: string; best?: boolean }) {
   return (
     <div className={`lp-plan ${best ? 'best' : ''}`}>
       <div className="lp-plan-top"><b>{name}</b>{best && <span className="lp-tag">Everything</span>}</div>
       <div className="lp-price">{p}</div>
       <small>{note}</small>
+      <p className="lp-plan-who">{who}</p>
       <ul>{items.map((x) => <li key={x}><Icon name="check" size={14} />{x}</li>)}</ul>
       <button className={`lp-btn ${best ? 'light' : 'ghost'}`} onClick={onPick}>{cta}</button>
     </div>
