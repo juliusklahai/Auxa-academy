@@ -415,6 +415,16 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocke
     return () => { off(); clearTimers(); audio.onAppNote = null; audio.stopAll(); setExpected(null); mic.settings.mode = settings.micMode; };
   }, []); // eslint-disable-line
 
+  // leaving full screen (Exit / X / Esc) stops a demo or attempt: nothing keeps playing underneath
+  const wasFocus = useRef(fm.focus);
+  useEffect(() => {
+    if (wasFocus.current && !fm.focus) {
+      clearTimers(); audio.stopAll(); stopClock(); setDemoIdx(null); setExpected(null); earDemo.current = false;
+      const st = session.current.state;
+      if (st === 'LISTENING' || st === 'COUNT_IN') { session.current = new AssessmentSession(exercise, bpm); rerender(); }
+    }
+    wasFocus.current = fm.focus;
+  }, [fm.focus]); // eslint-disable-line
   const [micErr, setMicErr] = useState('');
   const start = (fresh = true) => {
     if (isPhone() && !fm.focus) fm.enter();

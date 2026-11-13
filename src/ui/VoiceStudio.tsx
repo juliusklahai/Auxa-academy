@@ -104,52 +104,55 @@ export function VoiceStudio({ openLesson, singChoir, openScore }: { openLesson: 
 
   const vt = voiceType(lo, hi);
   const nextLesson = VOICE_LESSONS.find((l) => !progress.lessonComplete(l));
+  const partName = { S: 'Soprano', A: 'Alto', T: 'Tenor', B: 'Bass' }[vt.part];
+  const [tab, setTabState] = useState<VTab>(() => { try { return (sessionStorage.getItem('auxa.voiceTab') as VTab) || 'match'; } catch { return 'match'; } });
+  const setTab = (t: VTab) => { setTabState(t); try { sessionStorage.setItem('auxa.voiceTab', t); } catch { /* private mode */ } };
+  const inTune = cents !== null && Math.abs(cents) <= lvl.matchCents;
   return (
-    <div className="page">
-      <PageHead title="Voice Studio" sub="Sing to score, match notes, and find your range." stats={[
-        ['Now', clear ? midiToName(Math.round(sungFloat!)) : on ? 'listening' : 'mic off'],
+    <div className="page voice-page">
+      <PageHead title="Voice Studio" sub="Sing in tune, turn your singing into notes, and learn to sing in a choir." stats={[
+        ['Hearing', clear ? midiToName(Math.round(sungFloat!)) : on ? 'listening' : 'mic off'],
         ['Range', `${midiToName(lo)}–${midiToName(hi)}`],
-        ['Matched', score.hits],
-        ['Your part', vt.part === 'S' ? 'Soprano' : vt.part === 'A' ? 'Alto' : vt.part === 'T' ? 'Tenor' : 'Bass'],
+        ['Your part', partName],
       ]} />
-      {!on && <div className="card call stacked"><div><b>Turn on the microphone to sing.</b><p className="muted small">Your voice is analyzed on this device only. Headphones help when the app plays notes.</p>{err && <p className="small tip">{err}</p>}</div><button className="btn dark" onClick={start}><Icon name="mic" size={15} /> Start microphone</button></div>}
-      <SingToScore micOn={on} startMic={async () => { await mic.start(); mic.settings.mode = 'voice'; setOn(true); setErr(''); }} openScore={openScore} onRecording={setS2sRec} />
-      <section className="voice-grid">
-        <div className="card voice-level">
-          <div className="card-head"><b>Singing level</b><span className="muted small">{lvl.blurb}</span></div>
-          <div className="seg wide level-grid">{VOICE_LEVELS.map((v) => <button key={v.id} className={st.voiceLevel === v.id ? 'on' : ''} onClick={() => { if (!allowVoiceLevel(getAccount().ent, v.id)) { openUpgrade(`${v.label} singing is part of ${TIER_NAME[voiceLevelTier(v.id)]}`); return; } setSettings({ voiceLevel: v.id }); }}><span>{v.label}</span>{!allowVoiceLevel(getAccount().ent, v.id) && <small><Icon name="lock" size={11} />{TIER_NAME[voiceLevelTier(v.id)]}</small>}</button>)}</div>
+      {!on && (
+        <div className="vs-mic">
+          <span className="vs-mic-ic"><Icon name="mic" size={18} /></span>
+          <div><b>Turn on the microphone to sing</b><small>Your voice is analyzed on this device only. Headphones help when the app plays notes.</small>{err && <small className="tip">{err}</small>}</div>
+          <button className="btn lime" onClick={start}>Start microphone</button>
         </div>
-        <div className="card">
-          <div className="card-head"><b>Pitch matching</b><span className="muted small">Hold the note in tune for a moment. Any octave counts.</span></div>
-          <div className="match">
+      )}
+      <div className="seg shelf-seg vs-tabs" role="tablist">
+        {VTABS.map((t) => <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}><Icon name={t.icon} size={15} />{t.label}</button>)}
+      </div>
+
+      {tab === 'match' && (
+        <section className="vs-grid">
+          <div className="card vs-match">
             <div className="match-target"><small>Sing</small><b>{midiToName(target)}</b><span>{['Do', 'Di', 'Re', 'Ri', 'Mi', 'Fa', 'Fi', 'Sol', 'Si', 'La', 'Li', 'Ti'][target % 12]}</span></div>
             <div className="tunebar">
               <div className="tunebar-zone" />
-              <div className={`tunebar-needle ${cents !== null && Math.abs(cents) <= lvl.matchCents ? 'ok' : cents !== null && Math.abs(cents) <= 60 ? 'near' : ''}`} style={{ left: `${50 + Math.max(-50, Math.min(50, (cents ?? 0) / 2))}%`, opacity: cents === null ? 0.25 : 1 }} />
+              <div className={`tunebar-needle ${inTune ? 'ok' : cents !== null && Math.abs(cents) <= 60 ? 'near' : ''}`} style={{ left: `${50 + Math.max(-50, Math.min(50, (cents ?? 0) / 2))}%`, opacity: cents === null ? 0.25 : 1 }} />
               <span className="tb-l">flat</span><span className="tb-r">sharp</span>
             </div>
-            <p className="match-msg">{matched.current ? 'Matched! Next note coming…' : cents === null ? (on ? 'Sing on "ah" or "loo".' : 'Start the microphone first.') : Math.abs(cents) <= lvl.matchCents ? `In tune, hold it… ${Math.min(100, Math.round((held / lvl.holdMs) * 100))}%` : cents < 0 ? `${-cents} cents flat: a little higher` : `${cents} cents sharp: relax a little lower`}</p>
-            <div className="row wrap">
-              <button className="btn dark" onClick={() => audio.playNotes([{ midi: target, startMs: 0, durMs: 1100 }])}><Icon name="play" size={14} /> Hear the note</button>
-              <button className="btn" onClick={() => { setScore((s) => ({ ...s, tries: s.tries + 1 })); nextTarget(); }}>New note</button>
+            <p className="match-msg">{matched.current ? 'Matched! Next note coming…' : cents === null ? (on ? 'Sing on "ah" or "loo". Any octave counts.' : 'Start the microphone first.') : inTune ? `In tune, hold it… ${Math.min(100, Math.round((held / lvl.holdMs) * 100))}%` : cents < 0 ? `${-cents} cents flat: a little higher` : `${cents} cents sharp: relax a little lower`}</p>
+            <div className="vs-actions">
+              <button className="btn lime" onClick={() => audio.playNotes([{ midi: target, startMs: 0, durMs: 1100 }])}><Icon name="play" size={14} /> Hear the note</button>
+              <button className="btn" onClick={() => { setScore((x) => ({ ...x, tries: x.tries + 1 })); nextTarget(); }}>New note</button>
+              <span className="vs-score"><b>{score.hits}</b> matched</span>
             </div>
           </div>
-          <PitchRoll targets={() => []} hold={() => target} height={150} tolerance={25} />
-        </div>
-        <div className="side-stack">
-          <div className="card">
-            <div className="card-head"><b>Find your range</b><span className="muted small">{vt.name}</span></div>
-            <p className="small muted">Sing your lowest comfortable note for 3 seconds, then your highest. Never push: comfortable is what counts.</p>
-            <div className="row wrap">
-              <button className="btn" disabled={!on || !!rec} onClick={() => record('low')}>{rec === 'low' ? 'Listening… sing low' : 'Record lowest'}</button>
-              <button className="btn" disabled={!on || !!rec} onClick={() => record('high')}>{rec === 'high' ? 'Listening… sing high' : 'Record highest'}</button>
-            </div>
+          <div className="card vs-roll">
+            <div className="card-head"><b>Your pitch</b><span className="muted small">{lvl.label} level</span></div>
+            <PitchRoll targets={() => []} hold={() => target} height={210} tolerance={25} />
           </div>
-          <div className="card">
-            <div className="card-head"><b>Sing in a choir</b></div>
-            <p className="small muted">Open the four-part demo chorale. You sing your part while the other three voices play, and every note is checked.</p>
-            <div className="row wrap">{(['S', 'A', 'T', 'B'] as const).map((p) => <button key={p} className={`btn ${vt.part === p ? 'dark' : ''}`} onClick={() => singChoir(p)}>{{ S: 'Soprano', A: 'Alto', T: 'Tenor', B: 'Bass' }[p]}</button>)}</div>
-          </div>
+        </section>
+      )}
+
+      {tab === 'score' && <SingToScore micOn={on} startMic={async () => { await mic.start(); mic.settings.mode = 'voice'; setOn(true); setErr(''); }} openScore={openScore} onRecording={setS2sRec} />}
+
+      {tab === 'learn' && (
+        <section className="vs-grid">
           <div className="card">
             <div className="card-head"><b>Vocal lessons</b>{nextLesson && <button className="chip dark" onClick={() => openLesson(nextLesson)}><Icon name="play" size={12} /> Continue</button>}</div>
             <div className="vlist">
@@ -160,8 +163,40 @@ export function VoiceStudio({ openLesson, singChoir, openScore }: { openLesson: 
               })}
             </div>
           </div>
-        </div>
-      </section>
+          <div className="card">
+            <div className="card-head"><b>Sing in a choir</b></div>
+            <p className="small muted">Sing your part of a four-part chorale while the other three voices play. Every note is checked.</p>
+            <div className="vs-parts">{(['S', 'A', 'T', 'B'] as const).map((pt) => <button key={pt} className={`vs-part ${vt.part === pt ? 'mine' : ''}`} onClick={() => singChoir(pt)}><b>{{ S: 'Soprano', A: 'Alto', T: 'Tenor', B: 'Bass' }[pt]}</b>{vt.part === pt && <small>Your part</small>}</button>)}</div>
+          </div>
+        </section>
+      )}
+
+      {tab === 'voice' && (
+        <section className="vs-grid">
+          <div className="card">
+            <div className="card-head"><b>Your range</b><span className="muted small">{vt.name}</span></div>
+            <div className="vs-range"><span>{midiToName(lo)}</span><i /><span>{midiToName(hi)}</span></div>
+            <p className="small muted">Sing your lowest comfortable note for 3 seconds, then your highest. Comfortable is what counts, never push.</p>
+            <div className="vs-actions">
+              <button className="btn" disabled={!on || !!rec} onClick={() => record('low')}>{rec === 'low' ? 'Listening… sing low' : 'Record lowest'}</button>
+              <button className="btn" disabled={!on || !!rec} onClick={() => record('high')}>{rec === 'high' ? 'Listening… sing high' : 'Record highest'}</button>
+            </div>
+          </div>
+          <div className="card voice-level">
+            <div className="card-head"><b>Singing level</b></div>
+            <p className="small muted">{lvl.blurb}</p>
+            <div className="seg wide level-grid">{VOICE_LEVELS.map((v) => <button key={v.id} className={st.voiceLevel === v.id ? 'on' : ''} onClick={() => { if (!allowVoiceLevel(getAccount().ent, v.id)) { openUpgrade(`${v.label} singing is part of ${TIER_NAME[voiceLevelTier(v.id)]}`); return; } setSettings({ voiceLevel: v.id }); }}><span>{v.label}</span>{!allowVoiceLevel(getAccount().ent, v.id) && <small><Icon name="lock" size={11} />{TIER_NAME[voiceLevelTier(v.id)]}</small>}</button>)}</div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
+
+type VTab = 'match' | 'score' | 'learn' | 'voice';
+const VTABS: { id: VTab; label: string; icon: 'mic' | 'note' | 'doc' | 'people' }[] = [
+  { id: 'match', label: 'Pitch match', icon: 'mic' },
+  { id: 'score', label: 'Sing to score', icon: 'note' },
+  { id: 'learn', label: 'Lessons & choir', icon: 'doc' },
+  { id: 'voice', label: 'My voice', icon: 'people' },
+];

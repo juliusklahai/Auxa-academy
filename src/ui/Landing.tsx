@@ -289,5 +289,5 @@ const CHIPS_ALONG: Chip[] = [
 
 /** Shown for a moment while we check whether someone is signed in. */
 export function Splash() {
-  return <div className="landing splash"><span className="circle brand" aria-hidden><i /><i /><i /></span></div>;
+  return <div className="landing splash"><span className="splash-mark" aria-hidden><AuxaMark size={64} /></span></div>;
 }

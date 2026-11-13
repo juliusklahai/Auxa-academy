@@ -220,7 +220,10 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
     if (session.current && session.current.state !== 'COMPLETED') session.current = null;
     if (sing) mic.settings.mode = settings.micMode;
     if (micWasOn.current) { micWasOn.current = false; mic.start().catch(() => {}); }
-  };
+  };  // leaving full screen (Exit / X / Esc) stops playback and practice: nothing keeps playing underneath
+  const wasFocus = useRef(fm.focus);
+  useEffect(() => { if (wasFocus.current && !fm.focus && run) stop(); wasFocus.current = fm.focus; }, [fm.focus]); // eslint-disable-line
+
   useEffect(() => () => stop(), []); // eslint-disable-line
 
   /** Stream notes ahead of time from a sorted list (keeps thousands of notes cheap). */

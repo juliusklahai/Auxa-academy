@@ -1,3 +1,4 @@
+import { AuxaMark } from './Brand';
 import type { ReactNode } from 'react';
 import { Icon } from './Icon';
 import { goHome } from './nav';
@@ -14,7 +15,7 @@ export function FocusBar({ title, panel, onPanel, onExit, infoLabel = 'Info', se
 }) {
   return (
     <div className="focus-bar" role="toolbar" aria-label="Practice view controls">
-      <button className="circle brand focus-home" onClick={goHome} aria-label="Home" title="Home"><i /><i /><i /></button>
+      <button className="circle focus-home auxa-home" onClick={goHome} aria-label="Home" title="Home"><AuxaMark size={22} /></button>
       <span className="focus-title">{title}</span>
       <div className="focus-actions">
       {tools}

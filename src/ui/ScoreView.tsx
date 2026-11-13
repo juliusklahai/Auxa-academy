@@ -149,6 +149,27 @@ export const ScoreView = forwardRef<ScoreViewHandle, Props>(function ScoreView({
   }));
 
   /** keep the cursor in view: sideways in one-line view (cursor a third from the left), else page turns */
+  // smooth following: each cursor step sets a target and the view glides there every frame,
+  // so the music flows past instead of jumping (and stops pulling once it arrives, so you can scroll freely)
+  const glide = useRef<{ left: number | null; top: number | null; raf: number }>({ left: null, top: null, raf: 0 });
+  useEffect(() => () => cancelAnimationFrame(glide.current.raf), []);
+  function glideTo(left: number | null, top: number | null) {
+    const g = glide.current;
+    if (left !== null) g.left = left;
+    if (top !== null) g.top = top;
+    if (g.raf) return;
+    let last = performance.now();
+    const step = (now: number) => {
+      const sc = scroller.current;
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      const k = 1 - Math.exp(-dt * 7);
+      let moving = false;
+      if (sc && g.left !== null) { const d = g.left - sc.scrollLeft; if (Math.abs(d) < 0.6) g.left = null; else { sc.scrollLeft += d * k; moving = true; } }
+      if (sc && g.top !== null) { const d = g.top - sc.scrollTop; if (Math.abs(d) < 0.6) g.top = null; else { sc.scrollTop += d * k; moving = true; } }
+      g.raf = moving ? requestAnimationFrame(step) : 0;
+    };
+    g.raf = requestAnimationFrame(step);
+  }
   function follow() {
     const ce = osmd.current?.cursor.cursorElement as HTMLElement | undefined;
     const sc = scroller.current;
@@ -156,12 +177,14 @@ export const ScoreView = forwardRef<ScoreViewHandle, Props>(function ScoreView({
     if (horiz.current) {
       const x = ce.offsetLeft;
       const y = ce.offsetTop;
-      const top = y < sc.scrollTop || y > sc.scrollTop + sc.clientHeight * 0.5 ? Math.max(0, y - 8) : sc.scrollTop;
-      if (x < sc.scrollLeft + sc.clientWidth * 0.15 || x > sc.scrollLeft + sc.clientWidth * 0.6 || top !== sc.scrollTop) sc.scrollTo({ left: Math.max(0, x - sc.clientWidth * 0.3), top, behavior: 'smooth' });
+      const top = y < sc.scrollTop || y > sc.scrollTop + sc.clientHeight * 0.5 ? Math.max(0, y - 8) : null;
+      // keep the cursor about a third of the way in, always (steady flow rather than page jumps)
+      glideTo(Math.max(0, Math.min(sc.scrollWidth - sc.clientWidth, x - sc.clientWidth * 0.3)), top);
       return;
     }
     const top = ce.offsetTop, h = ce.offsetHeight;
-    if (top + h > sc.scrollTop + sc.clientHeight - 20 || top < sc.scrollTop) sc.scrollTo({ top: Math.max(0, top - 24), behavior: 'smooth' });
+    // vertical (page) layout: bring the next system up as the cursor reaches the lower part of the view
+    if (top + h > sc.scrollTop + sc.clientHeight * 0.7 || top < sc.scrollTop) glideTo(null, Math.max(0, top - 24));
   }
 
   return (
