@@ -95,6 +95,12 @@ export async function initAccount() {
   if (q.get('pro') === 'monime') { const id = localStorage.getItem('maestro.monime.pending'); if (id) await verifyMonime(id).catch(() => undefined); }
   if (q.get('pro')) { history.replaceState(null, '', location.pathname); setTimeout(() => void refreshProfile(), 2500); }
 }
+/** Change the name on the account (used on certificates, classes and profile cards). */
+export async function setDisplayName(name: string) {
+  const { error } = await (await supabase()).rpc('set_display_name', { n: name });
+  if (error) throw new Error(error.message);
+  await refreshProfile();
+}
 export const refreshProfile = async () => loadProfile((await (await supabase()).auth.getUser()).data.user ?? null);
 
 export async function signInWithEmail(email: string) {

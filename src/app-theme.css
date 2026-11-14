@@ -671,7 +671,7 @@ html.theme-light .btn.lime, html.theme-light .fab.lime, html.theme-light .dock-b
 .notchbar { display: none; }
 @media (max-width: 860px) {
   .tabbar { display: none !important; }
-  .notchbar { display: flex; position: fixed; left: var(--sal); right: var(--sar); bottom: 0; z-index: 150; height: calc(68px + var(--sab)); padding-bottom: var(--sab); box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  .notchbar { display: flex; position: fixed; left: 0; right: 0; width: 100%; bottom: 0; z-index: 150; height: calc(68px + var(--sab)); padding-bottom: var(--sab); box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   .nb-shape { position: absolute; inset: 0; overflow: visible; pointer-events: none; filter: drop-shadow(0 -6px 18px rgba(0,0,0,.08)); }
   .nb-shape path { fill: #ffffff; }
   html.theme-dark .nb-shape path { fill: #242426; }
@@ -1291,3 +1291,17 @@ html.theme-light .pi-back { background: rgba(245,245,243,.45); }
   .vs-about > b { display: none; }
   .vs-about p { font-size: 14px; }
 }
+/* the nav bar reaches the very bottom edge and beyond: when a mobile browser's toolbar slides
+   away while scrolling, nothing of the page can show underneath it */
+@media (max-width: 860px) {
+  .notchbar::after { content: ''; position: absolute; left: 0; right: 0; top: 40px; bottom: -160px; background: #ffffff; z-index: -1; pointer-events: none; }
+  html.theme-dark .notchbar::after { background: #242426; }
+  .nb-shape { z-index: 0; }
+}
+.cert-from { margin: 4px 0 0; text-align: center; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--accent, #3b6cf6); font: inherit; text-decoration: underline; cursor: pointer; }
+.acct-name { margin: 0 0 14px; }
+.acct-name label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: 14px; }
+.acct-name label small { font-weight: 400; color: var(--muted, #888); }
+.acct-name-row { display: flex; gap: 8px; margin-top: 4px; }
+.acct-name-row input { flex: 1; min-width: 0; }

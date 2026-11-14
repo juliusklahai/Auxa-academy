@@ -10,6 +10,7 @@ import { useAccount } from '../account/store';
 import { levelVerification, type LevelCheck } from '../account/witness';
 import { lessonById } from '../curriculum/lessons';
 import { Icon } from './Icon';
+import { getProfile } from './learnerProfile';
 
 export async function certToPng(svg: string, scale = 1): Promise<Blob> {
   const img = new Image();
@@ -48,8 +49,9 @@ function todoLessons(rows: LevelCheck[]) {
 
 export function CertificateSheet({ level, date, onClose, fresh }: { level: number; date: string; onClose: () => void; fresh?: boolean }) {
   const a = useAccount();
-  const [name, setName] = useState(() => { try { return localStorage.getItem('maestro.cert.name') ?? ''; } catch { return ''; } });
-  const shown = (name || a.profile?.display_name || '').trim();
+  // the name always comes from the learner's profile (account name, or the name given at onboarding)
+  const meta = (a.user as { user_metadata?: { full_name?: string; name?: string; display_name?: string } } | null)?.user_metadata;
+  const shown = (a.profile?.display_name || meta?.display_name || meta?.full_name || meta?.name || getProfile()?.name || '').trim();
   const [shape, setShape] = useState<{ d: string; w: number } | null>(null);
   useEffect(() => { let live = true; void nameShape(shown).then((x) => { if (live) setShape(x); }); return () => { live = false; }; }, [shown]);
   // verified copy from the database, re-issued (after a pause) when the name changes
@@ -96,7 +98,7 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
             : state === 'verify' ? <div className="cert-verify"><span>{err}</span>{todoLessons(todo).length > 0 && <ul>{todoLessons(todo).map((x) => <li key={x.id}><b>{x.title}</b> <small>{x.left} to play</small></li>)}</ul>}<button className="link-btn" onClick={() => setAttempt((n) => n + 1)}>Check again</button></div>
             : <span>Sign in to get a verified certificate with its own code, QR and seal.</span>}
         </div>
-        <label className="cert-name">Name on the certificate<input value={name} maxLength={40} placeholder={a.profile?.display_name || 'Your name'} onChange={(e) => { setName(e.target.value); try { localStorage.setItem('maestro.cert.name', e.target.value); } catch { /* private mode */ } }} /></label>
+        <p className="cert-from muted small">{shown ? <>Name from your profile. To change it, edit your name in <button className="link-btn" onClick={() => { onClose(); window.dispatchEvent(new Event('maestro:account')); }}>your account</button>.</> : <>Add your name in <button className="link-btn" onClick={() => { onClose(); window.dispatchEvent(new Event('maestro:account')); }}>your account</button> to put it on your certificate.</>}</p>
         <div className="cert-actions">
           <button className="btn lime" onClick={() => void shareLink()} disabled={!!busy || !cert}><Icon name="share" size={15} />{busy === 'link' ? 'Sharing…' : 'Share link'}</button>
           <button className="btn" onClick={() => void run('png', async () => download(await certToPng(svg, 2), `${base}.png`))} disabled={!!busy}><Icon name="download" size={15} />{busy === 'png' ? 'Saving…' : 'PNG'}</button>

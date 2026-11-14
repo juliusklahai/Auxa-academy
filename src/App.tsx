@@ -97,6 +97,7 @@ export default function App() {
   const [landing, setLanding] = useState(false);
   const [pastLanding, setPastLanding] = useState(!!saved);
   const [acctOpen, setAcctOpen] = useState(false);
+  useEffect(() => { const f = () => setAcctOpen(true); window.addEventListener('maestro:account', f); return () => window.removeEventListener('maestro:account', f); }, []);
   const [cert, setCert] = useState<{ level: number; date: string; fresh?: boolean } | null>(null);
   const [placing, setPlacing] = useState(false);
   const pv = useProgressVersion();

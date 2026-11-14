@@ -31,17 +31,27 @@ export function NotchBar({ items, active, onPick }: { items: NotchItem[]; active
   const ref = useRef<HTMLElement>(null);
   const [w, setW] = useState(0);
   const [h, setH] = useState(72);
+  // side padding = our inset + the phone's safe area (notch, or the system buttons in landscape)
+  const [pad, setPad] = useState<[number, number]>([INSET, INSET]);
   const idx = Math.max(0, items.findIndex((i) => i.id === active));
-  const target = w ? INSET + ((w - 2 * INSET) / items.length) * (idx + 0.5) : 0;
+  const target = w ? pad[0] + ((w - pad[0] - pad[1]) / items.length) * (idx + 0.5) : 0;
   const [x, setX] = useState(target);
   const xr = useRef(target);
   const [pop, setPop] = useState(0);
 
   useLayoutEffect(() => {
     const el = ref.current; if (!el) return;
-    const ro = new ResizeObserver(() => { setW(el.clientWidth); setH(el.clientHeight); });
-    ro.observe(el); setW(el.clientWidth); setH(el.clientHeight);
-    return () => ro.disconnect();
+    const measure = () => {
+      const cs = getComputedStyle(el);
+      setW(el.clientWidth); setH(el.clientHeight);
+      setPad([parseFloat(cs.paddingLeft) || INSET, parseFloat(cs.paddingRight) || INSET]);
+    };
+    const ro = new ResizeObserver(measure);
+    ro.observe(el); measure();
+    // rotating the phone or the app updating the safe areas changes the padding without a resize
+    window.addEventListener('orientationchange', measure);
+    const t = window.setInterval(measure, 1500);
+    return () => { ro.disconnect(); window.removeEventListener('orientationchange', measure); window.clearInterval(t); };
   }, []);
 
   // glide the dip to the new tab
@@ -60,11 +70,11 @@ export function NotchBar({ items, active, onPick }: { items: NotchItem[]; active
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [target, w]);
+  }, [target, w]); // eslint-disable-line
 
   const cur = items[idx];
   return (
-    <nav className="notchbar" ref={ref} aria-label="Sections" style={{ paddingLeft: INSET, paddingRight: INSET }}>
+    <nav className="notchbar" ref={ref} aria-label="Sections" style={{ paddingLeft: `calc(${INSET}px + var(--sal, 0px))`, paddingRight: `calc(${INSET}px + var(--sar, 0px))` }}>
       {w > 0 && (
         <svg className="nb-shape" width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden>
           <path d={barPath(w, h, x)} />

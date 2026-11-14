@@ -6,7 +6,7 @@ import { ACCOUNTS_ENABLED, MONIME_ENABLED, PLANS, type PlanOption } from '../acc
 import { TIER_NAME } from '../account/gate';
 import { toggleTheme, useTheme } from './theme';
 import {
-  adminGrant, adminPayments, adminSearch, adminSetRole, authMessage, closeUpgrade, endRecovery, openBillingPortal, openUpgrade, refreshProfile,
+  adminGrant, adminPayments, adminSearch, adminSetRole, authMessage, closeUpgrade, endRecovery, openBillingPortal, openUpgrade, refreshProfile, setDisplayName,
   deleteAccount, sendPasswordReset, signInWithEmail, signInWithGoogle, signInWithPassword, signOut, signUp, startCheckout, updatePassword, useAccount, useUpgrade, type Profile,
 } from '../account/store';
 import { FREE_LINE, PLAN_ITEMS } from '../account/planCopy';
@@ -179,9 +179,32 @@ export function AccountSheet({ onClose }: { onClose: () => void }) {
     <div className="sheet-back" onClick={onClose}>
       <div className="sheet acct-sheet" role="dialog" aria-label="Account" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-head"><div><small className="muted">Auxa</small><b>{a.user ? 'Your account' : 'Sign in'}</b></div><button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="close" size={16} /></button></div>
+        {a.user && <NameField />}
         <AccountCard bare />
       </div>
     </div>
+  );
+}
+
+/** The account's name: shown on certificates, in classes and on profile cards. */
+function NameField() {
+  const a = useAccount();
+  const [v, setV] = useState(a.profile?.display_name ?? '');
+  const [state, setState] = useState<'' | 'saving' | 'saved' | 'error'>('');
+  useEffect(() => { setV(a.profile?.display_name ?? ''); }, [a.profile?.display_name]);
+  const dirty = v.trim() !== (a.profile?.display_name ?? '').trim();
+  const save = async () => {
+    setState('saving');
+    try { await setDisplayName(v.trim()); setState('saved'); } catch { setState('error'); }
+  };
+  return (
+    <form className="acct-name" onSubmit={(e) => { e.preventDefault(); if (dirty && v.trim()) void save(); }}>
+      <label>Your name<small>Shown on your certificates, in classes and on your profile card.</small>
+        <span className="acct-name-row"><input value={v} maxLength={40} autoComplete="name" onChange={(e) => { setV(e.target.value); setState(''); }} placeholder="Ama Kamara" />
+          <button className="btn" disabled={!dirty || !v.trim() || state === 'saving'}>{state === 'saving' ? 'Saving…' : state === 'saved' && !dirty ? 'Saved' : 'Save'}</button></span>
+      </label>
+      {state === 'error' && <small className="tip">Could not save. Check your connection and try again.</small>}
+    </form>
   );
 }
 
