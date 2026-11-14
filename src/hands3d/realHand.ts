@@ -117,6 +117,13 @@ export class RealHandView {
   private target: ({ finger: number; j: number; mix: number } | null)[] = [];
   /** each bone's aiming direction in its own rest frame (towards its child joint) */
   private aimDir: THREE.Vector3[] = [];
+  /** the next bone in the chain (its rest offset is stretched so each joint lands on ours), and that offset's rest length */
+  private kid: (THREE.Bone | null)[] = [];
+  private restLen: number[] = [];
+  /** last segment: length from the bone to the scan's fingertip (hand root space) */
+  private tipLen: number[] = [];
+  /** each finger's last bone (index of the 03 bone), for the two-bone reach to the fingertip */
+  private lastOf = new Map<number, number>();
   private parentIdx: number[] = [];
   private parentConstQ: THREE.Quaternion[] = [];
   private jointFinger: number[] = [];
@@ -183,9 +190,17 @@ export class RealHandView {
         const j = th ? (n.endsWith('base') ? 1 : n.endsWith('01') ? 2 : n.endsWith('02') ? 2 : 3) : m.seg + 1;
         const mix = th && n.endsWith('02') ? 0.45 : 0;
         this.target[i] = { finger: m.finger, j, mix };
-        const kid = b.children.find((ch) => (ch as THREE.Bone).isBone && !/Ctrl/.test(ch.name) && ourBoneFor(ch.name)?.finger === m.finger);
-        const dirRoot = kid ? kid.getWorldPosition(new THREE.Vector3()).sub(b.getWorldPosition(new THREE.Vector3())) : new THREE.Vector3(0, 1, 0).applyQuaternion(q);
+        const kid = b.children.find((ch) => (ch as THREE.Bone).isBone && !/Ctrl/.test(ch.name) && ourBoneFor(ch.name)?.finger === m.finger) as THREE.Bone | undefined;
+        // the last bone has no child, but the rig keeps a fingertip marker: aim (and measure) towards it
+        const pre = n.replace(/_0[123]$|_base$/, '');
+        const tipB = !kid ? this.bones.find((x) => x.name.replace(/\.?R$/, '') === `${pre}_tip`) : undefined;
+        const end = kid ?? tipB;
+        const dirRoot = end ? end.getWorldPosition(new THREE.Vector3()).sub(b.getWorldPosition(new THREE.Vector3())) : new THREE.Vector3(0, 1, 0).applyQuaternion(q);
+        this.tipLen[i] = !kid && tipB ? dirRoot.length() : 0;
+        if (n.endsWith('03') && this.tipLen[i] > 0) this.lastOf.set(m.finger, i);
         this.aimDir[i] = dirRoot.normalize().applyQuaternion(q.clone().invert());
+        this.kid[i] = kid ?? null;
+        this.restLen[i] = kid ? kid.position.length() : 0;
       } else this.target[i] = null;
       const par = b.parent as THREE.Bone | null;
       const pi = par && (par as THREE.Bone).isBone ? index.get(par) ?? -1 : -1;
@@ -251,7 +266,34 @@ export class RealHandView {
       // then swing it so it points at the joint our model has next (aim, not copy): the scan's own
       // proportions differ a little from ours, and aiming keeps fingertips and the thumb on the keys
       b.getWorldPosition(head).applyMatrix4(rootInv);
-      const goal = joints[t.finger][t.j].clone().lerp(joints[t.finger][Math.min(3, t.j + 1)], t.mix);
+      let goal = joints[t.finger][t.j].clone().lerp(joints[t.finger][Math.min(3, t.j + 1)], t.mix);
+      // second-to-last bone: bend the last two scan bones (their real lengths) so the fingertip lands
+      // exactly on ours, bending the way our finger bends. Aiming alone left the thumb short of its key
+      // whenever the scan's proportions differ from ours.
+      const li = this.lastOf.get(t.finger);
+      const kidB = this.kid[i];
+      if (li !== undefined && kidB && kidB === this.bones[li]) {
+        const sRoot = new THREE.Vector3().setFromMatrixScale(rootInv.clone().multiply(b.matrixWorld)).y;
+        const a = this.restLen[i] * sRoot, c = this.tipLen[li];
+        const J = joints[t.finger], T = J[3];
+        const toT = T.clone().sub(head);
+        const d = toT.length();
+        if (a > 1e-6 && c > 1e-6 && d > 1e-6) {
+          const n = toT.clone().divideScalar(d);
+          // bend direction: away from the line, towards our chain's knuckle (fingers: our DIP; thumb: our IP side)
+          const knee = t.finger === 0 ? J[2].clone().sub(J[1].clone().lerp(J[3], 0.5)).add(head) : J[2].clone();
+          const u = knee.sub(head); u.sub(n.clone().multiplyScalar(u.dot(n)));
+          if (u.lengthSq() < 1e-8) u.copy(new THREE.Vector3(0, 0, 1).applyQuaternion(D[i]).sub(n.clone().multiplyScalar(n.z)));
+          u.normalize();
+          let len = a;
+          if (d >= a + c) len = Math.min(1.25 * a, d - c * 0.999); // out of reach: lengthen the bone a little, then straight
+          const dd = Math.min(d, len + c - 1e-4), lo = Math.abs(len - c) + 1e-4;
+          const dc = Math.max(lo, dd);
+          const cosA = Math.max(-1, Math.min(1, (len * len + dc * dc - c * c) / (2 * len * dc)));
+          goal = head.clone().add(n.multiplyScalar(len * cosA)).add(u.multiplyScalar(len * Math.sqrt(1 - cosA * cosA)));
+          if (sRoot > 1e-9) kidB.position.setLength(len / sRoot);
+        }
+      }
       const want = goal.sub(head).normalize();
       const cur = this.aimDir[i].clone().applyQuaternion(baseD).normalize();
       const swing = new THREE.Quaternion().setFromUnitVectors(cur, want);

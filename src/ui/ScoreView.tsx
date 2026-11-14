@@ -169,8 +169,20 @@ export const ScoreView = forwardRef<ScoreViewHandle, Props>(function ScoreView({
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       const k = 1 - Math.exp(-dt * 7);
       let moving = false;
-      if (sc && g.left !== null) { const d = g.left - sc.scrollLeft; if (Math.abs(d) < 0.6) g.left = null; else { sc.scrollLeft += d * k; moving = true; } }
-      if (sc && g.top !== null) { const d = g.top - sc.scrollTop; if (Math.abs(d) < 0.6) g.top = null; else { sc.scrollTop += d * k; moving = true; } }
+      // steps of at least a whole pixel: phones round scroll positions to device pixels, and a
+      // sub-pixel step would be rounded away (the view would never arrive). If a step does not
+      // take (the browser refused it), jump straight to the target.
+      const ease = (cur: number, target: number) => { const d = target - cur; return Math.abs(d) <= 1.5 ? target : cur + Math.sign(d) * Math.max(1.5, Math.abs(d) * k); };
+      if (sc && g.left !== null) {
+        const cur = sc.scrollLeft;
+        if (Math.abs(g.left - cur) < 1) g.left = null;
+        else { sc.scrollLeft = ease(cur, g.left); if (Math.abs(sc.scrollLeft - cur) < 0.5) { sc.scrollLeft = g.left; if (Math.abs(sc.scrollLeft - cur) < 0.5) g.left = null; } moving = g.left !== null || moving; }
+      }
+      if (sc && g.top !== null) {
+        const cur = sc.scrollTop;
+        if (Math.abs(g.top - cur) < 1) g.top = null;
+        else { sc.scrollTop = ease(cur, g.top); if (Math.abs(sc.scrollTop - cur) < 0.5) { sc.scrollTop = g.top; if (Math.abs(sc.scrollTop - cur) < 0.5) g.top = null; } moving = g.top !== null || moving; }
+      }
       g.raf = moving ? requestAnimationFrame(step) : 0;
     };
     g.raf = requestAnimationFrame(step);

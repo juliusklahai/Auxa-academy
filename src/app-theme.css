@@ -1320,3 +1320,6 @@ html.theme-light .pi-back { background: rgba(245,245,243,.45); }
 .chip.chip-x > .chip-del:hover { opacity: 1; background: rgba(127,127,127,.18); }
 .chip.chip-x.on { outline: 2px solid var(--accent, #1fe0d8); outline-offset: -2px; }
 .score-scroll.tappable .osmd-host { cursor: pointer; }
+/* the score's follow-the-cursor scrolling animates itself; the browser's smooth scrolling fights it
+   (on Android every small step restarted a smooth scroll, so the sheet stood still while playing) */
+.score-scroll { scroll-behavior: auto !important; }
