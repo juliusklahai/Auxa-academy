@@ -63,7 +63,7 @@ export function HandsLayer(p: HandsLayerProps) {
   return (
     <Suspense fallback={null}>
       <Hands3D g={p.g} below={below} events={p.events} fingering={fingering} timeOf={p.timeOf} timeKey={p.timeKey} clock={p.clock} index={p.index}
-        demo={!!p.demo} correction={!!p.correction} style={{ opacity: s.handOpacity, color: s.handColor, stroke: s.handStroke, outline: true }}
+        demo={!!p.demo} correction={!!p.correction} style={{ opacity: s.handOpacity, color: s.handColor, stroke: s.handStroke, outline: true, look: s.handLook }}
         show={s.handsShow} showFingering={s.fingers} onFail={() => setFailed(true)} />
     </Suspense>
   );
@@ -96,13 +96,16 @@ export function HandControls({ events, exerciseId, index }: { events: ScoreEvent
               <button onClick={() => { setSettings({ hands: false }); setOpen(false); }}>None</button></div>
           </div>
           {s.handStyle === '3d' && <>
+            <div className="hp-row"><span>Look</span>
+              <div className="seg">{(['real', 'drawn'] as const).map((v) => <button key={v} className={s.handLook === v ? 'on' : ''} onClick={() => setSettings({ handLook: v })}>{v === 'real' ? 'Realistic' : 'Drawn'}</button>)}</div>
+            </div>
             <label className="hp-row"><span>Opacity <small>{Math.round(s.handOpacity * 100)}%</small></span>
               <input type="range" min={0.3} max={1} step={0.05} value={s.handOpacity} onChange={(e) => setSettings({ handOpacity: +e.target.value })} /></label>
-            <div className="hp-row"><span>Colour</span>
+            {s.handLook === 'drawn' && <><div className="hp-row"><span>Colour</span>
               <div className="swatches">{(Object.keys(SWATCH) as AppColor[]).map((c) => <button key={c} className={`sw ${s.handColor === c ? 'on' : ''}`} style={{ background: SWATCH[c] }} onClick={() => setSettings({ handColor: c })} aria-label={c} title={c} />)}</div>
             </div>
             <label className="hp-row"><span>Line weight</span>
-              <input type="range" min={0} max={2} step={0.1} value={s.handStroke} onChange={(e) => setSettings({ handStroke: +e.target.value })} /></label>
+              <input type="range" min={0} max={2} step={0.1} value={s.handStroke} onChange={(e) => setSettings({ handStroke: +e.target.value })} /></label></>}
           </>}
           <label className="hp-row check"><input type="checkbox" checked={s.fingers} onChange={(e) => setSettings({ fingers: e.target.checked })} /> Show finger numbers</label>
           {ev && ev.pitches.length > 0 && (

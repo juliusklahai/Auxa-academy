@@ -15,8 +15,9 @@ import { HAND_DATA, HAND_LAYOUT } from './handData';
 import { BONE_DEFS, qAxis, type Q } from './kinematics';
 import { chainStart } from './anatomy';
 import type { HandPose } from './pose';
+import { RealHandView } from './realHand';
 
-export interface HandStyle { opacity: number; color: string; stroke: number; outline: boolean }
+export interface HandStyle { opacity: number; color: string; stroke: number; outline: boolean; look?: 'real' | 'drawn' }
 export const HAND_COLORS: Record<string, string> = { white: '#f6f3ee', skin: '#e8c2a4', blue: '#a9c9f5', pink: '#f4bfd0' };
 const INK = new THREE.Color('#2b2622');
 
@@ -194,6 +195,11 @@ export class HandScene {
   private camera = new THREE.OrthographicCamera(0, 1, 0, -1, 1, 6000);
   readonly mats: Record<Hand, Materials> = { RH: new Materials(), LH: new Materials() };
   readonly views: Record<Hand, HandView>;
+  /** the scanned, realistic hands (loaded on first use; the drawn hands show until they are ready) */
+  readonly real: Record<Hand, RealHandView> = { RH: new RealHandView('RH'), LH: new RealHandView('LH') };
+  private look: 'real' | 'drawn' = 'drawn';
+  private loading = false;
+  onReady: (() => void) | null = null;
   private k = 1;
   private H = 1;
 
@@ -208,8 +214,17 @@ export class HandScene {
     this.camera.position.set(0, 0, 3000);
     this.camera.lookAt(0, 0, 0);
     this.views = { RH: new HandView('RH', this.mats.RH), LH: new HandView('LH', this.mats.LH) };
-    this.scene.add(this.views.RH.group, this.views.LH.group);
+    this.scene.add(this.views.RH.group, this.views.LH.group, this.real.RH.group, this.real.LH.group);
   }
+  private useReal() { return this.look === 'real' && this.real.RH.ready && this.real.LH.ready; }
+  private loadReal() {
+    if (this.loading) return;
+    this.loading = true;
+    Promise.all([this.real.RH.load(), this.real.LH.load()])
+      .then(() => { this.real.RH.place(this.k, this.H); this.real.LH.place(this.k, this.H); this.real.RH.setOpacity(this.opacity); this.real.LH.setOpacity(this.opacity); this.onReady?.(); })
+      .catch((e) => { console.warn('Realistic hands unavailable, using drawn hands', e); this.look = 'drawn'; });
+  }
+  private opacity = 1;
 
   /** width/height of the canvas in CSS px, key height H (px), k = px per mm. */
   resize(w: number, h: number, H: number, k: number) {
@@ -219,10 +234,17 @@ export class HandScene {
     Object.assign(this.camera, { left: 0, right: w, top: 0, bottom: -h });
     this.camera.updateProjectionMatrix();
     this.views.RH.place(k, H); this.views.LH.place(k, H);
+    this.real.RH.place(k, H); this.real.LH.place(k, H);
     for (const m of [this.mats.RH, this.mats.LH]) m.u.uHatchPx.value = 5 * this.renderer.getPixelRatio();
   }
 
-  setStyle(st: HandStyle) { this.mats.RH.setStyle(st, this.k); this.mats.LH.setStyle(st, this.k); }
+  setStyle(st: HandStyle) {
+    this.mats.RH.setStyle(st, this.k); this.mats.LH.setStyle(st, this.k);
+    this.look = st.look ?? 'drawn';
+    this.opacity = Math.max(0.5, st.opacity);
+    this.real.RH.setOpacity(this.opacity); this.real.LH.setOpacity(this.opacity);
+    if (this.look === 'real') this.loadReal();
+  }
 
   /** model-space mm point of a hand -> CSS px in the canvas */
   toPx(h: Hand, p: number[]): [number, number] {
@@ -231,15 +253,19 @@ export class HandScene {
   }
 
   update(h: Hand, pose: HandPose | null, yaw = 0, lift = 0) {
-    const v = this.views[h];
-    v.visible = !!pose;
-    if (pose) v.apply(pose, yaw, lift);
+    const real = this.useReal();
+    const v = this.views[h], r = this.real[h];
+    v.visible = !!pose && !real;
+    r.visible = !!pose && real;
+    if (!pose) return;
+    if (real) r.apply(pose, lift); else v.apply(pose, yaw, lift);
   }
   /** per-finger highlight (index 0 = thumb) spread onto that finger's bones */
   setHighlight(h: Hand, hi: number[], fix: number[]) {
     const toBones = (v: number[]) => { const b = new Array(17).fill(0); v.forEach((x, i) => { const s = chainStart(i + 1); b[s] = x * (i === 0 ? 0.3 : 0.85); b[s + 1] = x; b[s + 2] = x; }); return b; };
     this.mats[h].u.uHi.value = toBones(hi);
     this.mats[h].u.uFix.value = toBones(fix);
+    this.real[h].setHighlight(hi, fix);
   }
   render() { this.renderer.render(this.scene, this.camera); }
   dispose() { this.renderer.dispose(); }

@@ -51,7 +51,7 @@ export function TeachDemo({ id, restart }: { id: DemoId; restart: number }) {
         overlay={webgl ? (g) => (
           <Suspense fallback={null}>
             <Hands3D g={g} below={handsBelow(g.whiteW)} events={d.events} fingering={d.fingering} timeOf={(b) => b} timeKey={id} clock={clock}
-              index={0} demo={false} correction={false} style={{ opacity: s.handOpacity, color: s.handColor, stroke: s.handStroke, outline: true }}
+              index={0} demo={false} correction={false} style={{ opacity: s.handOpacity, color: s.handColor, stroke: s.handStroke, outline: true, look: s.handLook }}
               show="both" showFingering={d.labels || s.fingers} onFail={() => setFailed(true)} lift={d.lift} />
           </Suspense>
         ) : undefined} />

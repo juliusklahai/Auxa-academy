@@ -68,6 +68,7 @@ export default function Hands3D(p: Hands3DProps) {
       return;
     }
     const sc = sceneRef.current;
+    sc.onReady = () => { dirty.current = true; state.current.settled = 0; };
     const onLost = (e: Event) => { e.preventDefault(); props.current.onFail(); };
     canvas.current!.addEventListener('webglcontextlost', onLost);
     return () => { canvas.current?.removeEventListener('webglcontextlost', onLost); sc.dispose(); sceneRef.current = null; };
@@ -77,7 +78,7 @@ export default function Hands3D(p: Hands3DProps) {
     sceneRef.current?.resize(p.g.width, H + p.below, H, k);
     sceneRef.current?.setStyle(p.style);
     dirty.current = true;
-  }, [p.g.width, H, p.below, k, p.style.opacity, p.style.color, p.style.stroke, p.style.outline]); // eslint-disable-line
+  }, [p.g.width, H, p.below, k, p.style.opacity, p.style.color, p.style.stroke, p.style.outline, p.style.look]); // eslint-disable-line
 
   useEffect(() => { dirty.current = true; posers.current.RH.reset(); posers.current.LH.reset(); state.current.tv = -1; }, [bridge]);
   useEffect(() => { dirty.current = true; }, [p.index, p.demo, p.correction, p.show, p.showFingering]);
