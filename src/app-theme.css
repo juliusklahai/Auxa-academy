@@ -1232,3 +1232,62 @@ html.theme-light .pi-back { background: rgba(245,245,243,.45); }
 .authpage .auth .auth-google { background: color-mix(in srgb, var(--ink, #f2f2ef) 5%, transparent); color: inherit; border: 1px solid color-mix(in srgb, var(--ink, #f2f2ef) 16%, transparent); }
 .authpage .auth label, .authpage .auth .auth-foot, .authpage .auth .link { color: inherit; }
 .authpage .auth-or { color: var(--muted, #8b8b86); }
+
+/* Voice Studio shell: sidebar + panel with a toolbar on top (as sketched) */
+.vs-shell { display: grid; grid-template-columns: 200px minmax(0, 1fr); border-radius: 26px; overflow: hidden; background: var(--card); border: 1px solid var(--hair); min-height: 460px; }
+.vs-side { display: flex; flex-direction: column; padding: 70px 0 16px; background: color-mix(in srgb, var(--ink) 4%, transparent); border-right: 1px solid var(--hair); }
+.vs-side button { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border: 0; border-bottom: 1px solid var(--hair); background: none; color: var(--ink2); font: inherit; font-size: 14.5px; font-weight: 600; text-align: left; cursor: pointer; }
+.vs-side button:first-child { border-top: 1px solid var(--hair); }
+.vs-side button.on { background: color-mix(in srgb, var(--ink) 10%, transparent); color: var(--ink); box-shadow: inset 3px 0 0 var(--lime); }
+.vs-main { min-width: 0; display: grid; }
+.vs-panel { display: grid; gap: 16px; align-content: start; padding: 0 22px 22px; }
+.vs-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; min-height: 58px; margin: 0 -22px; padding: 8px 22px; border-bottom: 1px solid var(--hair); font-size: 14px; }
+.vs-toolbar .btn { padding: 8px 14px; }
+.vs-tool-title { font-size: 15px; }
+.vs-tool-range { display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; }
+.vs-tool-range input { width: 110px; }
+.vs-tool-check { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.vs-tool-note { color: var(--ink2); }
+.vs-spacer { flex: 1; }
+.vs-mic-btn { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--hair); background: var(--pillbg); color: var(--muted); cursor: pointer; flex: none; }
+.vs-mic-btn.on { background: var(--lime); color: #0b2a33; border-color: transparent; }
+.vs-stage { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 24px; align-items: center; }
+.vs-note { display: grid; place-items: center; align-content: center; gap: 2px; height: 140px; border-radius: 20px; background: color-mix(in srgb, var(--ink) 7%, transparent); border: 1px solid var(--hair); }
+.vs-note small { font-size: 12px; color: var(--muted); }
+.vs-note b { font-family: var(--head); font-size: 64px; line-height: 1; color: var(--lime); letter-spacing: -.02em; }
+.vs-note span { color: var(--ink2); font-size: 14px; }
+.vs-note.ok { box-shadow: 0 0 0 2px var(--lime) inset; }
+.vs-about { display: grid; gap: 8px; }
+.vs-about > b { font-size: 17px; }
+.vs-about p { margin: 0; line-height: 1.5; color: var(--ink2); }
+.vs-voice { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 13.5px; color: var(--muted); }
+.vs-voice b { color: var(--ink); }
+.vs-graph { border-radius: 20px; overflow: hidden; background: #fbfaf6; padding: 10px 12px; }
+.vs-graph .s2s-trace { width: 100%; height: 170px; display: block; }
+.vs-graph .s2s-trace line { stroke: #e6e3da; stroke-width: 1; }
+.vs-graph .s2s-trace polyline { fill: none; stroke: #141414; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.vs-levels button { display: inline-flex; align-items: center; gap: 4px; }
+.vs-learn { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.vs-choir { display: grid; gap: 6px; padding: 16px; border-radius: 18px; border: 1px solid var(--hair); }
+.vs-err { margin: 12px 22px 0; }
+@media (max-width: 860px) {
+  .vs-shell { grid-template-columns: 1fr; border-radius: 22px; }
+  .vs-side { flex-direction: row; padding: 0; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--hair); }
+  .vs-side button, .vs-side button:first-child { border: 0; flex: 1; justify-content: center; white-space: nowrap; padding: 13px 12px; }
+  .vs-side button.on { box-shadow: inset 0 -3px 0 var(--lime); }
+  .vs-panel { padding: 0 14px 16px; }
+  .vs-toolbar { margin: 0 -14px; padding: 8px 14px; }
+  .vs-stage { grid-template-columns: 1fr; gap: 12px; }
+  .vs-note { height: 110px; } .vs-note b { font-size: 52px; }
+  .vs-learn { grid-template-columns: 1fr; }
+}
+.vs-graph .pitch-roll { width: 100%; display: block; background: transparent; }
+@media (max-width: 860px) {
+  .vs-side svg { display: none; }
+  .vs-side button { font-size: 13.5px; padding: 12px 8px; }
+  .vs-toolbar { gap: 8px 10px; font-size: 13px; }
+  .vs-toolbar .btn { padding: 7px 12px; font-size: 13px; }
+  .vs-tool-range input { width: 90px; }
+  .vs-about > b { display: none; }
+  .vs-about p { font-size: 14px; }
+}

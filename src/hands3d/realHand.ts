@@ -26,12 +26,21 @@ const CHAINS: { pre: string; finger: number }[] = [
 ];
 function ourBoneFor(name: string): { bone: number; finger: number; seg: number } | null {
   const n = name.replace(/\.?R$/, ''); // three.js drops the dots: 'index_01.R' arrives as 'index_01R'
+  // the scan's thumb has 4 bones: base = metacarpal (CMC to MCP, where most thumb movement happens),
+  // 01 = proximal phalanx, 02 + 03 = the distal part. Ours has 3: meta, prox, dist.
+  const t = /^thumb_(?:Ctrl_?)?(base|0[123])?$/.exec(n);
+  if (t) {
+    const seg = !t[1] || t[1] === 'base' ? 0 : t[1] === '01' ? 1 : 2;
+    return { bone: chainStart(1) + seg, finger: 0, seg };
+  }
   for (const c of CHAINS) {
+    if (c.finger === 0) continue;
     const m = new RegExp(`^${c.pre}_(?:Ctrl_)?0([123])$`).exec(n);
     if (m) { const seg = +m[1] - 1; return { bone: chainStart(c.finger + 1) + seg, finger: c.finger, seg }; }
   }
   return null;
 }
+const v3o = (p: V3) => new THREE.Vector3(p[0], p[1], p[2]);
 const fingerOf = (name: string) => { const c = CHAINS.find((x) => name.startsWith(x.pre)); return c ? c.finger : -1; };
 
 // ---------- loading (shared by both hands) ----------
@@ -104,6 +113,10 @@ export class RealHandView {
   private map: (ReturnType<typeof ourBoneFor> | null)[] = [];
   private restQ: THREE.Quaternion[] = [];
   private corr: THREE.Quaternion[] = [];
+  /** which of our joints each scan bone aims at (finger, joint index, blend toward the next joint) */
+  private target: ({ finger: number; j: number; mix: number } | null)[] = [];
+  /** each bone's aiming direction in its own rest frame (towards its child joint) */
+  private aimDir: THREE.Vector3[] = [];
   private parentIdx: number[] = [];
   private parentConstQ: THREE.Quaternion[] = [];
   private jointFinger: number[] = [];
@@ -133,7 +146,8 @@ export class RealHandView {
     const P = (n: string) => { const b = sk.bones.find((x) => x.name === n || x.name === n.replace(/\./g, '')); if (!b) throw new Error(`missing bone ${n}`); return b.getWorldPosition(new THREE.Vector3()); };
     const v3 = (p: V3) => new THREE.Vector3(p[0], p[1], p[2]);
     const src = [P('pulse.R'), P('thumb_01.R'), P('index_01.R'), P('middle_01.R'), P('ring_01.R'), P('pinky_01.R')];
-    const dst = [v3([0, 0, 0]), ...FINGERS.map((f) => v3(f.joints[0]))];
+    // thumb_01 starts at the thumb's MCP joint (its knuckle), the others at the finger knuckles
+    const dst = [v3([0, 0, 0]), v3(FINGERS[0].joints[1]), ...FINGERS.slice(1).map((f) => v3(f.joints[0]))];
     const s = similarity(src, dst);
     fit.scale.setScalar(s.scale); fit.quaternion.copy(s.rot); fit.position.copy(s.t);
     // still detached: "world" here is the hand's own root space (no keyboard scale, no left-hand mirror)
@@ -152,10 +166,27 @@ export class RealHandView {
       if (m) {
         const f = FINGERS[m.finger];
         const ours = v3(f.joints[m.seg + 1]).sub(v3(f.joints[m.seg])).normalize();
-        const theirs = new THREE.Vector3(0, 1, 0).applyQuaternion(q).normalize(); // bones point along +Y
+        // the scan's segment direction: towards the next joint of the same chain when there is one
+        // (a bone's own +Y axis need not point there), otherwise along its +Y axis
+        const kid = b.children.find((c) => (c as THREE.Bone).isBone && ourBoneFor(c.name)?.finger === m.finger) as THREE.Bone | undefined;
+        const theirs = kid
+          ? kid.getWorldPosition(new THREE.Vector3()).sub(b.getWorldPosition(new THREE.Vector3())).normalize()
+          : new THREE.Vector3(0, 1, 0).applyQuaternion(q).normalize();
         c = new THREE.Quaternion().setFromUnitVectors(theirs, ours);
       }
       this.corr[i] = c;
+      // aiming: thumb base -> our MCP, 01 -> our IP, 02 -> partway to the tip, 03 -> tip; fingers 01/02/03 -> PIP/DIP/tip
+      const isCtrl = /Ctrl/.test(b.name);
+      if (m && !isCtrl) {
+        const n = b.name.replace(/\.?R$/, '');
+        const th = m.finger === 0;
+        const j = th ? (n.endsWith('base') ? 1 : n.endsWith('01') ? 2 : n.endsWith('02') ? 2 : 3) : m.seg + 1;
+        const mix = th && n.endsWith('02') ? 0.45 : 0;
+        this.target[i] = { finger: m.finger, j, mix };
+        const kid = b.children.find((ch) => (ch as THREE.Bone).isBone && !/Ctrl/.test(ch.name) && ourBoneFor(ch.name)?.finger === m.finger);
+        const dirRoot = kid ? kid.getWorldPosition(new THREE.Vector3()).sub(b.getWorldPosition(new THREE.Vector3())) : new THREE.Vector3(0, 1, 0).applyQuaternion(q);
+        this.aimDir[i] = dirRoot.normalize().applyQuaternion(q.clone().invert());
+      } else this.target[i] = null;
       const par = b.parent as THREE.Bone | null;
       const pi = par && (par as THREE.Bone).isBone ? index.get(par) ?? -1 : -1;
       this.parentIdx[i] = pi;
@@ -193,24 +224,59 @@ export class RealHandView {
     this.root.position.set(p.frame.pos[0], p.frame.pos[1], p.frame.pos[2]);
     this.root.scale.setScalar(1 + Math.max(0, lift) / 320);
     this.root.quaternion.set(p.frame.rot[0], p.frame.rot[1], p.frame.rot[2], p.frame.rot[3]);
-    // our bones' rotations in the hand's root space
+    this.root.updateMatrixWorld(true);
+    const rootInv = new THREE.Matrix4().copy(this.root.matrixWorld).invert();
+    // our hand model's joints in root space (forward kinematics of the solved pose)
     const Q = p.bones.map((q) => new THREE.Quaternion(q[0], q[1], q[2], q[3]));
-    const R: THREE.Quaternion[] = [];
-    R[1] = Q[1].clone();
-    for (let f = 1; f <= 5; f++) {
-      const s = chainStart(f);
-      R[s] = R[1].clone().multiply(Q[s]);
-      R[s + 1] = R[s].clone().multiply(Q[s + 1]);
-      R[s + 2] = R[s + 1].clone().multiply(Q[s + 2]);
-    }
-    const D: THREE.Quaternion[] = [];
-    this.bones.forEach((b, i) => {
-      const m = this.map[i];
-      const r = m ? R[m.bone] : R[1];
-      D[i] = r.clone().multiply(this.corr[i]).multiply(this.restQ[i]);
-      const parentQ = this.parentIdx[i] >= 0 ? D[this.parentIdx[i]] : this.parentConstQ[i];
-      b.quaternion.copy(parentQ.clone().invert().multiply(D[i]));
+    const joints: THREE.Vector3[][] = FINGERS.map((f) => {
+      const s = chainStart(f.id);
+      let R = Q[1].clone();
+      const js = [v3o(f.joints[0]).applyQuaternion(Q[1])];
+      for (let k = 0; k < 3; k++) { R = R.multiply(Q[s + k]); js.push(js[k].clone().add(v3o(f.joints[k + 1]).sub(v3o(f.joints[k])).applyQuaternion(R))); }
+      return js;
     });
+    const palm = Q[1];
+    const D: THREE.Quaternion[] = [];
+    const head = new THREE.Vector3(), tip = new THREE.Vector3();
+    this.bones.forEach((b, i) => {
+      const pi = this.parentIdx[i];
+      const parentD = pi >= 0 ? D[pi] : this.parentConstQ[i];
+      // start rigid with the parent (or the palm for palm bones), keeping the bone's natural twist
+      const baseD = pi >= 0 ? D[pi].clone().multiply(this.restQ[pi].clone().invert()).multiply(this.restQ[i]) : palm.clone().multiply(this.restQ[i]);
+      b.quaternion.copy(parentD.clone().invert().multiply(baseD));
+      b.updateMatrixWorld(true);
+      D[i] = baseD;
+      const t = this.target[i];
+      if (!t) return;
+      // then swing it so it points at the joint our model has next (aim, not copy): the scan's own
+      // proportions differ a little from ours, and aiming keeps fingertips and the thumb on the keys
+      b.getWorldPosition(head).applyMatrix4(rootInv);
+      const goal = joints[t.finger][t.j].clone().lerp(joints[t.finger][Math.min(3, t.j + 1)], t.mix);
+      const want = goal.sub(head).normalize();
+      const cur = this.aimDir[i].clone().applyQuaternion(baseD).normalize();
+      const swing = new THREE.Quaternion().setFromUnitVectors(cur, want);
+      D[i] = swing.multiply(baseD);
+      b.quaternion.copy(parentD.clone().invert().multiply(D[i]));
+      b.updateMatrixWorld(true);
+      void tip;
+    });
+  }
+
+  /** debugging: where the scan's joints are vs where our hand model puts them (root space, mm) */
+  debugJoints(p: HandPose) {
+    const Q = p.bones.map((q) => new THREE.Quaternion(q[0], q[1], q[2], q[3]));
+    const out: Record<string, number[][]> = {};
+    const rootInv = new THREE.Matrix4().copy(this.root.matrixWorld).invert();
+    FINGERS.forEach((f, fi) => {
+      const s = chainStart(f.id);
+      let R = Q[1].clone();
+      const ours: THREE.Vector3[] = [v3o(f.joints[0]).applyQuaternion(Q[1])];
+      for (let k = 0; k < 3; k++) { R = R.clone().multiply(Q[s + k]); ours.push(ours[k].clone().add(v3o(f.joints[k + 1]).sub(v3o(f.joints[k])).applyQuaternion(R))); }
+      const names = fi === 0 ? ['thumb_01', 'thumb_02', 'thumb_03'] : [`${CHAINS[fi].pre}_01`, `${CHAINS[fi].pre}_02`, `${CHAINS[fi].pre}_03`];
+      const theirs = names.map((n) => { const b = this.bones.find((x) => x.name.replace(/\.?R$/, '') === n); return b ? b.getWorldPosition(new THREE.Vector3()).applyMatrix4(rootInv) : new THREE.Vector3(NaN); });
+      out[f.name] = [...ours.map((v) => [v.x, v.y, v.z].map(Math.round)), ...theirs.map((v) => [v.x, v.y, v.z].map(Math.round))];
+    });
+    return out;
   }
 
   /** per-finger glow, index 0 = thumb */

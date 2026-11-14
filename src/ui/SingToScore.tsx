@@ -211,46 +211,41 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
 
   const recording = phase === 'rec' || phase === 'countin';
   return (
-    <section className="card s2s">
-      <div className="s2s-head">
-        <div>
-          <span className="s2s-kicker"><i />New</span>
-          <b className="s2s-title">Sing to score</b>
-          <p className="muted small">Sing a tune, or load a recording of yourself singing. Auxa writes down every note and how long you held it, then can arrange it for four voices.</p>
-        </div>
-        {!recording && (
-          <button className="btn lime s2s-rec" onClick={() => void record()}><span className="rec-dot" />{phase === 'done' ? 'Sing again' : 'Start singing'}</button>
-        )}
-        {recording && <button className="btn dark s2s-rec" onClick={stop}><span className="stop-sq" />Stop</button>}
+    <section className="s2s vs-panel">
+      <div className="vs-toolbar">
+        <button className={`vs-mic-btn ${micOn ? 'on' : ''}`} onClick={() => { if (!micOn) void startMic(); }} aria-label={micOn ? 'Microphone on' : 'Turn on the microphone'} title={micOn ? 'Microphone on' : 'Turn on the microphone'}><Icon name="mic" size={16} /></button>
+        {!recording && phase !== 'done' && <>
+          <Select value={free ? 'free' : 'fixed'} aria-label="Tempo" onChange={(e) => setFree(e.target.value === 'free')}>
+            <option value="fixed">With a click</option><option value="free">Free tempo</option>
+          </Select>
+          {!free && <label className="vs-tool-range"><span>Speed {bpm} bpm</span><input type="range" min={50} max={150} value={bpm} onChange={(e) => setBpm(+e.target.value)} /></label>}
+          {!free && <label className="vs-tool-check"><input type="checkbox" checked={click} onChange={(e) => setClick(e.target.checked)} /> Click while I sing</label>}
+        </>}
+        {recording && <span className="vs-tool-note">{free ? 'Sing at your own speed.' : click ? 'Sing with the click.' : 'Keep the count you heard.'} Press Stop when you finish.</span>}
+        <span className="vs-spacer" />
+        {!recording && <button className="btn" disabled={busy} onClick={() => fileIn.current?.click()}><Icon name="upload" size={15} />{busy ? 'Listening…' : 'Use recording'}</button>}
+        {!recording && <button className="btn lime" onClick={() => void record()}><span className="rec-dot" />{phase === 'done' ? 'Sing again' : 'Start singing'}</button>}
+        {recording && <button className="btn dark" onClick={stop}><span className="stop-sq" />Stop</button>}
       </div>
       <input ref={fileIn} type="file" accept="audio/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void fromFile(f); }} />
       {take && <audio ref={takeEl} src={take} preload="auto" hidden />}
 
-      {!recording && phase !== 'done' && (
-        <div className="s2s-opts">
-          <label className="s2s-opt"><span>Tempo</span>
-            <Select value={free ? 'free' : 'fixed'} aria-label="Tempo" onChange={(e) => setFree(e.target.value === 'free')}>
-              <option value="fixed">With a click</option><option value="free">Free: find my tempo</option>
-            </Select>
-          </label>
-          {!free && <label className="s2s-opt"><span>Speed {bpm} bpm</span><input type="range" min={50} max={150} value={bpm} onChange={(e) => setBpm(+e.target.value)} /></label>}
-          {!free && <label className="s2s-check"><input type="checkbox" checked={click} onChange={(e) => setClick(e.target.checked)} /> Click while I sing</label>}
-          <button className="btn s2s-file" disabled={busy} onClick={() => fileIn.current?.click()}><Icon name="upload" size={15} />{busy ? 'Listening to it…' : 'Use a recording'}</button>
+      <div className="vs-stage">
+        <div className={`vs-note ${recording ? 'live' : ''}`}>
+          {phase === 'countin' ? <><small>Get ready</small><b>{count || '…'}</b></> : <><small>{recording ? (live ? `${live.cents > 0 ? '+' : ''}${live.cents} cents` : 'Listening') : 'Your note'}</small><b>{(recording && live?.name) || '·'}</b></>}
         </div>
-      )}
-
-      {recording && (
-        <div className="s2s-live">
-          <div className="s2s-now">
-            {phase === 'countin' ? <><small>Get ready</small><b>{count || '…'}</b></> : <><small>{live ? `${live.cents > 0 ? '+' : ''}${live.cents} cents` : 'Listening'}</small><b>{live?.name ?? '·'}</b></>}
-          </div>
-          <svg className="s2s-trace" viewBox="0 0 600 120" preserveAspectRatio="none" aria-hidden>
-            {[0, 1, 2, 3, 4].map((i) => <line key={i} x1="0" x2="600" y1={20 + i * 20} y2={20 + i * 20} />)}
-            <polyline ref={trace} />
-          </svg>
-          <p className="muted small">{free ? 'Sing at your own speed. Press Stop when you finish.' : click ? 'Sing with the click. Press Stop when you finish.' : 'Keep the count you heard. Press Stop when you finish.'} Use headphones if the click is on.</p>
+        <div className="vs-about">
+          <b>Sing to score</b>
+          <p>Sing a tune, or load a recording of yourself singing. Auxa writes down every note and how long you held it, then can arrange it for four voices.</p>
+          {!micOn && !recording && <p className="muted small">The microphone starts when you press Start singing. Headphones help if the click is on.</p>}
         </div>
-      )}
+      </div>
+      <div className="vs-graph">
+        <svg className="s2s-trace" viewBox="0 0 600 120" preserveAspectRatio="none" aria-hidden>
+          {[0, 1, 2, 3, 4].map((i) => <line key={i} x1="0" x2="600" y1={20 + i * 20} y2={20 + i * 20} />)}
+          <polyline ref={trace} />
+        </svg>
+      </div>
 
       {phase === 'done' && busy && <p className="s2s-busy"><span className="s2s-spin" />Listening back to your take and writing every note…</p>}
       {phase === 'done' && !melody && !busy && <p className="tip small">No clear notes heard. Sing a little louder, closer to the microphone, on “la” or “loo”.</p>}
