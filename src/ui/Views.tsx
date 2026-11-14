@@ -22,6 +22,7 @@ import { mic, type MicFrame, micHelp } from '../input/mic';
 import { midiIn } from '../input/midi';
 import { dayKey } from '../progress/store';
 import { Icon } from './Icon';
+import { SoundPicker } from './SoundPicker';
 
 import { SongShelf } from './MyMusic';
 import { Piano, type KeyMark } from './Piano';
@@ -468,6 +469,7 @@ export function SettingsView() {
         </section>}
         {sec === 'sound' && <section className="card">
           <div className="card-head"><b>Sound</b></div>
+          <div className="field">Piano sound<SoundPicker /></div>
           <label className="field">Piano volume<input type="range" min={0} max={1} step={0.05} value={st.volume} onChange={(e) => setSettings({ volume: +e.target.value })} /></label>
           <div className="field">Playback quality
             <div className="seg">

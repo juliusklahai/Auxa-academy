@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { audio } from '../audio/engine';
+import type { SoundId } from '../audio/samples';
 import { mic } from '../input/mic';
 import { browserKV, ProgressStore } from '../progress/store';
 
@@ -45,6 +46,8 @@ export interface AppSettings {
   kbKeys: 'auto' | 25 | 37 | 49 | 61 | 88;
   /** singing level: easy (encouraging) to pro (strict vocal coaching) */
   voiceLevel: 'easy' | 'standard' | 'strict' | 'pro';
+  /** the piano's sound (recorded instruments; anything but the grand needs Pro or Plus) */
+  pianoSound: SoundId;
 }
 
 const KEY = 'maestro.settings.v1';
@@ -52,7 +55,7 @@ const DEFAULTS: AppSettings = {
   labels: 'letters', fingers: true, keyHints: false, highContrast: false, a4: 440, volume: 0.8, metronomeVolume: 0.6,
   latencyMs: 60, noiseGate: 0.002, micSensitivity: 0.85, wrongBeep: false, mistakePolicy: 'restart', hands: true, micMode: 'piano', voiceLow: 57, voiceHigh: 74, outputMode: 'headphones', latencyMode: 'smooth', micDeviceId: '', micInstrument: 'piano', autoFocus: true, coachVoice: true,
   handStyle: '3d', handOpacity: 0.8, handColor: 'white', handLook: 'real', handStroke: 1, handsShow: 'both',
-  handsListen: true, keyboard: true, kbScale: 1, kbKeys: 'auto', voiceLevel: 'easy',
+  handsListen: true, keyboard: true, kbScale: 1, kbKeys: 'auto', voiceLevel: 'easy', pianoSound: 'grand',
 };
 
 const kv = browserKV();

@@ -1323,3 +1323,18 @@ html.theme-light .pi-back { background: rgba(245,245,243,.45); }
 /* the score's follow-the-cursor scrolling animates itself; the browser's smooth scrolling fights it
    (on Android every small step restarted a smooth scroll, so the sheet stood still while playing) */
 .score-scroll { scroll-behavior: auto !important; }
+/* sound picker */
+.sound-picker { display: grid; gap: 12px; margin-top: 8px; }
+.sp-head { display: block; font-size: 12px; color: var(--muted, #888); margin-bottom: 6px; font-weight: 600; }
+.sp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.sound-picker.compact .sp-grid { grid-template-columns: 1fr 1fr; }
+.sp-card { display: flex; align-items: stretch; border-radius: 14px; border: 1px solid var(--hair, #e5e3dc); background: var(--pillbg, #f6f5f1); overflow: hidden; }
+.sp-card.on { border-color: var(--accent, #1fe0d8); box-shadow: 0 0 0 1px var(--accent, #1fe0d8) inset; }
+.sp-pick { flex: 1; min-width: 0; text-align: left; background: none; border: 0; color: inherit; font: inherit; padding: 10px 12px; display: grid; gap: 4px; cursor: pointer; }
+.sp-pick b { font-size: 13px; font-weight: 600; }
+.sp-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted, #888); }
+.sp-tag.on { color: var(--accent-ink, #0e8f89); font-weight: 600; }
+.sp-hear { width: 40px; border: 0; border-left: 1px solid var(--hair, #e5e3dc); background: none; color: inherit; cursor: pointer; display: grid; place-items: center; }
+.sp-hear:hover { background: rgba(127,127,127,.12); }
+.sp-note { margin: 0; }
+.sound-panel { width: min(380px, calc(100% - 28px)); }

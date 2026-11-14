@@ -7,6 +7,7 @@ import { Select } from './Select';
 import { Piano, type KeyMark } from './Piano';
 import { HandControls, HandsLayer, HANDS_MIN_ASPECT, handsBelow, type HandsLayerProps } from './HandsLayer';
 import { setSettings, useSettings } from './settings';
+import { SoundButton } from './SoundPicker';
 import { Icon } from './Icon';
 
 interface Props {
@@ -100,6 +101,7 @@ export function KeyboardArea({ lo, hi, marks, labels, showKeyHints, scrollTo, ba
         </label>
         <span className="kb-fill" />
         {extra}
+        <SoundButton />
         {hands && <HandControls events={hands.events} exerciseId={hands.exerciseId} index={hands.index} />}
         <button className="kb-btn" onClick={() => setSettings({ keyboard: false })} aria-label="Hide keyboard" title="Hide the on-screen keyboard"><Icon name="close" size={13} /><span>Hide keys</span></button>
       </div>

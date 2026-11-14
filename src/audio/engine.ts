@@ -8,15 +8,29 @@
 // Tempo changes never alter pitch: notes are rendered at their own frequency.
 
 import { midiToFreq } from '../core/music';
+import { layerFor, loadBank, nearestRoot, readyBank, type SoundId } from './samples';
 
 type Listener = (midi: number, on: boolean) => void;
-interface Voice { src: AudioBufferSourceNode; gain: GainNode; startMs: number; endMs: number; midi: number }
+interface Voice { src: AudioBufferSourceNode; gain: GainNode; startMs: number; endMs: number; midi: number; rel?: number }
 
-export type Instrument = 'piano' | 'violin' | 'viola' | 'cello' | 'flute' | 'strings' | 'bass' | 'choir';
-export const INSTRUMENTS: { id: Instrument; label: string }[] = [
+export type Instrument = 'piano' | 'violin' | 'viola' | 'cello' | 'flute' | 'strings' | 'bass' | 'choir'
+  | 'epiano' | 'fmpiano' | 'organ' | 'jazzorgan' | 'harpsichord' | 'vibes' | 'nylon' | 'steel' | 'eguitar' | 'abass';
+/** `plus`: a Plus/Pro sound (free accounts hear the piano instead) */
+export const INSTRUMENTS: { id: Instrument; label: string; plus?: boolean }[] = [
   { id: 'piano', label: 'Piano' }, { id: 'violin', label: 'Violin' }, { id: 'viola', label: 'Viola' }, { id: 'cello', label: 'Cello' },
   { id: 'flute', label: 'Flute' }, { id: 'strings', label: 'Strings' }, { id: 'bass', label: 'Bass' }, { id: 'choir', label: 'Choir "aah"' },
+  { id: 'epiano', label: 'Electric piano', plus: true }, { id: 'fmpiano', label: 'FM electric piano', plus: true }, { id: 'organ', label: 'Church organ', plus: true },
+  { id: 'jazzorgan', label: 'Jazz organ', plus: true }, { id: 'harpsichord', label: 'Harpsichord', plus: true }, { id: 'vibes', label: 'Vibraphone', plus: true },
+  { id: 'nylon', label: 'Nylon guitar', plus: true }, { id: 'steel', label: 'Steel guitar', plus: true }, { id: 'eguitar', label: 'Electric guitar', plus: true }, { id: 'abass', label: 'Upright bass', plus: true },
 ];
+/** which recorded sound each play-along instrument uses */
+const INST_SOUND: Record<Exclude<Instrument, 'piano'>, SoundId> = {
+  violin: 'violin-s', viola: 'violin-s', cello: 'cello-s', flute: 'flute-s', strings: 'strings-s', bass: 'ebass', choir: 'choir-s',
+  epiano: 'epiano', fmpiano: 'fmpiano', organ: 'organ', jazzorgan: 'jazzorgan', harpsichord: 'harpsichord', vibes: 'vibes',
+  nylon: 'nylon', steel: 'steel', eguitar: 'eguitar', abass: 'abass',
+};
+/** instruments with no synth stand-in fall back to these while their recordings load */
+const SYNTH_STANDIN: Partial<Record<Instrument, Instrument>> = { epiano: 'piano', fmpiano: 'piano', harpsichord: 'piano', vibes: 'piano', nylon: 'piano', steel: 'piano', eguitar: 'piano', organ: 'strings', jazzorgan: 'strings', abass: 'bass' };
 export type Drum = 'kick' | 'snare' | 'hat';
 
 /** One app-played note, in performance.now() ms at the speakers (for the microphone echo gate). */
@@ -50,6 +64,30 @@ class AudioEngine {
   metronomeVolume = 0.6;
   latencyMode: 'smooth' | 'low' = 'smooth';
   onAppNote: Listener | null = null;
+  private _pianoSound: SoundId = 'grand';
+  /** the sound the piano plays everywhere (keyboard, lessons, scores); recorded sounds load on first use */
+  get pianoSound() { return this._pianoSound; }
+  set pianoSound(id: SoundId) { this._pianoSound = id; if (this.ctx) void loadBank(this.ctx, id).catch(() => {}); }
+  /** Let the learner hear a sound: a short phrase and a chord (loads it first if needed). */
+  async preview(id: SoundId) {
+    const ctx = this.ensure();
+    await loadBank(ctx, id);
+    const t0 = ctx.currentTime + 0.05;
+    const low = id === 'abass' || id === 'ebass' ? -24 : id === 'cello-s' ? -12 : id === 'violin-s' || id === 'flute-s' ? 12 : 0;
+    const phrase: [number, number, number][] = [[60, 0, 0.32], [64, 0.3, 0.32], [67, 0.6, 0.32], [72, 0.9, 0.6], [60, 1.6, 1.4], [64, 1.6, 1.4], [67, 1.6, 1.4], [72, 1.6, 1.4]];
+    for (const [m, at, d] of phrase) {
+      const v = this.sampleVoice(id, m + low, t0 + at, 0.7);
+      if (!v) continue;
+      this.release(v, t0 + at + d, 0.3);
+      this.scheduled.add(v);
+      v.src.onended = () => this.scheduled.delete(v);
+    }
+  }
+  /** start loading recorded sounds ahead of time (e.g. the instruments chosen in a mixer) */
+  preload(ids: Instrument[]) {
+    if (!this.ctx) return;
+    for (const i of ids) void loadBank(this.ctx, i === 'piano' ? this._pianoSound : INST_SOUND[i]).catch(() => {});
+  }
 
   ensure(): AudioContext {
     if (!this.ctx) {
@@ -72,6 +110,7 @@ class AudioEngine {
       this.waves.clear();
       this.drumBufs.clear();
       this.warm(48, 84);
+      void loadBank(this.ctx, this._pianoSound).catch(() => {});
     }
     if (this.ctx.state === 'suspended') void this.ctx.resume();
     return this.ctx;
@@ -171,7 +210,34 @@ class AudioEngine {
     setTimeout(step, 0);
   }
 
+  /** a note from a recorded sound, or null while it is still loading */
+  private sampleVoice(id: SoundId, midi: number, t: number, velocity: number): Voice | null {
+    const ctx = this.ensure();
+    const bank = readyBank(ctx, id);
+    if (!bank) { void loadBank(ctx, id).catch(() => {}); return null; }
+    const layer = bank.layers[layerFor(bank.layers.length, velocity)];
+    const root = nearestRoot(bank.roots, midi);
+    const s = layer.get(root);
+    if (!s) return null;
+    const src = ctx.createBufferSource();
+    src.buffer = s.buf;
+    const rate = Math.pow(2, (midi - root) / 12) * (this.a4 / 440);
+    src.playbackRate.value = rate;
+    if (s.loopEnd > 0) { src.loop = true; src.loopStart = s.loopStart; src.loopEnd = s.loopEnd; }
+    const gain = ctx.createGain();
+    const v = Math.max(0.05, Math.min(1, velocity));
+    // the layer already carries the loudness; velocity shades it within the layer
+    gain.gain.value = bank.norm * bank.def.gain * 0.62 * (0.55 + 0.45 * v);
+    src.connect(gain).connect(this.master);
+    src.start(t, s.start);
+    const startMs = performance.now() + (t - ctx.currentTime + this.outLatency) * 1000;
+    const lenMs = s.loopEnd > 0 ? 60_000 : ((s.buf.duration - s.start) / rate) * 1000;
+    return { src, gain, startMs, endMs: startMs + lenMs, midi, rel: bank.def.release };
+  }
+
   private startVoice(midi: number, t: number, velocity: number): Voice {
+    const sv = this.sampleVoice(this._pianoSound, midi, t, velocity);
+    if (sv) return sv;
     const ctx = this.ensure();
     const src = ctx.createBufferSource();
     src.buffer = this.bufferFor(Math.max(21, Math.min(108, midi)));
@@ -185,6 +251,7 @@ class AudioEngine {
   }
 
   private release(v: Voice, t: number, sec = 0.18) {
+    if (v.rel !== undefined && sec > 0.1) sec = v.rel; // recorded sounds have their own natural release
     const g = v.gain.gain;
     try {
       g.cancelScheduledValues(t);
@@ -238,6 +305,19 @@ class AudioEngine {
     const end = t + Math.max(0.08, durSec);
     const now = performance.now();
     if (instrument !== 'piano') {
+      const sv = this.sampleVoice(INST_SOUND[instrument], midi, t, velocity);
+      if (sv) {
+        this.release(sv, end, 0.22);
+        sv.endMs = sv.startMs + (end - t + (sv.rel ?? 0.2)) * 1000;
+        this.scheduled.add(sv);
+        sv.src.onended = () => this.scheduled.delete(sv);
+        this.appNotes.push({ midi, onMs: sv.startMs, offMs: sv.endMs });
+        if (suppressMic) this.appPlayingUntil = Math.max(this.appPlayingUntil, now + (end - ctx.currentTime) * 1000 + 500);
+        return;
+      }
+      const standIn = SYNTH_STANDIN[instrument];
+      if (standIn === 'piano') { this.scheduleSynthPiano(midi, t, end, velocity, suppressMic, now); return; }
+      if (standIn) instrument = standIn;
       const startMs = now + (t - ctx.currentTime + this.outLatency) * 1000;
       this.playSynth(instrument, midi, t, end, velocity);
       this.appNotes.push({ midi, onMs: startMs, offMs: startMs + (end - t + 0.4) * 1000 });
@@ -245,8 +325,28 @@ class AudioEngine {
       return;
     }
     const v = this.startVoice(midi, t, velocity);
+    this.finishScheduled(v, midi, t, end, suppressMic, now);
+  }
+
+  /** the built-in synthesized piano (stand-in while a recorded keyboard or guitar sound loads) */
+  private scheduleSynthPiano(midi: number, t: number, end: number, velocity: number, suppressMic: boolean, now: number) {
+    const sv = this.sampleVoice('grand', midi, t, velocity);
+    if (sv) { this.finishScheduled(sv, midi, t, end, suppressMic, now); return; }
+    const ctx = this.ctx!;
+    const src = ctx.createBufferSource();
+    src.buffer = this.bufferFor(Math.max(21, Math.min(108, midi)));
+    const gain = ctx.createGain();
+    gain.gain.value = Math.max(0.05, Math.min(1, velocity)) * 0.55;
+    src.connect(gain).connect(this.master);
+    src.start(t);
+    const startMs = now + (t - ctx.currentTime + this.outLatency) * 1000;
+    this.finishScheduled({ src, gain, startMs, endMs: startMs + src.buffer.duration * 1000, midi }, midi, t, end, suppressMic, now);
+  }
+
+  private finishScheduled(v: Voice, midi: number, t: number, end: number, suppressMic: boolean, now: number) {
+    const ctx = this.ctx!;
     this.release(v, end, 0.22);
-    v.endMs = v.startMs + (end - t + 0.2) * 1000;
+    v.endMs = v.startMs + (end - t + (v.rel ?? 0.2)) * 1000;
     this.scheduled.add(v);
     v.src.onended = () => this.scheduled.delete(v);
     this.appNotes.push({ midi, onMs: v.startMs, offMs: v.endMs });
@@ -271,7 +371,7 @@ class AudioEngine {
   private playSynth(inst: Instrument, midi: number, t: number, end: number, velocity: number) {
     const ctx = this.ctx!;
     const f = midiToFreq(midi, this.a4);
-    const P: Record<Exclude<Instrument, 'piano'>, { amps: number[]; lp: number; att: number; rel: number; vib: number; vibRate: number; vol: number; detune?: number }> = {
+    const P: Partial<Record<Exclude<Instrument, 'piano'>, { amps: number[]; lp: number; att: number; rel: number; vib: number; vibRate: number; vol: number; detune?: number }>> = {
       violin: { amps: [1, 0.62, 0.48, 0.36, 0.3, 0.22, 0.17, 0.12, 0.09, 0.07, 0.05], lp: 4200, att: 0.07, rel: 0.22, vib: 0.0065, vibRate: 5.7, vol: 0.32 },
       viola: { amps: [1, 0.7, 0.5, 0.4, 0.28, 0.2, 0.14, 0.1, 0.07], lp: 3000, att: 0.08, rel: 0.25, vib: 0.006, vibRate: 5.4, vol: 0.34 },
       cello: { amps: [1, 0.8, 0.55, 0.42, 0.3, 0.22, 0.15, 0.1, 0.07, 0.05], lp: 2200, att: 0.09, rel: 0.3, vib: 0.0055, vibRate: 5.0, vol: 0.4 },
@@ -280,7 +380,7 @@ class AudioEngine {
       bass: { amps: [1, 0.45, 0.2, 0.1, 0.05], lp: 900, att: 0.006, rel: 0.12, vib: 0, vibRate: 0, vol: 0.55 },
       choir: { amps: [1, 0.55, 0.32, 0.18, 0.12, 0.08, 0.05], lp: 1700, att: 0.18, rel: 0.35, vib: 0.0045, vibRate: 4.8, vol: 0.3, detune: 5 },
     };
-    const p = P[inst as Exclude<Instrument, 'piano'>];
+    const p = P[inst as Exclude<Instrument, 'piano'>] ?? P.strings!;
     const out = ctx.createGain();
     const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';

@@ -123,6 +123,15 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
   const latest = useRef<{ onFeedback: (fb: Feedback | null) => void }>(null!);
 
   const busy = run === 'listen' || run === 'practice';
+  const canSounds = allowFeature(useAccount().ent, 'sounds');
+  /** extra keyboard and guitar voices are Pro and Plus; they start loading as soon as they are chosen */
+  const pickInst = (inst: Instrument, apply: (i: Instrument) => void) => {
+    if (INSTRUMENTS.find((i) => i.id === inst)?.plus && !canSounds) { openUpgrade('Choose from all the instrument sounds with Pro or Plus'); return; }
+    audio.preload([inst]);
+    apply(inst);
+  };
+  // load the recorded sounds of every part as soon as a score is open
+  useEffect(() => { audio.ensure(); audio.preload([...new Set(Object.values(mix).map((m) => m.inst))]); }, [Object.values(mix).map((m) => m.inst).join()]); // eslint-disable-line
   const bpm = (score?.tempo ?? 90) * tempoPct / 100;
   const tlFor = (q0: number) => new Timeline(score?.tempoMap ?? [{ q: 0, bpm: 90 }], q0, tempoPct, followTempo);
   const speakers = settings.outputMode === 'speakers';
@@ -626,7 +635,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
                 <div key={t.key} className={`mix-row ${targets.has(t.key) ? 'mine' : ''}`}>
                   <i className="role-dot" style={{ background: t.role ? ROLE_COLOR[t.role] : '#8a8984' }} />
                   <span className="mix-name" title={`${t.partName}, staff ${t.staff}, voice ${t.voice}`}>{t.name}{targets.has(t.key) && <small> · you</small>}
-                    <Select className="inst" value={m.inst} onChange={(e) => set({ inst: e.target.value as Instrument })} aria-label={`Sound for ${t.name}`}>{INSTRUMENTS.map((i) => <option key={i.id} value={i.id}>{i.label}</option>)}</Select>
+                    <Select className="inst" value={m.inst} onChange={(e) => pickInst(e.target.value as Instrument, (inst) => set({ inst }))} aria-label={`Sound for ${t.name}`}>{INSTRUMENTS.map((i) => <option key={i.id} value={i.id}>{i.label}{i.plus && !canSounds ? ' (Pro)' : ''}</option>)}</Select>
                   </span>
                   <button className={`mini ${m.mute ? 'on' : ''}`} onClick={() => set({ mute: !m.mute })} aria-label={`Mute ${t.name}`}>M</button>
                   <button className={`mini ${m.solo ? 'on' : ''}`} onClick={() => set({ solo: !m.solo })} aria-label={`Solo ${t.name}`}>S</button>
@@ -643,7 +652,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
                 <div key={k} className={`mix-row band ${band[k] ? '' : 'off'}`}>
                   <input type="checkbox" checked={band[k]} disabled={busy} onChange={(e) => setBand((b) => ({ ...b, [k]: e.target.checked }))} aria-label={`${label} on or off`} />
                   <span className="mix-name">{label}
-                    <Select className="inst" value={m.inst} onChange={(e) => set({ inst: e.target.value as Instrument })} aria-label={`Sound for ${label}`}>{INSTRUMENTS.map((i) => <option key={i.id} value={i.id}>{i.label}</option>)}</Select>
+                    <Select className="inst" value={m.inst} onChange={(e) => pickInst(e.target.value as Instrument, (inst) => set({ inst }))} aria-label={`Sound for ${label}`}>{INSTRUMENTS.map((i) => <option key={i.id} value={i.id}>{i.label}{i.plus && !canSounds ? ' (Pro)' : ''}</option>)}</Select>
                   </span>
                   <button className={`mini ${m.mute ? 'on' : ''}`} onClick={() => set({ mute: !m.mute })} aria-label={`Mute ${label}`}>M</button>
                   <button className={`mini ${m.solo ? 'on' : ''}`} onClick={() => set({ solo: !m.solo })} aria-label={`Solo ${label}`}>S</button>

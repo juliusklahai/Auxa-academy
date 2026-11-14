@@ -7,7 +7,7 @@ import { mic, micHelp } from './input/mic';
 import { midiIn } from './input/midi';
 import { Icon } from './ui/Icon';
 import { LessonView } from './ui/LessonView';
-import { bumpProgress, progress, useProgressVersion } from './ui/settings';
+import { bumpProgress, progress, useProgressVersion, useSettings } from './ui/settings';
 import { Dashboard, LearnList, PianoStudio, SettingsView } from './ui/Views';
 import { MyMusic } from './ui/MyMusic';
 import { VoiceStudio } from './ui/VoiceStudio';
@@ -30,7 +30,7 @@ import { stopSpeaking } from './ui/voice';
 import { audio } from './audio/engine';
 import { ACCOUNTS_ENABLED } from './account/config';
 import { getAccount, initAccount, openUpgrade, useAccount, useUpgrade } from './account/store';
-import { allowLesson, lessonTier, TIER_NAME } from './account/gate';
+import { allowFeature, allowLesson, lessonTier, TIER_NAME } from './account/gate';
 
 type Tab = 'home' | 'learn' | 'music' | 'voice' | 'studio' | 'people' | 'settings' | 'admin';
 const TABS: { id: Tab; label: string; short?: string; icon: string; title: string }[] = [
@@ -84,6 +84,9 @@ export default function App() {
   const [songId, setSongId] = useState<string | null>(null);
   const [xmlToOpen, setXmlToOpen] = useState<string | null>(null);
   const account = useAccount();
+  // the piano's sound: the learner's choice with Pro or Plus, otherwise the concert grand
+  const appSettings = useSettings();
+  useEffect(() => { audio.pianoSound = allowFeature(account.ent, 'sounds') ? appSettings.pianoSound : 'grand'; }, [account.ent, appSettings.pianoSound]);
   const [, bump] = useState(0);
   // Android back button (inside the Auxa app): close the lesson, then go back to Home, then leave
   const navRef = useRef({ lesson, tab });

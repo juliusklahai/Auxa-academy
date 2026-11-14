@@ -147,6 +147,11 @@ function Licenses() {
         <li><b>fflate</b> (MIT): opening compressed MusicXML.</li>
         <li><b>Manrope</b> font (SIL Open Font License).</li>
       </ul>
+      <p><b>Instrument sounds.</b> The recorded instruments are used under these licenses (sounds trimmed and converted for the app):</p>
+      <ul>
+        <li><b>Salamander Grand Piano V3</b> by Alexander Holm (Yamaha C5 grand piano), <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>; MP3 edition by Jan Forst (@audio-samples, MIT).</li>
+        <li><b>FluidR3_GM</b> by Frank Wen (electric pianos, organs, harpsichord, vibraphone, guitars, basses, strings, violin, cello, flute and choir), <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>; rendered by Benjamin Gleitzman (midi-js-soundfonts, MIT).</li>
+      </ul>
       <p>Classical and traditional pieces (for example Ode to Joy, Amazing Grace, When the Saints) are in the public domain. Auxa's arrangements, lessons and original songs are © {LEGAL.name}.</p>
     </>
   );
