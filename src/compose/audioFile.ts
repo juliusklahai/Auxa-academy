@@ -27,13 +27,24 @@ export function framesFromSamples(input: Float32Array, inputRate: number, a4 = 4
   const out: PitchFrame[] = [];
   for (let i = win; i <= x.length; i += hop) {
     const w = x.subarray(i - win, i);
-    const e = yin(w, sampleRate, 70, 1100);
+    let en = 0;
+    for (let k = 0; k < w.length; k += 4) en += w[k] * w[k];
+    const quiet = Math.sqrt(en / (w.length / 4)) <= floor;
+    const e = quiet ? { freq: 0, confidence: 0, rms: Math.sqrt(en / (w.length / 4)) } : yin(w, sampleRate, 70, 1100);
     if (e.freq > 0) e.freq = fixOctave(w, sampleRate, e.freq);
     const clear = e.freq > 0 && e.confidence >= 0.75 && e.rms > floor;
     const soft = !clear && e.freq > 0 && e.confidence >= 0.5 && e.rms > floor ? 69 + 12 * Math.log2(e.freq / a4) : null;
     out.push({ t: (i / sampleRate) * 1000, midi: clear ? 69 + 12 * Math.log2(e.freq / a4) : null, rms: e.rms, soft });
   }
   return out;
+}
+
+/** Decode an audio file in the browser to mono samples. */
+export async function decodeMono(file: Blob, ctx: BaseAudioContext): Promise<{ samples: Float32Array; sampleRate: number }> {
+  const buf = await ctx.decodeAudioData(await file.arrayBuffer());
+  const n = buf.length, mono = new Float32Array(n);
+  for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let i = 0; i < n; i++) mono[i] += d[i] / buf.numberOfChannels; }
+  return { samples: mono, sampleRate: buf.sampleRate };
 }
 
 /** Decode an audio file in the browser and read its pitch. */

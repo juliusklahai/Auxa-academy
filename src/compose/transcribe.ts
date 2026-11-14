@@ -464,6 +464,11 @@ export function detectGrid(sung: SungNote[], bpm: number, origin: number): numbe
 export function transcribe(frames: PitchFrame[], opts: { bpm?: number; origin?: number; timeSig?: [number, number]; grid?: number } = {}): Melody | null {
   const clean = cleanFrames(frames);
   const sung = tidy(alignSyllables(tidy(segment(clean)), frames));
+  return writeMelody(sung, opts);
+}
+
+/** Sung notes (ms) -> a written melody: key, tempo, meter, bar lines and note values. */
+export function writeMelody(sung: SungNote[], opts: { bpm?: number; origin?: number; timeSig?: [number, number]; grid?: number } = {}): Melody | null {
   if (!sung.length) return null;
   snapToKey(sung, detectKey(sung));
   const bpm = opts.bpm ?? estimateTempo(sung);

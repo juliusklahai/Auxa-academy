@@ -7,7 +7,8 @@ import { freqToMidiFloat, midiToName } from '../core/music';
 import { chordLabel, harmonize, STYLES, type ArrStyle } from '../compose/harmony';
 import { asSoprano, melodyXml, playbackNotes, satbXml } from '../compose/score';
 import { keyInfo, transcribe, type Melody, type PitchFrame } from '../compose/transcribe';
-import { framesFromFile, framesFromSamples } from '../compose/audioFile';
+import { decodeMono, framesFromSamples } from '../compose/audioFile';
+import { scoreFromVoice } from '../compose/singToScore2';
 import { mic, type MicFrame } from '../input/mic';
 import { Icon } from './Icon';
 import { ScoreView } from './ScoreView';
@@ -43,6 +44,8 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
   const [live, setLive] = useState<{ name: string; cents: number } | null>(null);
   const [playing, setPlaying] = useState(false);
   const frames = useRef<PitchFrame[]>([]);
+  /** the whole take (samples), when we have it: written syllable by syllable */
+  const takeAudio = useRef<{ samples: Float32Array; sampleRate: number; t0: number } | null>(null);
   const origin = useRef(0);
   const timers = useRef<number[]>([]);
   const trace = useRef<SVGPolylineElement>(null);
@@ -74,7 +77,7 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
   const record = async () => {
     if (!micOn) { try { await startMic(); } catch { return; } }
     audio.stopAll(); setPlaying(false);
-    frames.current = []; setMel(null); setKeyOverride(''); setFeel('1'); setMeter('auto'); setGrid('auto');
+    frames.current = []; takeAudio.current = null; setMel(null); setKeyOverride(''); setFeel('1'); setMeter('auto'); setGrid('auto');
     mic.singing = true;
     startTake();
     const beatMs = 60000 / bpm;
@@ -103,9 +106,23 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
     } catch { rec.current = null; }
   };
 
-  /** Readings -> melody, honoring the rhythm reading chosen. */
+  /** Take -> melody, honoring the rhythm reading chosen. Whole takes are read syllable by syllable. */
   const write = (fr: PitchFrame[], h: { free: boolean; bpm: number; origin?: number }, f: string, fx = fix()) => {
     const k = +f;
+    const ta = takeAudio.current;
+    if (ta) {
+      const ts = fx.timeSig;
+      if (h.free) {
+        const auto = scoreFromVoice(ta.samples, ta.sampleRate, { timeSig: ts, a4: audio.a4 });
+        if (!auto || k === 1) return auto;
+        return scoreFromVoice(ta.samples, ta.sampleRate, { bpm: Math.round(auto.bpm * k), timeSig: ts, a4: audio.a4 });
+      }
+      // with the click: the beat is known exactly, and the clicks themselves are never notes
+      const o = (h.origin ?? ta.t0) - ta.t0, beat = 60000 / h.bpm;
+      const clicks: number[] = [];
+      for (let c = o - 8 * beat; c < ta.samples.length / ta.sampleRate * 1000; c += beat) if (c >= 0) clicks.push(c);
+      return scoreFromVoice(ta.samples, ta.sampleRate, { bpm: h.bpm * k, origin: k === 1 ? o : undefined, timeSig: ts, clicks, a4: audio.a4 });
+    }
     if (h.free) {
       const auto = transcribe(fr, fx);
       if (!auto || k === 1) return auto;
@@ -129,6 +146,7 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
       // and can skip quick notes when the phone is busy. The full recording does not.
       setBusy(true); setPhase('done');
       window.setTimeout(() => {
+        takeAudio.current = { samples: cap.samples, sampleRate: cap.sampleRate, t0: cap.startPerf };
         const full = framesFromSamples(cap.samples, cap.sampleRate, audio.a4).map((f) => ({ ...f, t: f.t + cap.startPerf }));
         frames.current = full.length ? full : frames.current;
         (window as unknown as { __s2s?: PitchFrame[] }).__s2s = frames.current; // for troubleshooting
@@ -157,7 +175,9 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
     setBusy(true); audio.stopAll(); setPlaying(false); setMel(null); setKeyOverride(''); setFeel('1'); setMeter('auto'); setGrid('auto');
     try {
       const ctx = audio.ensure();
-      const fr = await framesFromFile(file, ctx, audio.a4);
+      const dec = await decodeMono(file, ctx);
+      takeAudio.current = { samples: dec.samples, sampleRate: dec.sampleRate, t0: 0 };
+      const fr = framesFromSamples(dec.samples, dec.sampleRate, audio.a4);
       frames.current = fr;
       heard.current = { free: true, bpm };
       if (take) URL.revokeObjectURL(take);
