@@ -13,11 +13,11 @@ export interface ScoreViewHandle {
   color: (colors: Map<string, string>) => void;
 }
 
-interface Props { xml: string; zoom?: number; transpose?: number; /** one continuous line that scrolls sideways (practice view) */ horizontal?: boolean; onError?: (msg: string) => void; onReady?: () => void }
+interface Props { /** tapping a note gives its written-score position (quarters) */ onNoteTap?: (srcQ: number) => void; xml: string; zoom?: number; transpose?: number; /** one continuous line that scrolls sideways (practice view) */ horizontal?: boolean; onError?: (msg: string) => void; onReady?: () => void }
 
 export const noteKey = (srcQ: number, midi: number) => `${srcQ.toFixed(3)}|${midi}`;
 
-export const ScoreView = forwardRef<ScoreViewHandle, Props>(function ScoreView({ xml, zoom = 1, transpose = 0, horizontal = false, onError, onReady }, ref) {
+export const ScoreView = forwardRef<ScoreViewHandle, Props>(function ScoreView({ onNoteTap, xml, zoom = 1, transpose = 0, horizontal = false, onError, onReady }, ref) {
   const horiz = useRef(horizontal);
   horiz.current = horizontal;
   const host = useRef<HTMLDivElement>(null);
@@ -26,11 +26,15 @@ export const ScoreView = forwardRef<ScoreViewHandle, Props>(function ScoreView({
   const stamps = useRef<number[]>([]);
   const curIdx = useRef(0);
   const noteEls = useRef(new Map<string, SVGElement[]>());
+  const elQ = useRef(new Map<Element, number>()); // note element -> written position, for tap-to-play
+  const tapRef = useRef(onNoteTap);
+  tapRef.current = onNoteTap;
   const colored = useRef(new Set<string>());
   const [loading, setLoading] = useState(true);
 
   const indexNotes = () => {
     noteEls.current.clear();
+    elQ.current.clear();
     try {
       const sheet = (osmd.current as unknown as { GraphicSheet: { MeasureList: unknown[][] } }).GraphicSheet;
       for (const row of sheet.MeasureList) for (const gm of row as { staffEntries: { graphicalVoiceEntries: { notes: unknown[] }[] }[] }[]) {
@@ -42,6 +46,7 @@ export const ScoreView = forwardRef<ScoreViewHandle, Props>(function ScoreView({
           const q = src.getAbsoluteTimestamp().RealValue * 4;
           const el = gn.getSVGGElement?.();
           if (!el) continue;
+          elQ.current.set(el, q);
           for (const m of new Set([midi, midi - trRef.current])) { const k = noteKey(q, m); (noteEls.current.get(k) ?? noteEls.current.set(k, []).get(k)!).push(el); }
         }
       }
@@ -187,10 +192,27 @@ export const ScoreView = forwardRef<ScoreViewHandle, Props>(function ScoreView({
     if (top + h > sc.scrollTop + sc.clientHeight * 0.7 || top < sc.scrollTop) glideTo(null, Math.max(0, top - 24));
   }
 
+  /** a tap on (or right next to) a note reports where it is in the score */
+  const onTap = (e: React.MouseEvent) => {
+    const f = tapRef.current;
+    if (!f || !elQ.current.size) return;
+    for (let n: Element | null = e.target as Element; n && n !== host.current; n = n.parentElement) {
+      const q = elQ.current.get(n);
+      if (q !== undefined) { f(q); return; }
+    }
+    let best = Infinity, bq: number | null = null;
+    elQ.current.forEach((q, el) => {
+      const r = el.getBoundingClientRect();
+      const dx = Math.max(r.left - e.clientX, 0, e.clientX - r.right), dy = Math.max(r.top - e.clientY, 0, e.clientY - r.bottom);
+      const d = Math.hypot(dx, dy * 1.5);
+      if (d < best) { best = d; bq = q; }
+    });
+    if (bq !== null && best < 28) f(bq);
+  };
   return (
-    <div className={`score-scroll ${horizontal ? 'horizontal' : ''}`} ref={scroller}>
+    <div className={`score-scroll ${horizontal ? 'horizontal' : ''} ${onNoteTap ? 'tappable' : ''}`} ref={scroller}>
       {loading && <div className="score-loading">Drawing the score…</div>}
-      <div ref={host} className="osmd-host" />
+      <div ref={host} className="osmd-host" onClick={onTap} />
     </div>
   );
 });

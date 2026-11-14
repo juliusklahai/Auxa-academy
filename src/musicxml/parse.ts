@@ -110,7 +110,7 @@ export function parseMusicXml(doc: Document, xml = ''): Score {
     let divisions = 1, beats = 4, beatType = 4;
     kids(p, 'measure').forEach((m, mi) => {
       if (pi === 0) measureNumbers[mi] = m.getAttribute('number') ?? String(mi + 1);
-      let pos = 0, maxPos = 0;
+      let pos = 0, maxPos = 0, maxReal = 0; // maxReal ignores hidden padding rests
       for (const c of kids(m)) {
         if (c.nodeName === 'attributes') {
           divisions = num(txt(c, 'divisions'), divisions);
@@ -121,6 +121,7 @@ export function parseMusicXml(doc: Document, xml = ''): Score {
         } else if (c.nodeName === 'note') {
           if (kid(c, 'chord') || kid(c, 'grace')) continue;
           pos += num(txt(c, 'duration'), 0) / divisions;
+          if (!(kid(c, 'rest') && c.getAttribute('print-object') === 'no')) maxReal = Math.max(maxReal, pos);
         } else if (c.nodeName === 'backup') pos -= num(txt(c, 'duration'), 0) / divisions;
         else if (c.nodeName === 'forward') pos += num(txt(c, 'duration'), 0) / divisions;
         else if (c.nodeName === 'direction' || c.nodeName === 'sound') {
@@ -151,7 +152,11 @@ export function parseMusicXml(doc: Document, xml = ''): Score {
         }
         maxPos = Math.max(maxPos, pos);
       }
-      contentLen[mi] = Math.max(contentLen[mi], maxPos);
+      // Some exporters (music21) pad every voice with an invisible rest that overfills the bar.
+      // A bar never runs past its time signature because of hidden rests alone.
+      const nominal = (beats * 4) / beatType;
+      const len = maxPos > nominal + 1e-6 ? Math.max(nominal, maxReal) : maxPos;
+      contentLen[mi] = Math.max(contentLen[mi], len);
       if (pi === 0) sigs[mi] = { beats, beatType };
     });
   });

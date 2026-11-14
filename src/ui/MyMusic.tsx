@@ -17,7 +17,7 @@ import { midiIn } from '../input/midi';
 import { demoChoraleXml } from '../musicxml/demo';
 import { deleteScore, listScores, saveScore, scoreId, type LibItem } from '../musicxml/library';
 import { musicXmlText, parseMusicXml, type Score, type ScoreNote } from '../musicxml/parse';
-import { buildPractice, handTracksFor, rangeQ, toSrcQ, type PracticeBuild } from '../musicxml/practice';
+import { buildPractice, handTracksFor, rangeQ, toSrcQ, fromSrcQ, type PracticeBuild } from '../musicxml/practice';
 import { Timeline } from '../musicxml/tempo';
 import { displayXml } from '../musicxml/display';
 import { makeBand, BAND_KEYS, type BandParts } from '../musicxml/band';
@@ -103,7 +103,8 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
   const [band, setBand] = useState<BandParts>({ pad: false, bass: false, melody: false });
   const [grooveVol, setGrooveVol] = useState(0.5);
   const [zoom, setZoom] = useState(0.85);
-  const [run, setRun] = useState<'idle' | 'listen' | 'practice'>('idle');
+  const [run, setRun] = useState<'idle' | 'listen' | 'paused' | 'practice'>('idle');
+  const pausedAt = useRef<number | null>(null);
   const [feed, setFeed] = useState<{ kind: Feedback['kind']; text: string; id: number }[]>([]);
   const [report, setReport] = useState<AssessmentReport | null>(null);
   const [held, setHeld] = useState<Map<number, KeyMark>>(new Map());
@@ -121,6 +122,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
   const [cursorIdx, setCursorIdx] = useState(0);
   const latest = useRef<{ onFeedback: (fb: Feedback | null) => void }>(null!);
 
+  const busy = run === 'listen' || run === 'practice';
   const bpm = (score?.tempo ?? 90) * tempoPct / 100;
   const tlFor = (q0: number) => new Timeline(score?.tempoMap ?? [{ q: 0, bpm: 90 }], q0, tempoPct, followTempo);
   const speakers = settings.outputMode === 'speakers';
@@ -165,7 +167,9 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
       setReport(null); setFeed([]);
       if (save) {
         const it: LibItem = { id: scoreId(s.title, xml), title: s.title, composer: s.composer, xml, addedAt: Date.now() };
-        saveScore(it).then(() => listScores().then(setLib));
+        // a newer version of the same piece replaces the old one instead of piling up copies
+        listScores().then((all) => Promise.all(all.filter((o) => o.title === it.title && o.id !== it.id).map((o) => deleteScore(o.id))))
+          .then(() => saveScore(it)).then(() => listScores().then(setLib));
       }
       return s;
     } catch (e) { setErr((e as Error).message); return null; }
@@ -210,12 +214,12 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
 
   // ---------- scheduling ----------
   const clearTimers = () => { timers.current.forEach((t) => { clearTimeout(t); clearInterval(t); }); timers.current = []; };
-  const stop = () => {
+  const stop = (keepCursor = false) => {
     clearTimers();
     audio.stopAll();
     clock.current = null;
     setExpected(null);
-    view.current?.hideCursor();
+    if (keepCursor !== true) { view.current?.hideCursor(); pausedAt.current = null; }
     setRun('idle');
     if (session.current && session.current.state !== 'COMPLETED') session.current = null;
     if (sing) mic.settings.mode = settings.micMode;
@@ -290,25 +294,45 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
     }, 40) as unknown as number);
   };
 
-  const listen = () => {
+  /** Listen from the start of the chosen bars, or from a point (a tapped note, or where you paused). */
+  const listen = (startQ?: number) => {
     if (!score) return;
     if (isPhone() && !fm.focus) fm.enter(); // phones: playback full screen and sideways too
     stop();
     // The microphone is not needed to listen. Pausing it also keeps Bluetooth earphones in their
     // high-quality mode (many switch to a crackly "headset" mode while a microphone is open).
     if (mic.active) { micWasOn.current = true; mic.stop(); }
-    const [q0, q1] = rangeQ(score, from, to);
+    const [r0, r1] = rangeQ(score, from, to);
+    const end = score.measures[score.measures.length - 1];
+    const q0 = startQ ?? r0;
+    // a start outside the chosen bars plays on to the end of the piece
+    const q1 = startQ !== undefined && (startQ < r0 - 1e-9 || startQ >= r1 - 1e-9) ? end.startQ + end.lengthQ : r1;
     const tl = tlFor(q0);
-    const notes = allNotes.filter((n) => n.startQ >= q0 - 1e-9 && n.startQ < q1 && audible(n.track));
+    // notes already sounding at the start point (resuming mid-chord) are picked up from there
+    const notes = allNotes.filter((n) => n.startQ < q1 && n.startQ + n.durQ > q0 + 0.05 && audible(n.track))
+      .map((n) => (n.startQ < q0 - 1e-9 ? { ...n, startQ: q0, durQ: n.startQ + n.durQ - q0 } : n));
     const t0 = performance.now() + 300;
     clock.current = { t0, tl, q0, q1 };
     streamNotes(notes, tl, t0);
     streamGroove(q0, q1, t0, tl);
     if (metro) scheduleClicks(q0, q1, t0, tl);
+    view.current?.moveTo(toSrcQ(score, q0));
     followCursor();
     setRun('listen');
     timers.current.push(window.setTimeout(() => { if (loop) listen(); else stop(); }, 300 + tl.msAt(q1) + 300));
   };
+  /** Pause keeps the place (and the cursor); Listen again carries on from there. */
+  const pause = () => {
+    const c = clock.current;
+    if (!c || !score) { stop(); return; }
+    const q = Math.min(c.q1, Math.max(c.q0, c.tl.qAt(performance.now() - c.t0)));
+    stop(true);
+    pausedAt.current = q;
+    view.current?.moveTo(toSrcQ(score, q));
+    setRun('paused');
+  };
+  const resume = () => listen(pausedAt.current ?? undefined);
+  const tapNote = (srcQ: number) => { if (!score || run === 'practice') return; listen(fromSrcQ(score, srcQ)); };
 
   // ---------- practice ----------
   const pushFeed = (kind: Feedback['kind'], text: string) => { if (text) setFeed((f) => [{ kind, text, id: fid.current++ }, ...f].slice(0, 5)); };
@@ -481,30 +505,31 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
   }
 
   const dock = (
-      <div className="dock has-more">
-        <button className={`dock-btn lime ${run === 'practice' ? 'live' : ''}`} onClick={run === 'practice' ? stop : () => { if (settings.autoFocus && !fm.focus) fm.enter(); void practice(); }} disabled={!targets.size} aria-label={run === 'practice' ? 'Stop practicing' : 'Practice'}><Icon name={run === 'practice' ? 'pause' : 'play'} size={18} /></button>
+      <div className={`dock has-more ${more ? 'more-open' : ''}`}>
+        <button className={`dock-btn lime ${run === 'practice' ? 'live' : ''}`} onClick={run === 'practice' ? () => stop() : () => { if (settings.autoFocus && !fm.focus) fm.enter(); void practice(); }} disabled={!targets.size} aria-label={run === 'practice' ? 'Stop practicing' : 'Practice'}><Icon name={run === 'practice' ? 'pause' : 'play'} size={18} /></button>
         <span className="dock-label">{run === 'practice' ? 'Stop' : 'Practice'}</span>
-        <button className={`dock-btn dock-demo ${run === 'listen' ? 'on' : ''}`} onClick={run === 'listen' ? stop : () => { if (settings.autoFocus && settings.hands && settings.handsListen && !fm.focus) fm.enter(); listen(); }} aria-label={run === 'listen' ? 'Stop playback' : 'Listen'}><Icon name={run === 'listen' ? 'pause' : 'wave'} size={17} /></button>
-        <span className="dock-label">{run === 'listen' ? 'Stop' : 'Listen'}</span>
+        <button className={`dock-btn dock-demo ${run === 'listen' || run === 'paused' ? 'on' : ''}`} onClick={run === 'listen' ? pause : run === 'paused' ? resume : () => { if (settings.autoFocus && settings.hands && settings.handsListen && !fm.focus) fm.enter(); listen(); }} aria-label={run === 'listen' ? 'Pause' : run === 'paused' ? 'Resume' : 'Listen'}><Icon name={run === 'listen' ? 'pause' : run === 'paused' ? 'play' : 'wave'} size={17} /></button>
+        <span className="dock-label">{run === 'listen' ? 'Pause' : run === 'paused' ? 'Resume' : 'Listen'}</span>
+        {(run === 'listen' || run === 'paused') && <button className="dock-btn sm dock-stop" onClick={() => stop()} aria-label="Stop"><Icon name="stop" size={14} /></button>}
         <span className="dock-sep" />
         <button className={`dock-btn ${more ? 'on' : ''}`} onClick={() => setMore(!more)} aria-expanded={more} aria-label="Tempo, bars, key, loop and click"><Icon name="sliders" size={16} /></button>
         <span className="dock-summary">{Math.round(bpm)} bpm · bars {from + 1}–{to + 1}{tr ? ` · ${tr > 0 ? '+' : ''}${tr}` : ''}{loop ? ' · loop' : ''}</span>
         <div className={`dock-more ${more ? 'open' : ''}`}>
         <div className="row"><div className="dock-group">
-          {[50, 75, 100].map((p) => <button key={p} className={`dock-chip ${tempoPct === p ? 'on' : ''}`} disabled={run !== 'idle'} onClick={() => setTempoPct(p)}>{p}%</button>)}
-          <input className="dock-range" type="range" min={20} max={150} step={5} value={tempoPct} disabled={run !== 'idle'} onChange={(e) => setTempoPct(+e.target.value)} aria-label="Tempo percent" />
+          {[50, 75, 100].map((p) => <button key={p} className={`dock-chip ${tempoPct === p ? 'on' : ''}`} disabled={busy} onClick={() => setTempoPct(p)}>{p}%</button>)}
+          <input className="dock-range" type="range" min={20} max={150} step={5} value={tempoPct} disabled={busy} onChange={(e) => setTempoPct(+e.target.value)} aria-label="Tempo percent" />
           <span className="dock-label">{Math.round(bpm)} bpm</span>
         </div>
         </div><div className="row">
         <span className="dock-label">Bars</span>
-        <Select className="dock-select" value={from} disabled={run !== 'idle'} onChange={(e) => { const v = +e.target.value; setFrom(v); if (to < v) setTo(v); }} aria-label="From measure">{measOpts}</Select>
+        <Select className="dock-select" value={from} disabled={busy} onChange={(e) => { const v = +e.target.value; setFrom(v); if (to < v) setTo(v); }} aria-label="From measure">{measOpts}</Select>
         <span className="dock-label">to</span>
-        <Select className="dock-select" value={to} disabled={run !== 'idle'} onChange={(e) => { const v = +e.target.value; setTo(v); if (from > v) setFrom(v); }} aria-label="To measure">{measOpts}</Select>
+        <Select className="dock-select" value={to} disabled={busy} onChange={(e) => { const v = +e.target.value; setTo(v); if (from > v) setFrom(v); }} aria-label="To measure">{measOpts}</Select>
         </div><div className="row">
         <span className="dock-label">Key</span>
-        <button className="dock-btn sm" disabled={run !== 'idle' || tr <= -12} onClick={() => setTr(tr - 1)} aria-label="Transpose down a semitone">−</button>
+        <button className="dock-btn sm" disabled={busy || tr <= -12} onClick={() => setTr(tr - 1)} aria-label="Transpose down a semitone">−</button>
         <span className="dock-label keylabel" title="Transpose for playback, practice and the notation">{tr === 0 ? 'Written' : `${tr > 0 ? '+' : ''}${tr} · ${transposedKey(score.keyFifths, tr).replace(' major', '')}`}</span>
-        <button className="dock-btn sm" disabled={run !== 'idle' || tr >= 12} onClick={() => setTr(tr + 1)} aria-label="Transpose up a semitone">+</button>
+        <button className="dock-btn sm" disabled={busy || tr >= 12} onClick={() => setTr(tr + 1)} aria-label="Transpose up a semitone">+</button>
         </div><div className="row">
         <button className={`dock-btn ${loop ? 'on' : ''}`} onClick={() => setLoop(!loop)} aria-label="Loop"><Icon name="restart" size={16} /></button>
         <span className="dock-label">Loop</span>
@@ -522,8 +547,9 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
   return (
     <div className={`page practice-root ${fm.focus ? 'focus' : ''} ${fm.panel ? 'show-' + fm.panel : ''} ${fm.dockOpen ? 'dock-open' : ''}`}>
       {fm.focus && <FocusBar title={score.title} panel={fm.panel} onPanel={fm.togglePanel} onExit={fm.exit} infoLabel="Teacher" settingsLabel="Parts & mixer" settingsIcon="people" tools={<>
-        <button className={`fbtn tool lime ${run === 'practice' ? 'live' : ''}`} onClick={run === 'practice' ? stop : () => void practice()} disabled={!targets.size} aria-label={run === 'practice' ? 'Stop practicing' : 'Practice'}><Icon name={run === 'practice' ? 'pause' : 'play'} size={16} /><span className="fl">{run === 'practice' ? 'Stop' : 'Practice'}</span></button>
-        <button className={`fbtn tool ${run === 'listen' ? 'on' : ''}`} onClick={run === 'listen' ? stop : listen} aria-label={run === 'listen' ? 'Stop playback' : 'Listen'}><Icon name={run === 'listen' ? 'pause' : 'wave'} size={16} /><span className="fl">{run === 'listen' ? 'Stop' : 'Listen'}</span></button>
+        <button className={`fbtn tool lime ${run === 'practice' ? 'live' : ''}`} onClick={run === 'practice' ? () => stop() : () => void practice()} disabled={!targets.size} aria-label={run === 'practice' ? 'Stop practicing' : 'Practice'}><Icon name={run === 'practice' ? 'pause' : 'play'} size={16} /><span className="fl">{run === 'practice' ? 'Stop' : 'Practice'}</span></button>
+        <button className={`fbtn tool ${run === 'listen' || run === 'paused' ? 'on' : ''}`} onClick={run === 'listen' ? pause : run === 'paused' ? resume : () => listen()} aria-label={run === 'listen' ? 'Pause' : run === 'paused' ? 'Resume' : 'Listen'}><Icon name={run === 'listen' ? 'pause' : run === 'paused' ? 'play' : 'wave'} size={16} /><span className="fl">{run === 'listen' ? 'Pause' : run === 'paused' ? 'Resume' : 'Listen'}</span></button>
+        {(run === 'listen' || run === 'paused') && <button className="fbtn tool" onClick={() => stop()} aria-label="Stop"><Icon name="stop" size={16} /><span className="fl">Stop</span></button>}
         <button className={`fbtn tool ${fm.dockOpen ? 'on' : ''}`} onClick={fm.toggleDock} aria-expanded={fm.dockOpen} aria-label="Options"><Icon name="sliders" size={16} /><span className="fl">Options</span></button>
       </>} />}
       {fm.focus && fm.rotateHint && <RotateHint onDismiss={fm.dismissRotate} />}
@@ -533,14 +559,19 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
         ['Key', tr ? transposedKey(score.keyFifths, tr) : keyName(score.keyFifths)],
         ['Bars', score.measures.length],
         ['Parts', score.parts.length],
-      ]} />
+      ]}><button className="icon-btn head-close" onClick={() => { stop(); setScore(null); }} aria-label="Close this score" title="Close this score"><Icon name="close" size={16} /></button></PageHead>
       <div className="chip-row">
         <button className="chip" onClick={() => pickFile()}><Icon name="plus" size={13} /> Open another</button>
         <button className="chip" onClick={() => load(demoChoraleXml(), false)}>Demo chorale</button>
         <Select className="chip chip-select" value="" onChange={(e) => { if (e.target.value) openSong(e.target.value); }} aria-label="Open a song" placeholder="Songs…">
           {SONG_LEVELS.map((l) => <optgroup key={l} label={l}>{SONGS.filter((sg) => sg.level === l).map((sg) => <option key={sg.id} value={sg.id}>{sg.title}</option>)}</optgroup>)}
         </Select>
-        {lib.slice(0, 4).map((it) => <button key={it.id} className="chip" onClick={() => load(it.xml, false)}><Icon name="note" size={12} /> {it.title}</button>)}
+        {lib.slice(0, 4).map((it) => (
+          <span key={it.id} className={`chip chip-x ${it.title === score.title ? 'on' : ''}`}>
+            <button onClick={() => load(it.xml, false)}><Icon name="note" size={12} /> {it.title}</button>
+            <button className="chip-del" onClick={() => deleteScore(it.id).then(() => listScores().then(setLib))} aria-label={`Remove ${it.title} from your library`} title="Remove from library"><Icon name="close" size={11} /></button>
+          </span>
+        ))}
         <button className="chip" onClick={() => { stop(); setScore(null); }}>Library</button>
         <input ref={fileIn} type="file" accept=".musicxml,.xml,.mxl" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ''; }} />
       </div>
@@ -554,7 +585,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
               <span className="legend"><i className="lg correct" />correct <i className="lg partial" />timing/tuning <i className="lg wrong" />wrong</span>
               <div className="zoom"><button onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(2)))} aria-label="Zoom out">−</button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom((z) => Math.min(1.6, +(z + 0.1).toFixed(2)))} aria-label="Zoom in">+</button></div>
             </div>
-            <ScoreView ref={view} xml={shownXml} zoom={zoom} transpose={tr} horizontal={fm.focus} onError={setErr} />
+            <ScoreView ref={view} onNoteTap={tapNote} xml={shownXml} zoom={zoom} transpose={tr} horizontal={fm.focus} onError={setErr} />
             {feed[0] && !report && <div key={feed[0].id} className={`latest fb ${feed[0].kind}`}><span className="ic">{icon(feed[0].kind)}</span>{feed[0].text}</div>}
           </div>
         </div>
@@ -584,7 +615,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
               <button className={speakers ? 'on' : ''} onClick={() => setSettings({ outputMode: 'speakers' })}>Speakers</button>
             </div>
             <p className="muted small" style={{ margin: '6px 0 0' }}>{speakers ? 'Speakers: the microphone ignores the notes the app plays, and the play-along is a little quieter so your own playing stands out.' : 'Headphones: the play-along goes to your ears only.'}</p>
-            <label className="check"><input type="checkbox" checked={followTempo} onChange={(e) => setFollowTempo(e.target.checked)} disabled={run !== 'idle'} /> Follow tempo changes in the score{tempos.length > 1 ? ` (${tempos.length} marks)` : ''}</label>
+            <label className="check"><input type="checkbox" checked={followTempo} onChange={(e) => setFollowTempo(e.target.checked)} disabled={busy} /> Follow tempo changes in the score{tempos.length > 1 ? ` (${tempos.length} marks)` : ''}</label>
           </div>
           <div className="card mixer panel-settings">
             <div className="card-head"><b>Mixer</b><span className="muted small">mute · solo · volume</span></div>
@@ -610,7 +641,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
               const set = (p: Partial<Mix>) => setMix((x) => ({ ...x, [key]: { ...m, ...p } }));
               return (
                 <div key={k} className={`mix-row band ${band[k] ? '' : 'off'}`}>
-                  <input type="checkbox" checked={band[k]} disabled={run !== 'idle'} onChange={(e) => setBand((b) => ({ ...b, [k]: e.target.checked }))} aria-label={`${label} on or off`} />
+                  <input type="checkbox" checked={band[k]} disabled={busy} onChange={(e) => setBand((b) => ({ ...b, [k]: e.target.checked }))} aria-label={`${label} on or off`} />
                   <span className="mix-name">{label}
                     <Select className="inst" value={m.inst} onChange={(e) => set({ inst: e.target.value as Instrument })} aria-label={`Sound for ${label}`}>{INSTRUMENTS.map((i) => <option key={i.id} value={i.id}>{i.label}</option>)}</Select>
                   </span>
@@ -659,7 +690,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
               timeOf: (beat) => { const tl = clock.current?.tl ?? tlFor(hb.startQ); return (tl.msAt(hb.startQ + beat) - tl.msAt(hb.startQ)) / 1000; },
               timeKey: `${tempoPct}|${followTempo}|${hb.startQ}|${run}`,
               clock: () => { const c = clock.current; if (!c || !(run === 'listen' || (run === 'practice' && mode === 'timed'))) return null; return (performance.now() - c.t0 - (c.tl.msAt(hb.startQ) - c.tl.msAt(c.q0))) / 1000; },
-              index: handIdx, active: run !== 'idle', demo: !!s && run === 'practice' && s.state === 'LISTENING' && mode === 'wait', correction: fix && mode === 'wait' && run === 'practice',
+              index: handIdx, active: busy, demo: !!s && run === 'practice' && s.state === 'LISTENING' && mode === 'wait', correction: fix && mode === 'wait' && run === 'practice',
             } : undefined} />
         )}
       </div>

@@ -1305,3 +1305,18 @@ html.theme-light .pi-back { background: rgba(245,245,243,.45); }
 .acct-name label small { font-weight: 400; color: var(--muted, #888); }
 .acct-name-row { display: flex; gap: 8px; margin-top: 4px; }
 .acct-name-row input { flex: 1; min-width: 0; }
+/* My Music: the summary next to the options button only shows when there is room for it */
+.mm-toolbar > .dock .dock-summary { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 700px) { .mm-toolbar > .dock .dock-summary { display: none; } }
+.mm-toolbar > .dock.more-open .dock-summary { display: none; }
+.dock-stop { margin-left: -4px; }
+/* close the open score */
+.page-head:has(.head-close) { position: relative; padding-right: 52px; }
+.head-close { position: absolute; top: 0; right: 0; }
+/* library chips with a remove button */
+.chip.chip-x { padding: 0 4px 0 0; gap: 0; }
+.chip.chip-x > button { background: none; border: 0; color: inherit; font: inherit; display: inline-flex; align-items: center; gap: 7px; height: 100%; padding: 0 8px 0 14px; cursor: pointer; }
+.chip.chip-x > .chip-del { padding: 0; width: 26px; height: 26px; justify-content: center; border-radius: 50%; opacity: .6; }
+.chip.chip-x > .chip-del:hover { opacity: 1; background: rgba(127,127,127,.18); }
+.chip.chip-x.on { outline: 2px solid var(--accent, #1fe0d8); outline-offset: -2px; }
+.score-scroll.tappable .osmd-host { cursor: pointer; }

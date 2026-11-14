@@ -50,6 +50,12 @@ export function toSrcQ(score: Score, q: number): number {
   return M ? M.srcStartQ + (q - M.startQ) : q;
 }
 
+/** Performance-timeline position of a written-score position (first pass through repeats). */
+export function fromSrcQ(score: Score, srcQ: number): number {
+  const M = score.measures.find((m) => srcQ >= m.srcStartQ - 1e-9 && srcQ < m.srcStartQ + m.lengthQ - 1e-9);
+  return M ? M.startQ + (srcQ - M.srcStartQ) : 0;
+}
+
 export function rangeQ(score: Score, from: number, to: number): [number, number] {
   const a = score.measures[Math.max(0, from)], b = score.measures[Math.min(score.measures.length - 1, to)];
   return [a.startQ, b.startQ + b.lengthQ];

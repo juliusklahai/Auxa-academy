@@ -46,6 +46,50 @@ export function displayXml(xml: string): string {
     if (/<score-timewise/.test(xml)) return xml;
     const doc = new DOMParser().parseFromString(xml, 'application/xml');
     if (doc.getElementsByTagName('parsererror').length) return xml;
-    return hideEmptyStaves(doc) ? new XMLSerializer().serializeToString(doc) : xml;
+    const changed = trimHiddenPadding(doc) + hideEmptyStaves(doc);
+    return changed ? new XMLSerializer().serializeToString(doc) : xml;
   } catch { return xml; }
+}
+
+/**
+ * Some exporters (music21 for one) end every voice with an invisible rest that overfills the bar,
+ * e.g. 4 beats of notes plus 3 hidden beats in 4/4. Trim those hidden rests to the time signature
+ * (and shorten the backups that follow them) so the notation renderer and the player agree.
+ */
+export function trimHiddenPadding(doc: Document): number {
+  let trimmed = 0;
+  const kidEls = (e: Element) => Array.from(e.childNodes).filter((c): c is Element => c.nodeType === 1);
+  const first = (e: Element, tag: string) => e.getElementsByTagName(tag)[0];
+  for (const part of Array.from(doc.getElementsByTagName('part'))) {
+    let divisions = 1, beats = 4, beatType = 4;
+    for (const m of Array.from(part.getElementsByTagName('measure'))) {
+      const kids = kidEls(m);
+      for (const a of kids.filter((k) => k.tagName === 'attributes')) {
+        const d = first(a, 'divisions'); if (d) divisions = +(d.textContent ?? divisions) || divisions;
+        const t = first(a, 'time');
+        if (t) { const b = first(t, 'beats')?.textContent; const bt = first(t, 'beat-type')?.textContent; if (b) beats = b.split('+').reduce((x, y) => x + +y, 0) || beats; if (bt) beatType = +bt || beatType; }
+      }
+      const nominal = Math.round((beats * 4 * divisions) / beatType);
+      let pos = 0, cut = 0;
+      for (const el of kids) {
+        const durEl = first(el, 'duration');
+        const dur = durEl ? +(durEl.textContent ?? 0) : 0;
+        if (el.tagName === 'note') {
+          if (first(el, 'chord') || first(el, 'grace')) continue;
+          const hidden = !!first(el, 'rest') && el.getAttribute('print-object') === 'no';
+          if (hidden && pos + dur > nominal) {
+            const keep = Math.max(0, nominal - pos);
+            cut += dur - keep; trimmed++;
+            if (keep === 0) m.removeChild(el); else durEl!.textContent = String(keep);
+            pos += keep;
+          } else pos += dur;
+        } else if (el.tagName === 'backup' && durEl) {
+          const nd = dur - cut; cut = 0;
+          if (nd <= 0) m.removeChild(el); else durEl.textContent = String(nd);
+          pos -= nd;
+        } else if (el.tagName === 'forward') pos += dur;
+      }
+    }
+  }
+  return trimmed;
 }
