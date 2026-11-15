@@ -19,6 +19,28 @@ export const CELLS: Record<string, { beats: number[]; say: string; name: string 
   'tika-ti': { beats: [0.25, 0.25, 0.5], say: 'tika-ti', name: 'two sixteenths and an eighth' },
   'tri-po-let': { beats: [1 / 3, 1 / 3, 1 / 3], say: 'tri-po-let', name: 'triplet' },
 };
+/** a rhythm answer ("ta-a  sh  ta") as notes to draw and animate, each with its own syllable */
+export function countItems(say: string): { beats: number; rest?: boolean; say: string }[] {
+  const out: { beats: number; rest?: boolean; say: string }[] = [];
+  for (const c of say.trim().split(/\s{2,}|\s(?=[a-z])/)) {
+    const cell = CELLS[c];
+    if (!cell) continue;
+    if (c === 'sh') { out.push({ beats: 1, rest: true, say: 'sh' }); continue; }
+    const parts = cell.beats.length > 1 ? cell.say.split('-') : [cell.say];
+    cell.beats.forEach((b, i) => out.push({ beats: b, say: parts[i] ?? '' }));
+  }
+  return out;
+}
+/** one bar that shows a rhythm word in use (the word repeated, or filled out with quarter notes) */
+export function cellBar(cell: string): { beats: number; rest?: boolean; say: string }[] {
+  const one = countItems(cell);
+  const len = cell === 'sh' ? 1 : CELLS[cell].beats.reduce((a, b) => a + b, 0);
+  const out: { beats: number; rest?: boolean; say: string }[] = [];
+  let at = 0;
+  while (at + len <= 4 + 1e-6) { if (cell === 'sh') out.push({ beats: 1, say: 'ta' }, ...one); else out.push(...one); at += cell === 'sh' ? 2 : len; }
+  while (at < 4 - 1e-6) { out.push({ beats: 1, say: 'ta' }); at += 1; }
+  return out;
+}
 const cellLen = (c: string) => (c === 'sh' ? 1 : CELLS[c].beats.reduce((a, b) => a + b, 0));
 
 /** A four-beat pattern made from the allowed cells. */
@@ -66,13 +88,18 @@ export const TEMPOS: { id: string; bpm: number; means: string }[] = [
   { id: 'Allegro', bpm: 136, means: 'quick and bright' },
   { id: 'Presto', bpm: 180, means: 'very fast' },
 ];
-export function tempoQuestion(pool: string[], rnd: Rnd): DrillQuestion {
-  const id = pick(pool, rnd);
-  const t = TEMPOS.find((x) => x.id === id)!;
-  const beatMs = 60000 / t.bpm;
+/** the little tune every tempo is played with (so only the speed changes) */
+export function tempoSound(bpm: number): Sound[] {
+  const beatMs = 60000 / bpm;
   const tune = [60, 64, 67, 64, 65, 62, 64, 60];
   const sound: Sound[] = tune.map((m, i) => ({ midi: m + 12, startMs: i * beatMs, durMs: beatMs * 0.8 }));
   for (let i = 0; i < tune.length; i += 2) sound.push({ midi: i % 4 === 0 ? 48 : 43, startMs: i * beatMs, durMs: beatMs * 1.8 });
+  return sound;
+}
+export function tempoQuestion(pool: string[], rnd: Rnd): DrillQuestion {
+  const id = pick(pool, rnd);
+  const t = TEMPOS.find((x) => x.id === id)!;
+  const sound = tempoSound(t.bpm);
   return {
     prompt: 'Listen to the speed. Which tempo word fits best?',
     sound, context: [], answers: [t.id], options: pool,
@@ -83,17 +110,15 @@ export function tempoQuestion(pool: string[], rnd: Rnd): DrillQuestion {
 }
 
 /* ---------------- meter ---------------- */
-const METERS: Record<string, { strong: number[]; per: number; beatMs: number; how: string }> = {
+export const METERS: Record<string, { strong: number[]; per: number; beatMs: number; how: string }> = {
   '2/4': { strong: [1, 0], per: 2, beatMs: 520, how: 'two beats in a bar: STRONG weak, like a march' },
   '3/4': { strong: [1, 0, 0], per: 3, beatMs: 500, how: 'three beats: STRONG weak weak, like a waltz' },
   '4/4': { strong: [1, 0, 0.5, 0], per: 4, beatMs: 480, how: 'four beats: STRONG weak medium weak' },
   '6/8': { strong: [1, 0, 0, 0.5, 0, 0], per: 6, beatMs: 230, how: 'two big beats, each split in three: ONE-and-a TWO-and-a' },
 };
-export function meterQuestion(pool: string[], rnd: Rnd): DrillQuestion {
-  const id = pick(pool, rnd);
+export function meterSound(id: string, bars = 4): Sound[] {
   const m = METERS[id];
   const sound: Sound[] = [];
-  const bars = 4;
   for (let b = 0; b < bars; b++) {
     for (let k = 0; k < m.per; k++) {
       const t = (b * m.per + k) * m.beatMs, s = m.strong[k];
@@ -101,6 +126,12 @@ export function meterQuestion(pool: string[], rnd: Rnd): DrillQuestion {
       else sound.push(...[57, 60, 65].map((x) => ({ midi: x + (s ? 0 : 0), startMs: t, durMs: m.beatMs * (s ? 0.7 : 0.45) })));
     }
   }
+  return sound;
+}
+export function meterQuestion(pool: string[], rnd: Rnd): DrillQuestion {
+  const id = pick(pool, rnd);
+  const m = METERS[id];
+  const sound = meterSound(id);
   return {
     prompt: 'Find the strong beat and count to the next one. Which time signature is it?',
     sound, context: [], answers: [id], options: pool,

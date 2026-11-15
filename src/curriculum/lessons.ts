@@ -9,6 +9,8 @@ import { COUNT_LESSON, KEYSIG_LESSON, LANDMARK_LESSON, RHYTHM_LESSONS, SETUP_LES
 import { CHURCH_LESSONS } from './church';
 import { CRAFT_LESSONS, STYLE_LESSONS } from './styles';
 import { playAlongs, type PlayAlongSpec } from './playalong';
+import { conceptsTaught } from './coverage';
+import { R } from './rhythmCards';
 
 /** Build events from "C4:1 D4:1 E4:2 R:1 C4+E4+G4:4" (name:beats, R = rest, + = chord). */
 export function seq(spec: string, hand: Hand = 'RH', fingers?: (number | number[])[]): ScoreEvent[] {
@@ -46,6 +48,7 @@ const BASE_LESSONS: Lesson[] = [
       { title: 'Sit well first', body: 'Sit facing the middle of the keyboard, forearms level with the keys, shoulders loose. Curve your fingers as if holding a small ball. Tension is the enemy: if your wrist feels tight, drop your hands to your lap, shake them out, and start again.' },
       { title: 'The black keys come in groups of 2 and 3', body: 'Look at the highlighted keys. The black keys always repeat in a pattern: a group of two, then a group of three. This pattern is your map of the whole piano.', show: [61, 63, 66, 68, 70] },
       { title: 'Middle C', body: 'C is the white key just LEFT of any group of two black keys. The C closest to the middle of the piano is "middle C", written C4. On the staff it sits on its own short line (a ledger line) below the treble staff.', show: [C4], play: [C4] },
+      { title: 'Notes on the staff', body: 'Music is written as notes on five lines, the staff. Each note you will play for now is a quarter note: a filled head with a stem, one steady beat. Watch middle C appear four times as it sounds. Soon you will count it as "ta".', rhythm: R('C4=ta C4=ta C4=ta C4=ta', { bpm: 66 }) },
       { title: 'Finger numbers', body: 'Each hand numbers its fingers the same way: thumb = 1, index = 2, middle = 3, ring = 4, little finger = 5. Play middle C with right-hand finger 1 (your thumb), letting the weight of your arm sink into the key.' },
       { title: 'High and low', body: 'Moving right on the keyboard makes pitch go UP (higher). Moving left makes it go DOWN (lower). Listen: low C, middle C, high C.', show: [48, 60, 72], play: [48, 60, 72], sequential: true },
     ],
@@ -83,7 +86,7 @@ const BASE_LESSONS: Lesson[] = [
     summary: 'Play steady quarter notes with the metronome.',
     teach: [
       { title: 'The beat', body: 'Music has a steady pulse, like a heartbeat. The metronome clicks each beat. You will hear 4 count-in clicks, then play middle C exactly WITH each click.' },
-      { title: 'Quarter note', body: 'A quarter note (filled head with a stem) lasts one beat. Count "1, 2, 3, 4" aloud while you play.', show: [C4], play: [60, 60, 60, 60], sequential: true },
+      { title: 'Quarter note', body: 'A quarter note (filled head with a stem) lasts one beat. Bars hold four beats here, so count "1, 2, 3, 4" aloud while you play, and watch each note appear right on its click.', show: [C4], rhythm: R('C4=ta C4=ta C4=ta C4=ta C4=ta C4=ta C4=ta C4=ta', { bpm: 60 }) },
     ],
     exercises: [
       ex('L0-4-a', 'Four steady Cs', 'Play four quarter-note Cs in time at 60 BPM.', 'treble', 'timed', seq('C4 C4 C4 C4 C4 C4 C4 C4'), ['pulse', 'rhythm'], { requiredPasses: 2 }),
@@ -104,8 +107,9 @@ const BASE_LESSONS: Lesson[] = [
     id: 'L1-2', level: 1, title: 'Note values: half and whole notes', prerequisites: ['L1-1'],
     summary: 'Hold notes for 1, 2 and 4 beats.',
     teach: [
-      { title: 'Longer notes', body: 'A half note (hollow head with a stem) lasts 2 beats. A whole note (hollow head, no stem) lasts 4 beats. Keep the key down for the whole value, counting as you hold.' },
-      { title: 'Listen', body: 'C for one beat, D for two, E for four.', play: [60, 62, 64], sequential: true },
+      { title: 'The half note: two beats', body: 'A half note has a hollow head and a stem. It lasts two beats: play it on beat 1 and keep the key down through beat 2. Compare it with the quarter notes before it.', rhythm: R('C4=ta C4=ta D4=ta-a', { bpm: 66 }) },
+      { title: 'The whole note: four beats', body: 'A whole note is a hollow head with no stem. It lasts four beats, a whole bar. Play it and keep holding while you count "1 2 3 4".', rhythm: R('E4=ta-a-a-a', { bpm: 66 }) },
+      { title: 'All three together', body: 'Quarter (1 beat), half (2) and whole (4) in one tune: exactly what you will play next. Watch how long each note stays lit.', rhythm: R('C4=ta C4=ta D4=ta-a E4=ta-a D4=ta-a C4=ta-a-a-a', { bpm: 66 }) },
     ],
     exercises: [
       ex('L1-2-a', 'Quarter, half, whole', 'Play with correct onsets and hold each note for its full value.', 'treble', 'timed', seq('C4:1 C4:1 D4:2 E4:2 D4:2 C4:4'), ['rhythm', 'noteReadingTreble']),
@@ -127,6 +131,8 @@ const BASE_LESSONS: Lesson[] = [
     id: 'L1-4', level: 1, title: 'First melody: Ode to Joy', prerequisites: ['L1-2'],
     summary: 'Beethoven\'s theme in C position, first slowly, then in time.',
     teach: [
+      { title: 'Two notes in one beat: eighth notes', body: 'Ode to Joy has one new rhythm, so here it is first. An eighth note lasts half a beat; two of them share one beat and are joined by a beam. Say "ti-ti" for the pair.', rhythm: R('C4=ta D4=ta E4=ti F4=ti E4=ta', { bpm: 66 }) },
+      { title: 'The dotted quarter: "ta-i ti"', body: 'A dot adds half a note\'s value: a dotted quarter lasts one and a half beats, and an eighth note fills the last half. It sounds long-short: "ta-i ti". Ode to Joy ends each phrase this way (E... D D). Watch the long note stay lit.', rhythm: R('E4=ta E4=ta E4=ta-i D4=ti D4=ta-a', { bpm: 72 }) },
       { title: 'A real melody', body: 'This theme by Beethoven (public domain) uses only C position. Notice it moves mostly by step: neighboring keys. The two phrases are almost the same; only the ending changes (D D, then C C). Listen and follow the notes.', play: [64, 64, 65, 67, 67, 65, 64, 62, 60, 60, 62, 64, 64, 62, 62], sequential: true },
     ],
     exercises: [
@@ -179,6 +185,7 @@ const BASE_LESSONS: Lesson[] = [
     summary: 'Short bouncy notes, then chord notes played one after another.',
     teach: [
       { title: 'Staccato', body: 'A dot above or below a note means short and detached. Let the key spring back up right away with a light bounce from the wrist, like touching a hot surface. With a MIDI keyboard the app measures how long you hold each key.', play: [60, 64, 67, 64, 60], sequential: true },
+      { title: 'Short note, short silence', body: 'Staccato notes are written here as an eighth note (half a beat) followed by an eighth rest (half a beat of silence, a little 7 with a dot). Say "ti" for the note and whisper "sh" for the rest.', rhythm: R('C4=ti s E4=ti s G4=ti s E4=ti s C4=ta-a', { bpm: 72 }) },
       { title: 'Broken chords', body: 'C-E-G played one after another is a broken C chord. Keep the hand shaped over all three keys so the fingers are already in place.' },
     ],
     exercises: [
@@ -226,6 +233,7 @@ const BASE_LESSONS: Lesson[] = [
     teach: [
       { title: 'Stand or sit tall', body: 'Feet flat, shoulders loose, head balanced. Breathe in low and quietly through the nose, as if smelling a flower, so your belly and lower ribs widen. Never push or strain: singing in this app should always feel comfortable.' },
       { title: 'Listen first', body: 'Listen to the note, hum it quietly inside your head, then sing it on "loo" or "ah". Men can sing it an octave lower: the app accepts any octave of the right note.', play: [60], show: [60] },
+      { title: 'One note, one beat', body: 'Each note you sing is written as a quarter note: one beat, "ta". You can take your time on each one; the app waits for you.', rhythm: R('C4=ta E4=ta G4=ta D4=ta', { bpm: 60 }) },
       { title: 'Watch your pitch line', body: 'While you sing, a line shows your pitch. Green means in tune, amber means close, red means off. If you are flat (below), think "up" and add a little more breath; if sharp, relax.' },
     ],
     exercises: [
@@ -237,6 +245,7 @@ const BASE_LESSONS: Lesson[] = [
     summary: 'Sing up and down the first five notes of the major scale with solfège.',
     teach: [
       { title: 'Solfège', body: 'Do Re Mi Fa Sol are names for the steps of the scale. Do is home. Each name has its own feeling: Mi is bright, Sol is strong, Re wants to fall back to Do.', play: [60, 62, 64, 65, 67, 65, 64, 62, 60], show: [60, 62, 64, 65, 67], sequential: true },
+      { title: 'Short and long notes', body: 'Quarter notes last one beat ("ta"); the half note at the end of each run lasts two ("ta-a"). Hold it until the word ends.', rhythm: R('C4=ta D4=ta E4=ta F4=ta G4=ta-a-a-a', { bpm: 72 }) },
       { title: 'Small steps', body: 'Every step here is a small one (a whole step, except Mi to Fa, a half step). Keep the sound connected, one breath for each direction.' },
     ],
     exercises: [
@@ -258,6 +267,7 @@ const BASE_LESSONS: Lesson[] = [
     id: 'V0-4', level: 0, track: 'voice', title: 'Sight-sing a phrase', prerequisites: ['V0-3'],
     summary: 'Read a short melody from the staff and sing it in time.',
     teach: [
+      { title: 'The rhythm first', body: 'This phrase mixes quarter notes ("ta"), a dotted quarter with an eighth ("ta-i ti", long-short) and a half note at the end ("ta-a"). Clap or say it before you sing.', rhythm: R('C4=ta E4=ta G4=ta-i E4=ti C4=ta-a', { bpm: 72 }) },
       { title: 'Read, then sing', body: 'Find Do (C) first. Look at the shape: steps or leaps, up or down. Tap the beat, then sing. You can press Demo to hear it, but try once without help first.' },
     ],
     exercises: [
@@ -286,7 +296,10 @@ const BASE_PLAYALONG: Record<string, PlayAlongSpec> = {
   'L2-6': { keys: N('C3 E3 G3 F3 A3 B2 D3'), hand: 'LH', styles: ['call', 'tempo'], skills: ['fingerTechnique'] },
 };
 
-const withPlayAlong = (l: Lesson, spec?: PlayAlongSpec): Lesson => (spec ? { ...l, exercises: [...l.exercises, ...playAlongs(l.id, spec)] } : l);
+// Play-alongs are written after the course is in teaching order, so each one uses only the note values
+// taught by then (no eighths in lesson 0).
+const PA = new Map<string, PlayAlongSpec>();
+const withPlayAlong = (l: Lesson, spec?: PlayAlongSpec): Lesson => { if (spec) PA.set(l.id, spec); return l; };
 const pianoBase = BASE_LESSONS.filter((l) => (l.track ?? 'piano') === 'piano').map((l) => withPlayAlong(l, BASE_PLAYALONG[l.id]));
 const more = [...MORE_LESSONS, ...ADVANCED_LESSONS].map((l: LessonDef) => withPlayAlong(l, l.playAlong));
 const pa = (l: LessonDef) => withPlayAlong(l, l.playAlong);
@@ -300,11 +313,22 @@ piano = after(piano, 'L1-2', [pa(COUNT_LESSON)]);
 piano = after(piano, 'L1-3', [pa(LANDMARK_LESSON)]);
 piano = after(piano, 'L5-2', [pa(KEYSIG_LESSON)]);
 piano = after(piano, 'L9-4', CRAFT_LESSONS.map(pa));
-// from here on, key lessons show their key signature
-for (const l of piano) if (l.id === 'L5-3') l.exercises.forEach((e) => { if (!e.drill && e.fifths === undefined) e.fifths = 2; });
 piano = after(piano, 'L4-5', RHYTHM_LESSONS.map(pa));
 // teaching order: level by level (lessons added later to an earlier level slot in at the end of that level)
 piano = piano.map((l, i) => [l, i] as const).sort((a, b) => a[0].level - b[0].level || a[1] - b[1]).map(([l]) => l);
+{
+  const taught = new Set<string>();
+  const BEATS: Record<string, number> = { whole: 4, dottedHalf: 3, half: 2, dottedQuarter: 1.5, quarter: 1, dottedEighth: 0.75, eighth: 0.5, sixteenth: 0.25 };
+  piano = piano.map((l) => {
+    for (const s of l.teach) conceptsTaught(s).forEach((c) => taught.add(c));
+    const spec = PA.get(l.id);
+    if (!spec) return l;
+    const values = Object.entries(BEATS).filter(([k]) => taught.has(`value:${k}`)).map(([, b]) => b);
+    return { ...l, exercises: [...l.exercises, ...playAlongs(l.id, { ...spec, values: values.length ? values : [1] })] };
+  });
+}
+// from here on, key lessons show their key signature
+for (const l of piano) if (l.id === 'L5-3') l.exercises.forEach((e) => { if (!e.drill && e.fifths === undefined) e.fifths = 2; });
 export const LESSONS: Lesson[] = [...piano, ...BASE_LESSONS.filter((l) => l.track === 'voice')];
 
 export const lessonById = (id: string) => LESSONS.find((l) => l.id === id);

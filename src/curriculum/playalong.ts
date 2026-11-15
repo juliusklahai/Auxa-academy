@@ -22,6 +22,8 @@ export interface PlayAlongSpec {
   tempo?: number;
   skills?: SkillId[];
   hideLabels?: boolean;
+  /** note values (beats) the learner has been taught so far: the piece uses only these */
+  values?: number[];
 }
 
 // ---------- seeded randomness ----------
@@ -83,7 +85,11 @@ export function playAlong(id: string, spec: PlayAlongSpec, style: PlayAlongStyle
   const mLo = rhKeys.length ? Math.min(...rhKeys) - 4 : 60, mHi = rhKeys.length ? Math.max(...rhKeys) + 5 : 74;
   const scaleNotes = (lo: number, hi: number) => { const out: number[] = []; for (let m = lo; m <= hi; m++) if (inScale(tonic, m)) out.push(m); return out; };
   const mPool = scaleNotes(Math.max(55, mLo), Math.min(84, mHi));
-  const rhythms = (beats === 3 ? RHYTHMS3 : RHYTHMS4)[style];
+  // only rhythms made of note values the learner has been taught
+  const okVal = (d: number) => !spec.values || spec.values.some((v) => Math.abs(v - d) < 1e-6);
+  const allR = (beats === 3 ? RHYTHMS3 : RHYTHMS4)[style];
+  const fitR = allR.filter((rh) => rh.every(okVal));
+  const rhythms = fitR.length ? fitR : [beats === 3 ? [1, 1, 1] : [1, 1, 1, 1]];
 
   // ---- melody
   const melody: Line[] = [];
@@ -120,7 +126,8 @@ export function playAlong(id: string, spec: PlayAlongSpec, style: PlayAlongStyle
   let bPrev = lhKeys.length ? lhKeys[0] : 48;
   for (let b = 0; b < bars; b++) {
     const chord = triad(tonic, prog[b]);
-    const pattern = lhKeys.length ? (beats === 3 ? [[1, 1, 1], [2, 1]][b % 2] : r.pick([[2, 2], [1, 1, 2], [4], [1, 1, 1, 1]])) : beats === 3 ? [3] : [2, 2];
+    const lhPats = (beats === 3 ? [[1, 1, 1], [2, 1]] : [[2, 2], [1, 1, 2], [4], [1, 1, 1, 1]]).filter((pt) => pt.every(okVal));
+    const pattern = lhKeys.length ? (beats === 3 ? (lhPats[b % Math.max(1, lhPats.length)] ?? [1, 1, 1]) : (lhPats.length ? r.pick(lhPats) : [1, 1, 1, 1])) : beats === 3 ? [3] : [2, 2];
     let t = b * beats;
     pattern.forEach((d, k) => {
       let pcs = k === 0 ? [chord[0]] : chord;
@@ -157,7 +164,7 @@ export function playAlong(id: string, spec: PlayAlongSpec, style: PlayAlongStyle
   if (chordsStyle) {
     for (let b = 0; b < bars; b++) {
       const v = spec.voicings![prog[b]] ?? spec.voicings![1];
-      const d = beats === 3 ? 3 : r.pick([[4], [2, 2]])[0];
+      const d = beats === 3 ? (okVal(3) ? 3 : 1) : okVal(4) && r.chance(0.5) ? 4 : okVal(2) ? 2 : 1;
       for (let t = 0; t < beats; t += d) v.forEach((m) => addUser(b * beats + t, d, m, spec.hand === 'LH' ? 'LH' : 'RH'));
     }
   }

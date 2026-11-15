@@ -99,6 +99,23 @@ export interface TeachStep {
   show?: number[];
   play?: number[];
   sequential?: boolean;
+  /** an animated rhythm on the staff: notes appear in time with the sound, the syllables stretch with each hold */
+  rhythm?: RhythmDemo;
+  /** tempo words to hear side by side (each with its pulse) */
+  tempos?: string[];
+  /** time signatures to hear and see beat by beat */
+  meters?: string[];
+  /** ideas this step teaches that its text and demos do not already show (for the teach-before-test check) */
+  teaches?: string[];
+}
+
+/** One bar or more of rhythm, drawn and animated on the staff. */
+export interface RhythmDemo {
+  items: { beats: number; rest?: boolean; say?: string; midi?: number }[];
+  timeSig?: [number, number];
+  bpm?: number;
+  /** count-in clicks before it starts (default one bar) */
+  countIn?: boolean;
 }
 
 export interface Lesson {

@@ -3,6 +3,7 @@
 // ends with play-along pieces (see playalong.ts) where the band plays and you play what you learned.
 
 import { nameToMidi } from '../core/music';
+import { R } from './rhythmCards';
 import type { Clef, Exercise, Hand, Lesson, ScoreEvent, SkillId, TeachStep } from '../core/types';
 import type { PlayAlongSpec } from './playalong';
 
@@ -52,6 +53,8 @@ function ex(id: string, title: string, objective: string, clef: Clef, mode: 'wai
 export interface LessonDef extends Lesson { playAlong?: PlayAlongSpec }
 
 const t = (title: string, body: string, show?: number[], play?: number[], sequential = true): TeachStep => ({ title, body, show, play, sequential });
+/** a teaching step with an animated demo (rhythm on the staff, tempo or meter) */
+const td = (title: string, body: string, demo: Partial<TeachStep>): TeachStep => ({ title, body, sequential: true, ...demo });
 const N = (s: string) => s.split(' ').map(nameToMidi);
 const C_POS_RH = N('C4 D4 E4 F4 G4');
 const C_POS_LH = N('C3 D3 E3 F3 G3');
@@ -123,7 +126,7 @@ export const MORE_LESSONS: LessonDef[] = [
     id: 'L4-1', level: 4, title: 'Eighth notes', prerequisites: ['L3-1'],
     summary: 'Two notes per beat: count "1 and 2 and".',
     teach: [
-      t('Half a beat', 'An eighth note lasts half a beat. Two eighths share one beat and are joined by a beam. Count "1 and 2 and 3 and 4 and": the number is the beat, the "and" is the second eighth.', [60, 62], [60, 60, 62, 62, 64, 64, 65, 65]),
+      td('Half a beat', 'An eighth note lasts half a beat. Two eighths share one beat and are joined by a beam. Count "1 and 2 and 3 and 4 and": the number is the beat, the "and" is the second eighth. Say "ti-ti" for each pair.', { rhythm: R('C4=ta C4=ti C4=ti D4=ta D4=ti D4=ti E4=ti E4=ti E4=ti E4=ti C4=ta-a', { bpm: 66 }) }),
       t('Steady, not rushed', 'The beat stays the same speed; eighths simply fill it with two notes. Most people rush them, so count out loud and let the metronome lead.'),
     ],
     exercises: [
@@ -136,8 +139,8 @@ export const MORE_LESSONS: LessonDef[] = [
     id: 'L4-2', level: 4, title: 'Dotted rhythms', prerequisites: ['L4-1'],
     summary: 'A dot adds half the value: dotted half, dotted quarter.',
     teach: [
-      t('The dot', 'A dot after a note adds half of its value. Dotted half = 2 + 1 = 3 beats. Dotted quarter = 1 + 1/2 = 1 and a half beats, usually followed by an eighth: "long ... short".', [60], [60, 62, 64]),
-      t('Feel it', 'Dotted quarter + eighth sounds like "Ta-a ti". You know it from "Auld Lang Syne" and Ode to Joy (bar 4). Count "1 (2) and" for the long note and play the eighth on the "and".'),
+      td('The dot', 'A dot after a note adds half of its value. Dotted half = 2 + 1 = 3 beats. Dotted quarter = 1 + 1/2 = 1 and a half beats, usually followed by an eighth: "long ... short".', { rhythm: R('C4=ta-a-a E4=ta C4=ta-i D4=ti E4=ta-a', { bpm: 66 }) }),
+      td('Feel it', 'Dotted quarter + eighth sounds like "Ta-a ti". You know it from "Auld Lang Syne" and Ode to Joy (bar 4). Count "1 (2) and" for the long note and play the eighth on the "and".', { rhythm: R('E4=ta-i D4=ti C4=ta-a E4=ta-i D4=ti C4=ta-a', { bpm: 66 }) }),
     ],
     exercises: [
       ex('L4-2-a', 'Dotted quarter and eighth', 'Long-short patterns on C D E.', 'treble', 'timed', seqOf('C4:1.5 D4:0.5 E4:2 E4:1.5 D4:0.5 C4:2', 'RH'), ['rhythm'], { tempo: 66 }),
@@ -149,7 +152,7 @@ export const MORE_LESSONS: LessonDef[] = [
     id: 'L4-3', level: 4, title: 'Rests and silence', prerequisites: ['L4-1'],
     summary: 'Silence is counted exactly like sound.',
     teach: [
-      t('Rests', 'Every note value has a rest of the same length: quarter rest, half rest (a hat sitting on the line), whole rest (a hole hanging under the line). During a rest, lift the hand and keep counting.'),
+      td('Rests', 'Every note value has a rest of the same length: quarter rest, half rest (a hat sitting on the line), whole rest (a hole hanging under the line), eighth rest (a little 7). A dot works on rests too: a dotted half rest is three beats. During a rest, lift the hand and keep counting.', { rhythm: R('C4=ta sh E4=ta sh G4=ta-a sh-h sh-h-h-h', { bpm: 72 }) }),
       t('Count through it', 'The most common mistake is coming in early after a rest. Say the rest beats out loud: "1 2 (3) (4)".'),
     ],
     exercises: [
@@ -161,7 +164,7 @@ export const MORE_LESSONS: LessonDef[] = [
     id: 'L4-4', level: 4, title: 'Three-four time: the waltz', prerequisites: ['L4-2'],
     summary: 'Three beats in a bar, strong first beat.',
     teach: [
-      t('ONE two three', 'In 3/4 there are three quarter beats per bar and the first is the strongest. Waltzes, many hymns and lullabies live in 3/4.'),
+      td('ONE two three', 'In 3/4 there are three quarter beats per bar and the first is the strongest. Waltzes, many hymns and lullabies live in 3/4.', { meters: ['3/4'] }),
       t('Oom-pah-pah', 'Left hand: a low note on beat 1, a light chord on 2 and 3. Right hand: the tune on top.', [48, 52, 55], [48, 52, 55, 52, 55]),
     ],
     exercises: [
@@ -174,7 +177,7 @@ export const MORE_LESSONS: LessonDef[] = [
     summary: 'Notes that start off the beat and hold across it.',
     teach: [
       t('Ties', 'A curved line joining two notes of the same pitch makes one long note: play the first, hold through the second.'),
-      t('Off-beat accents', 'Syncopation puts a note on the "and" and holds it over the next beat. It is the heartbeat of pop, gospel, jazz and Latin music. Count the eighths: "1 and 2 and".'),
+      td('Off-beat accents', 'Syncopation puts a note on the "and" and holds it over the next beat. It is the heartbeat of pop, gospel, jazz and Latin music. Count the eighths: "1 and 2 and".', { rhythm: R('C4=ta E4=ti G4=ta-i E4=ta C4=ti D4=ta-i', { bpm: 66 }) }),
     ],
     exercises: [
       ex('L4-5-a', 'On the "and"', 'Notes start on the off-beat.', 'treble', 'timed', seqOf('C4:1 E4:0.5 G4:1.5 E4:1 C4:0.5 D4:1.5 E4:1 C4:3', 'RH'), ['rhythm'], { tempo: 66 }),

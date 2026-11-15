@@ -3,13 +3,15 @@
 // melodies throughout (concepts only, nothing copied).
 import type { Clef, DrillSpec, Exercise, ScoreEvent, SkillId } from '../core/types';
 import { hands, seqOf, type LessonDef } from './levels';
+import { R } from './rhythmCards';
+import type { TeachStep } from '../core/types';
 
 function ex(id: string, title: string, objective: string, clef: Clef, mode: 'wait' | 'timed', events: ScoreEvent[], skills: SkillId[], opts: Partial<Exercise> = {}): Exercise {
   return { id, title, objective, clef, mode, events, skills, tempo: 66, timeSig: [4, 4], passScore: 80, maxConsecutiveMistakes: 3, requiredPasses: 1, inputs: ['midi', 'mic', 'screen', 'computer-keyboard'], ...opts };
 }
 const drill = (id: string, title: string, objective: string, spec: DrillSpec, skills: SkillId[] = ['rhythm']): Exercise =>
   ex(id, title, objective, 'treble', 'wait', [], skills, { drill: spec, passScore: 80 });
-const t = (title: string, body: string, show?: number[], play?: number[]) => ({ title, body, show, play, sequential: true });
+const t = (title: string, body: string, show?: number[], play?: number[], more: Partial<TeachStep> = {}): TeachStep => ({ title, body, show, play, sequential: true, ...more });
 
 /** Level 0, first lesson: sit, shape, arm weight, and make music straight away on the black keys. */
 export const SETUP_LESSON: LessonDef = {
@@ -19,6 +21,7 @@ export const SETUP_LESSON: LessonDef = {
     t('Your setup checklist', 'Bench: sit on the front half, facing the middle of the keyboard. Height: forearms level with the keys, elbows a little in front of you. Distance: knuckles can reach the black keys with arms gently bent. Feet flat on the floor. Shoulders down, back tall, breathe.'),
     t('Hand shape', 'Let your arms hang, then lift your hands to the keys without changing their shape. That relaxed curve is your piano hand: rounded fingers, knuckles up, wrist level, the thumb resting on its side corner. Play on the fingertips.'),
     t('Arm weight, not finger push', 'Support finger 3 with your thumb behind its first joint. Let the weight of your whole arm drop into one black key, then let the wrist float back up. Drop, release. A full sound comes from weight, never from pressing hard.', [61, 63], [61, 63]),
+    t('Reading the screen', 'Every round note on the screen is a key to play, and the same key lights up on the keyboard, so for now just follow the lights. Notes for the right hand sit on the top staff (the treble clef), notes for the left hand on the bottom staff (the bass clef). A filled note with a stem is a quarter note: one steady beat. Watch them appear one at a time as they sound.', undefined, undefined, { rhythm: R('C#5=ta D#5=ta C#5=ta D#5=ta', { bpm: 72 }) }),
     t('High and low, and make it yours', 'Black keys sound good in any order, so you can make music right now. Low keys sound like a bear, high keys like a bird. Play low, then high, slowly and evenly, and listen to the difference.', [37, 39, 85, 87], [37, 39, 85, 87]),
   ],
   exercises: [
@@ -35,9 +38,15 @@ export const COUNT_LESSON: LessonDef = {
   id: 'L1-6', level: 1, title: 'Count out loud: ta, ta-a and tempo words', prerequisites: ['L1-2'],
   summary: 'Say rhythms as you play them, and learn the words that tell you how fast to go.',
   teach: [
-    t('Rhythm has words', 'Say rhythms out loud and your hands follow. A quarter note is "ta" (one beat). A half note is "ta-a" (two beats). A dotted half is "ta-a-a" (three). A whole note is "ta-a-a-a" (four). A quarter rest is a silent "sh".'),
-    t('Count the bar too', 'Numbers keep your place: "1 2 3 4" in every bar of four-four. Clap and say "ta ta ta-a" while you count "1 2 3-4". If the words and the counting line up, the rhythm is right.'),
-    t('How fast? Tempo words', 'Tempo words are Italian. Adagio: slow and at ease. Andante: walking speed. Moderato: medium. Allegro: quick and bright. Presto: very fast. The number after them (like 84) is beats per minute.'),
+    t('Rhythm has words', 'Every note value has its own word. Say the words out loud as you play and your hands keep time by themselves. Start with the one you already know: the quarter note (a filled head with a stem) lasts one beat and says "ta". Watch each note appear as it sounds, and say "ta" with it.', undefined, undefined, { rhythm: R('ta ta ta ta') }),
+    t('The half note says "ta-a"', 'A half note has a hollow head and a stem. It lasts two beats, so its word lasts two beats too: "ta" on the first beat, "-a" held through the second. Keep the key down until the word ends.', undefined, undefined, { rhythm: R('ta-a ta-a') }),
+    t('The dotted half says "ta-a-a"', 'A dot after a note adds half its value. A half note (2) with a dot lasts 2 + 1 = 3 beats: "ta-a-a". Here it is followed by one quarter note to fill the bar.', undefined, undefined, { rhythm: R('ta-a-a ta') }),
+    t('The whole note says "ta-a-a-a"', 'A whole note is a hollow head with no stem. It fills a whole bar of four beats: "ta-a-a-a". Count all four beats while you hold it.', undefined, undefined, { rhythm: R('ta-a-a-a') }),
+    t('Rests are silent beats: "sh"', 'A rest is counted just like a note, but in silence. Lift your hand and whisper "sh" for each silent beat. The quarter rest (a squiggle) is one beat, the half rest (a little hat sitting on the middle line) is two, and the whole rest (a box hanging from the line) is a full bar. A dot adds half to a rest too: a dotted half rest is three beats.', undefined, undefined, { rhythm: R('ta sh ta sh ta-a sh-h sh-h-h-h') }),
+    t('Put them together', 'Now the words make a tune. This is exactly what you will play in a moment: "ta ta ta-a, ta-a ta-a, ta sh ta sh, ta-a-a-a". Say it along with the notes as they appear.', undefined, undefined, { rhythm: R('C4=ta D4=ta E4=ta-a F4=ta-a E4=ta-a D4=ta sh D4=ta sh C4=ta-a-a-a', { bpm: 72 }) }),
+    t('Count the bar too', 'Four-four time (4/4) means four beats in every bar, and a quarter note gets one beat. Numbers keep your place: count "1 2 3 4" in every bar while the words tell you what to play. Watch the numbers under the staff light up as the count goes by.', undefined, undefined, { rhythm: R('C4=ta C4=ta E4=ta-a G4=ta-a-a E4=ta', { bpm: 72 }) }),
+    t('How fast? The tempo', 'The beat can be slow or fast: that speed is the tempo. Musicians write it in Italian. Adagio is slow and at ease, Andante is a walking pace, Allegro is quick and bright, Presto is very fast (Moderato, in the middle, is medium). Tap each word to hear the same tune at its speed, and watch its pulse.', undefined, undefined, { tempos: ['Adagio', 'Andante', 'Moderato', 'Allegro', 'Presto'] }),
+    t('The number: beats per minute', 'Many scores also give a number, like "quarter note = 84". That is how many beats fit in one minute: 60 is one beat a second, 120 is two. The metronome clicks at that number. Andante is about 84, Allegro about 136.', undefined, undefined, { tempos: ['Andante', 'Allegro'] }),
   ],
   exercises: [
     drill('L1-6-a', 'Say the rhythm', 'Hear four beats and pick the syllables that match.', { kind: 'count', pool: ['ta', 'ta-a', 'ta-a-a', 'sh'], rounds: 6 }),
@@ -54,8 +63,8 @@ export const RHYTHM_LESSONS: LessonDef[] = [
     id: 'L4-6', level: 4, title: 'Sixteenth notes', prerequisites: ['L4-1'],
     summary: 'Four notes in a beat, and the gallop rhythms they make.',
     teach: [
-      t('Four to a beat', 'Two beams make a sixteenth note: four of them fill one beat. Say "ti-ka-ti-ka", or count "1 e and a, 2 e and a". Keep them even, like rain on a roof.'),
-      t('Gallops', 'Mix one eighth and two sixteenths and you get a gallop: "ti-tika" (long short short) or "tika-ti" (short short long). Say it before you play it.'),
+      t('Four to a beat', 'Two beams make a sixteenth note: four of them fill one beat. Say "ti-ka-ti-ka", or count "1 e and a, 2 e and a". Keep them even, like rain on a roof.', undefined, undefined, { rhythm: R('ta ti@0.25 ka ti@0.25 ka ta ti@0.25 ka ti@0.25 ka', { bpm: 66 }) }),
+      t('Gallops', 'Mix one eighth and two sixteenths and you get a gallop: "ti-tika" (long short short) or "tika-ti" (short short long). Say it before you play it.', undefined, undefined, { rhythm: R('ti ti@0.25 ka ti ti@0.25 ka ti@0.25 ka ti ti@0.25 ka ti', { bpm: 66 }) }),
     ],
     exercises: [
       drill('L4-6-a', 'Hear the sixteenths', 'Pick the syllables for the rhythm you hear.', { kind: 'count', pool: ['ta', 'ti-ti', 'ti-ka-ti-ka', 'ti-tika', 'tika-ti'], rounds: 6 }),
@@ -69,7 +78,7 @@ export const RHYTHM_LESSONS: LessonDef[] = [
     id: 'L4-7', level: 4, title: 'Triplets', prerequisites: ['L4-1'],
     summary: 'Three notes in the time of two: the lilt of blues, gospel and ballads.',
     teach: [
-      t('Three in the space of two', 'A small 3 over three notes makes a triplet: three equal notes in one beat, where two eighths would normally go. Say "tri-po-let" on each beat, smooth and round.'),
+      t('Three in the space of two', 'A small 3 over three notes makes a triplet: three equal notes in one beat, where two eighths would normally go. Say "tri-po-let" on each beat, smooth and round.', undefined, undefined, { rhythm: R('ti ti tri po let ti ti tri po let', { bpm: 66 }) }),
       t('Twos against threes', 'Switching between "ti-ti" and "tri-po-let" is the skill. Count the beat in your head and only change how you split it. The beat itself never moves.'),
     ],
     exercises: [
@@ -84,8 +93,9 @@ export const RHYTHM_LESSONS: LessonDef[] = [
     id: 'L4-8', level: 4, title: 'Two-four, six-eight and cut time', prerequisites: ['L4-4'],
     summary: 'Marches, lilting six-eight, and counting in two.',
     teach: [
-      t('Two-four', 'Two quarter beats in a bar: STRONG weak, STRONG weak. Marches and many folk songs live here. Count "1 2, 1 2".'),
-      t('Six-eight', 'Six eighth notes in a bar, felt as two big beats, each split in three: "ONE-and-a TWO-and-a". Count all six slowly at first: "1 2 3 4 5 6", leaning on 1 and 4. The metronome clicks each eighth.'),
+      t('The top number counts the beats', 'A time signature tells you how the beats group into bars. The top number is how many beats are in a bar; the bottom number says which note gets the beat (4 = quarter note, 8 = eighth note). You already know four-four (4/4): STRONG weak medium weak. Listen to how each one leans on its first beat.', undefined, undefined, { meters: ['4/4', '3/4', '2/4'] }),
+      t('Two-four', 'Two quarter beats in a bar: STRONG weak, STRONG weak. Marches and many folk songs live here. Count "1 2, 1 2".', undefined, undefined, { meters: ['2/4'] }),
+      t('Six-eight', 'Six eighth notes in a bar, felt as two big beats, each split in three: "ONE-and-a TWO-and-a". Count all six slowly at first: "1 2 3 4 5 6", leaning on 1 and 4. The metronome clicks each eighth.', undefined, undefined, { meters: ['3/4', '6/8'] }),
       t('Cut time', 'A C with a line through it is cut time (two-two): the half note gets the beat, so a bar of four quarters is felt in two. It looks like four-four but swings along twice as broad.'),
     ],
     exercises: [

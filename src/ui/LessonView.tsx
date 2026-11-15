@@ -16,6 +16,8 @@ import { Icon } from './Icon';
 import { Piano, type KeyMark } from './Piano';
 import { bumpProgress, progress, setSettings, useProgressVersion, useSettings } from './settings';
 import { Staff } from './Staff';
+import { RhythmDemo } from './RhythmDemo';
+import { MeterDemo, TempoDemo } from './PulseDemos';
 import { EarDrill } from './EarDrill';
 import { coachOn, say, stopSpeaking } from './voice';
 import { demoFor } from '../curriculum/teachDemos';
@@ -191,7 +193,12 @@ function TeachPanel({ lesson, step, setStep, onDone, chips }: { lesson: Lesson; 
   };
   const demoId = demoFor(lesson.id, step);
   const [restart, setRestart] = useState(0);
+  // animated demos (rhythm on the staff, tempo pulses, meter beats) start from one play counter
+  const [demoKey, setDemoKey] = useState(0);
+  const hasPulse = !!(s.rhythm || s.tempos || s.meters);
+  useEffect(() => { setDemoKey(0); }, [step]);
   const play = () => {
+    if (hasPulse) { setDemoKey((k) => k + 1); return; }
     if (demoId && !seq && !s.play) { setRestart((n) => n + 1); return playDemo(demoId); }
     if (seq) return playSeq(seq);
     if (!s.play) return;
@@ -204,7 +211,7 @@ function TeachPanel({ lesson, step, setStep, onDone, chips }: { lesson: Lesson; 
     let live = true;
     if (voiceOn) {
       const text = stepLine(lesson, step);
-      void say(text).then(() => { if (live && (seq || s.play || demoId)) window.setTimeout(() => { if (live) play(); }, 250); });
+      void say(text).then(() => { if (live && (seq || s.play || demoId || hasPulse)) window.setTimeout(() => { if (live) play(); }, 250); });
     }
     return () => { live = false; stopSpeaking(); };
   }, [step, voiceOn]); // eslint-disable-line
@@ -239,8 +246,11 @@ function TeachPanel({ lesson, step, setStep, onDone, chips }: { lesson: Lesson; 
           )}
         </div>
         <div className="card staff-card">
-          <div className="card-head"><b>{demoId && !allStaffNotes ? 'Demonstration' : 'On the staff'}</b></div>
-          {staffEvents.length > 0 && allStaff.length > 0
+          <div className="card-head"><b>{s.tempos ? 'How fast' : s.meters ? 'Strong and weak beats' : demoId && !allStaffNotes ? 'Demonstration' : 'On the staff'}</b></div>
+          {s.rhythm ? <RhythmDemo key={step} demo={s.rhythm} playKey={demoKey} />
+            : s.tempos ? <TempoDemo key={step} words={s.tempos} playKey={demoKey} />
+            : s.meters ? <MeterDemo key={step} meters={s.meters} playKey={demoKey} />
+            : staffEvents.length > 0 && allStaff.length > 0
             ? <Staff events={staffEvents} clef={clef} grand={grand} timeSig={[4, 4]} highContrast={settings.highContrast} measureWidth={staffEvents.length > 1 ? 210 : 160} showTime={false} height={grand ? 260 : undefined} />
             : demoId ? <div className="demo-note"><b>Watch the hands</b><p>{demoScript(demoId).caption}</p><button className="btn" onClick={play}><Icon name="play" size={14} />Play it with sound</button></div>
             : <p className="muted">This step is about listening and thinking. No notation needed.</p>}
@@ -250,7 +260,7 @@ function TeachPanel({ lesson, step, setStep, onDone, chips }: { lesson: Lesson; 
         {demoId && !seq && !s.play ? <TeachDemo id={demoId} restart={restart} /> : <Piano lo={lo} hi={hi} marks={marks} labels={settings.labels} scrollTo={show[0]} />}
       </section>
       <div className="dock">
-        <button className="dock-btn lime" onClick={play} disabled={!s.play && !seq && !demoId}><Icon name="play" size={18} /></button>
+        <button className="dock-btn lime" onClick={play} disabled={!s.play && !seq && !demoId && !hasPulse}><Icon name="play" size={18} /></button>
         <span className="dock-label">Hear it</span>
         <span className="dock-sep" />
         <div className="dock-steps">

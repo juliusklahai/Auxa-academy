@@ -141,6 +141,10 @@ export const ADVANCED_LESSONS: LessonDef[] = [
       step('Work in short loops', 'Never try to work out a whole song at once. Take one line (about 4 seconds), loop it, and sing it back before touching the keys. If you cannot sing it, you cannot find it yet.\n\nSlow it down if you need to (most video players and music apps can play at 0.75 speed without changing pitch).', {
         tips: ['Loop 2 to 4 bars.', 'Sing or hum it back first.', 'Only then search on the keys.', 'Wrong keys are useful: they tell you higher or lower.'],
       }),
+      step('Do, mi and sol: 1, 3 and 5', 'Number the notes of a key from home: home is 1 (do), the third note up is 3 (mi), the fifth is 5 (sol). These are the scale degrees of the home chord, and the most stable sounds in any key. Do is settled, mi is bright and calm, sol is strong and open. Set the key in your ear, then hear each one.', {
+        compare: [{ label: '1 do', seq: [...ctxC, [60]] }, { label: '3 mi', seq: [...ctxC, [64]] }, { label: '5 sol', seq: [...ctxC, [67]] }],
+        tips: ['1 do: home, finished', '3 mi: bright, calm', '5 sol: strong, open'],
+      }),
       step('Train the ear every day', 'Ear skills grow like muscles: little and often. Ten minutes a day of the drills in this level does more than an hour once a week. Each drill trains one of the five steps.', {
         tips: ['Home-note drill (step 1)', 'Scale-degree drill (step 4)', 'Bass and chord drills (steps 2 and 3)', 'Interval drill (step 4, leaps)'],
       }),
@@ -157,7 +161,7 @@ export const ADVANCED_LESSONS: LessonDef[] = [
       step('Home is where the song rests', 'Listen to where lines end, especially the very last note and chord. That resting point is the tonic (home). Hum it. Then find it: play notes on the piano along with the song until one sounds completely settled at the end of a phrase.', {
         seq: C('E4 D4 C4 D4 E4 E4 E4 D4 D4 E4 D4 C4'), tips: ['The last note of the chorus is usually home.', 'Hold your candidate note under the song: home never clashes at phrase ends.'],
       }),
-      step('Major or minor?', 'Once you have home, sing up from it: do, re, mi. If the third note sounds bright (4 half steps up), the song is major. If it sounds darker (3 half steps), it is minor. Many sad-sounding pop songs are major songs that sit on the vi chord, so trust the ending, not the mood.', {
+      step('Major or minor?', 'Once you have home, sing up from it: do, re, mi. If the third note sounds bright (4 half steps up), the song is major. If it sounds darker (3 half steps), it is minor. In scale-degree numbers the bright third is 3 (mi) and the dark one is flat 3 (me). Many sad-sounding pop songs are major songs that sit on the vi chord, so trust the ending, not the mood.', {
         compare: [{ label: 'Major (C E G)', seq: C('C3+C4+E4+G4 C4 D4 E4') }, { label: 'Minor (C Eb G)', seq: C('C3+C4+Eb4+G4 C4 D4 Eb4') }],
       }),
       step('Which notes belong', 'A key gives you 7 notes. Once you know home and major/minor, you know them all: C major is all white keys, G major has F sharp, F major has B flat. Melodies and chords mostly use these 7, so your search shrinks from 12 notes to 7.', {
@@ -200,8 +204,8 @@ export const ADVANCED_LESSONS: LessonDef[] = [
         seq: C('C4 D4 E4 G4 E4 D4 C4'), tips: ['Steps: neighbor notes in the key.', 'Leaps: skip one or more notes.', 'After a big leap, melodies usually turn back.'],
       }),
       step('Name the leap with a song', 'Each interval has a sound you can tie to a famous opening. When you hear a leap, test it against your reference songs.', {
-        tips: ['Major 2nd: Happy Birthday', 'Major 3rd: When the Saints', 'Perfect 4th: Here Comes the Bride', 'Perfect 5th: Twinkle Twinkle', 'Major 6th: My Bonnie', 'Octave: Somewhere Over the Rainbow'],
-        compare: [{ label: '4th', seq: C('C4 F4') }, { label: '5th', seq: C('C4 G4') }, { label: '6th', seq: C('C4 A4') }, { label: 'Octave', seq: C('C4 C5') }],
+        tips: ['Major 2nd: Happy Birthday', 'Minor 3rd: Greensleeves (the first two notes)', 'Major 3rd: When the Saints', 'Perfect 4th: Here Comes the Bride', 'Perfect 5th: Twinkle Twinkle', 'Major 6th: My Bonnie', 'Octave: Somewhere Over the Rainbow'],
+        compare: [{ label: '2nd', seq: C('C4 D4') }, { label: 'Minor 3rd', seq: C('C4 Eb4') }, { label: 'Major 3rd', seq: C('C4 E4') }, { label: '4th', seq: C('C4 F4') }, { label: '5th', seq: C('C4 G4') }, { label: '6th', seq: C('C4 A4') }, { label: 'Octave', seq: C('C4 C5') }],
       }),
       step('Anchor on a sure note', 'Find one note you are certain of (often the first note or the home note) and work outwards from it. Check each new note against the key: if it is not one of the 7 key notes, it is probably one of its neighbors.'),
       step('Try it: Amazing Grace', 'This tune starts on sol (5) and leaps up a 4th to do (1). Listen, then work out the first line by ear in the exercises. Key of C, in 3/4 time.', { seq: C('G3 C4 E4 C4 E4 D4 C4 A3 G3'), seqBeats: 1 }),

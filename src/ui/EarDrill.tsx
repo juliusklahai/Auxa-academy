@@ -12,12 +12,20 @@ import { bumpProgress, progress, useSettings } from './settings';
 import { say, stopSpeaking } from './voice';
 import { witnessStart } from '../account/witness';
 import { DRILL_LINES } from '../curriculum/spoken';
+import { cellBar, countItems, CELLS, TEMPOS } from '../curriculum/readingDrills';
+import { RhythmDemo } from './RhythmDemo';
+import { MeterDemo, TempoDemo } from './PulseDemos';
 
 type Mark = 'right' | 'wrong';
 
 export function EarDrill({ exercise, onNext }: { exercise: Exercise; onNext?: () => void }) {
   const spec = exercise.drill!;
   const rounds = spec.rounds ?? 10;
+  // teach before the test: the first time, every answer is shown and heard before round 1
+  const primable = PRIMER_KINDS.includes(spec.kind);
+  const [learning, setLearning] = useState(() => { if (!primable) return false; try { return !localStorage.getItem(`auxa.primed.${exercise.id}`); } catch { return true; } });
+  const startQuiz = () => { try { localStorage.setItem(`auxa.primed.${exercise.id}`, '1'); } catch { /* private mode */ } setLearning(false); };
+  const [revealKey, setRevealKey] = useState(0);
   const settings = useSettings();
   const [round, setRound] = useState(0);
   const [q, setQ] = useState<DrillQuestion>(() => makeQuestion(spec));
@@ -41,11 +49,12 @@ export function EarDrill({ exercise, onNext }: { exercise: Exercise; onNext?: ()
   }, []);
   // every new round starts by playing the question
   useEffect(() => {
+    if (learning) return;
     let live = true;
     // the coach reads the task on the first round, then the sound plays
     (round === 0 ? say(DRILL_LINES[spec.kind]) : Promise.resolve()).then(() => { if (live) window.setTimeout(() => { if (live) play(q.sound); }, 300); });
     return () => { live = false; stopSpeaking(); };
-  }, [q]); // eslint-disable-line
+  }, [q, learning]); // eslint-disable-line
 
   const answer = (choice: string | null, ok: boolean) => {
     if (answered || done) return;
@@ -57,7 +66,7 @@ export function EarDrill({ exercise, onNext }: { exercise: Exercise; onNext?: ()
       firstTry.current = true;
       const next = slot + 1;
       setSlot(next);
-      if (next >= q.answers.length) window.setTimeout(() => play(q.reveal), 250);
+      if (next >= q.answers.length) window.setTimeout(() => { if (spec.kind === 'count') setRevealKey((k) => k + 1); else play(q.reveal); }, 250);
     } else {
       firstTry.current = false;
       if (choice) setTries((t) => ({ ...t, [choice]: 'wrong' }));
@@ -102,6 +111,8 @@ export function EarDrill({ exercise, onNext }: { exercise: Exercise; onNext?: ()
   const lo = Math.min(48, q.tonic - 12), hi = Math.max(84, q.tonic + 24);
   const multi = q.answers.length > 1;
 
+  if (learning) return <DrillPrimer exercise={exercise} onStart={startQuiz} />;
+
   if (done) {
     return (
       <section className="card drill drill-done">
@@ -129,7 +140,8 @@ export function EarDrill({ exercise, onNext }: { exercise: Exercise; onNext?: ()
         <div className="drill-listen">
           {q.sound.length > 0 && <button className="btn lime" onClick={() => play(q.sound)}><Icon name="play" size={15} />Play again</button>}
           {q.context.length > 0 && <button className="btn" onClick={() => play(q.context)}><Icon name="ear" size={15} />Hear the key</button>}
-          {answered && <button className="btn" onClick={() => play(q.reveal)}><Icon name="note" size={15} />Hear the answer</button>}
+          {answered && <button className="btn" onClick={() => (spec.kind === 'count' ? setRevealKey((k) => k + 1) : play(q.reveal))}><Icon name="note" size={15} />Hear the answer</button>}
+          {!answered && primable && <button className="btn" onClick={() => setLearning(true)}><Icon name="ear" size={15} />Learn them again</button>}
         </div>
         {multi && (
           <div className="drill-slots">
@@ -144,10 +156,15 @@ export function EarDrill({ exercise, onNext }: { exercise: Exercise; onNext?: ()
               const isAns = answered && (multi ? false : q.answers[0] === o);
               return (
                 <button key={o} className={`drill-opt ${tries[o] ?? ''} ${isAns ? (marks[0] === 'right' ? 'right' : 'shown') : ''}`} disabled={answered || tries[o] === 'wrong'}
-                  onClick={() => answer(o, o === q.answers[slot])}>{optionLabel(spec.kind, o)}</button>
+                  onClick={() => answer(o, o === q.answers[slot])}>
+                  {spec.kind === 'count' && <span className="opt-rhythm"><RhythmDemo demo={{ items: countItems(o), countIn: false }} compact /></span>}
+                  {optionLabel(spec.kind, o)}</button>
               );
             })}
           </div>
+        )}
+        {answered && spec.kind === 'count' && (
+          <div className="drill-reveal"><RhythmDemo demo={{ items: countItems(q.answers[0]), bpm: 94 }} playKey={revealKey} /></div>
         )}
         {answered && (
           <div className={`drill-explain ${marks.every((m) => m === 'right') ? 'ok' : ''}`}>
@@ -163,5 +180,48 @@ export function EarDrill({ exercise, onNext }: { exercise: Exercise; onNext?: ()
         </section>
       )}
     </>
+  );
+}
+
+/** quizzes that show and play every possible answer before round 1 */
+const PRIMER_KINDS: string[] = ['count', 'tempo', 'meter', 'interval', 'quality', 'degree'];
+
+/** Learn it first: every answer of the quiz, seen and heard, before the test begins. */
+function DrillPrimer({ exercise, onStart }: { exercise: Exercise; onStart: () => void }) {
+  const spec = exercise.drill!;
+  const [cell, setCell] = useState(spec.pool[0]);
+  const [key, setKey] = useState(0);
+  const hear = (o: string) => { const q = makeQuestion({ ...spec, pool: [o] }); audio.stopAll(); audio.playNotes(q.sound, 0.7); };
+  useEffect(() => () => audio.stopAll(), []);
+  const intro: Record<string, string> = {
+    count: 'Each answer in this quiz is a rhythm word. Tap each one to see its notes appear on the staff as they sound, and say the word along with it.',
+    tempo: 'Each answer is a tempo word. Tap each one to hear the same tune at its speed, and watch its pulse.',
+    meter: 'Each answer is a time signature. Tap each one to hear where its strong beats fall.',
+    interval: 'Each answer is a distance between two notes. Tap each one to hear it.',
+    quality: 'Each answer is a type of chord. Tap each one to hear its colour.',
+    degree: 'Each answer is a scale degree. You will hear the key first, then the note. Tap each one to hear how it feels in the key.',
+  };
+  return (
+    <section className="card drill drill-primer">
+      <span className="kicker">Learn it first</span>
+      <h3>{exercise.title}</h3>
+      <p className="muted">{intro[spec.kind]}</p>
+      {spec.kind === 'count' && (
+        <>
+          <div className="primer-chips">
+            {spec.pool.map((c) => <button key={c} className={`chip ${cell === c ? 'on' : ''}`} onClick={() => { setCell(c); setKey((k) => k + 1); }}><b>{CELLS[c].say}</b><small>{CELLS[c].name}</small></button>)}
+          </div>
+          <RhythmDemo key={cell} demo={{ items: cellBar(cell), bpm: 84 }} playKey={key} />
+        </>
+      )}
+      {spec.kind === 'tempo' && <TempoDemo words={spec.pool.filter((w) => TEMPOS.some((t) => t.id === w))} />}
+      {spec.kind === 'meter' && <MeterDemo meters={spec.pool} />}
+      {['interval', 'quality', 'degree'].includes(spec.kind) && (
+        <div className="primer-chips">
+          {spec.pool.map((o) => <button key={o} className="chip" onClick={() => hear(o)}><Icon name="play" size={12} /><b>{optionLabel(spec.kind, o)}</b></button>)}
+        </div>
+      )}
+      <div className="drill-actions"><button className="btn lime" onClick={onStart}>I'm ready, start the quiz<Icon name="next" size={15} /></button></div>
+    </section>
   );
 }
