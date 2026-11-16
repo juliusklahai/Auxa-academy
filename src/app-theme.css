@@ -1404,3 +1404,5 @@ html.theme-dark .drill-opt .opt-rhythm .rd-stage { background: #fff; border-radi
 .coach-voice .cv-text { display: grid; gap: 1px; flex: 1; min-width: 0; }
 .coach-voice .cv-text small { color: #777; font-size: 12px; }
 .coach-voice .cv-check { color: #0fb9b1; font-weight: 700; }
+/* dashboard cards keep the same 16px gap as the rest */
+.card.my-tracks, .card.place-invite { margin-bottom: 16px; }
