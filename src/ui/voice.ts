@@ -73,7 +73,8 @@ function recordings(id = voiceId()): Promise<Set<string>> {
   if (id === 'device') return Promise.resolve(new Set());
   let p = recorded.get(id);
   if (!p) {
-    p = fetch(`${voiceDir(id)}index.json`, { cache: 'force-cache' }).then((r) => (r.ok ? r.json() : { lines: [] })).then((j: { lines: string[] }) => new Set(j.lines)).catch(() => new Set<string>());
+    // the list grows with each release, so always check it is current (recordings are named by their content and can stay cached)
+    p = fetch(`${voiceDir(id)}index.json`, { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : { lines: [] })).then((j: { lines: string[] }) => new Set(j.lines)).catch(() => new Set<string>());
     recorded.set(id, p);
     // offline or missing: forget it, so it is tried again later
     void p.then((s) => { if (!s.size) recorded.delete(id); });

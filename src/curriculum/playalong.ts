@@ -195,7 +195,8 @@ export function playAlong(id: string, spec: PlayAlongSpec, style: PlayAlongStyle
     id: `${id}-pa${n}`, title: `Play along: ${name}`, objective: what, clef, mode: timed ? 'timed' : 'wait',
     tempo: spec.tempo ?? (timed ? 72 : 84), timeSig: [beats, 4], events, skills: spec.skills ?? ['keyboardGeography', 'pitchAccuracy'],
     passScore: 80, maxConsecutiveMistakes: 3, requiredPasses: 1, inputs: ['midi', 'mic', 'screen', 'computer-keyboard'],
-    backing, grand: spec.hand === 'both', hideLabels: spec.hideLabels,
+    // the band's part goes on its own staff, so both hands are always readable (no towers of ledger lines)
+    backing, grand: spec.hand === 'both' || backing.some((b) => b.hand && b.hand !== spec.hand), hideLabels: spec.hideLabels,
   };
 }
 
