@@ -3,7 +3,7 @@
 // melodies throughout (concepts only, nothing copied).
 import type { Clef, DrillSpec, Exercise, ScoreEvent, SkillId } from '../core/types';
 import { hands, seqOf, type LessonDef } from './levels';
-import { R } from './rhythmCards';
+import { M, R } from './rhythmCards';
 import type { TeachStep } from '../core/types';
 
 function ex(id: string, title: string, objective: string, clef: Clef, mode: 'wait' | 'timed', events: ScoreEvent[], skills: SkillId[], opts: Partial<Exercise> = {}): Exercise {
@@ -31,6 +31,46 @@ export const SETUP_LESSON: LessonDef = {
       hands('R:4 C#6:1 D#6:1 C#6:1 D#6:1', 'C#2:1 D#2:1 C#2:1 D#2:1 R:4'), ['keyboardGeography'], { grand: true, hideLabels: true }),
   ],
   playAlong: { keys: [61, 63, 66, 68, 70], hand: 'RH', styles: ['echo', 'call'], skills: ['keyboardGeography'] },
+};
+
+/** Level 0, step 1 of the foundation: how long notes last, before any reading or keys. */
+export const VALUES_LESSON: LessonDef = {
+  id: 'L0-5', level: 0, title: 'Note values: how long each note lasts', prerequisites: [],
+  summary: 'Whole, half, quarter and eighth notes, and their rests: see each one, hear it, and count it.',
+  teach: [
+    t('Notes have lengths', 'Every note tells you two things: which key to play (from where it sits on the staff, coming next) and how long to hold it (from its shape). Length is counted in beats, the steady pulse you tap your foot to. Here is a steady beat on one key. Count "1 2 3 4" with the numbers.', undefined, undefined, { rhythm: R('ta ta ta ta', { bpm: 66 }) }),
+    t('The whole note: 4 beats', 'A hollow oval with no stem is a whole note. It lasts four beats, a whole bar: play it on 1 and keep holding through 2, 3 and 4. Watch it stay lit while the count goes on.', undefined, undefined, { rhythm: R('ta-a-a-a ta-a-a-a', { bpm: 72 }) }),
+    t('The half note: 2 beats', 'Add a stem to the hollow oval and you have a half note. It lasts two beats, half of a whole note, so two of them fill a bar. Play on 1, hold through 2; play on 3, hold through 4.', undefined, undefined, { rhythm: R('ta-a ta-a ta-a ta-a', { bpm: 72 }) }),
+    t('The quarter note: 1 beat', 'Fill the oval in and you have a quarter note. It lasts one beat, so four of them fill a bar: one note on every count.', undefined, undefined, { rhythm: R('ta ta ta ta ta ta ta ta', { bpm: 72 }) }),
+    t('The eighth note: half a beat', 'Add a flag to the quarter note and you have an eighth note. It lasts half a beat, so two share one beat, and they are usually joined by a beam. Eight of them fill a bar: count "1 and 2 and 3 and 4 and".', undefined, undefined, { rhythm: R('ti ti ti ti ti ti ti ti', { bpm: 66 }) }),
+    t('One bar, four ways', 'A bar of four beats can hold one whole note, or two half notes, or four quarter notes, or eight eighth notes. Each value is half as long as the one before. Watch the same bar fill up four ways.', undefined, undefined, { rhythm: R('ta-a-a-a ta-a ta-a ta ta ta ta ti ti ti ti ti ti ti ti', { bpm: 72 }) }),
+    t('Rests: counted silence', 'Every note value has a rest of the same length. The whole rest hangs below a line (4 beats), the half rest sits on top of a line (2 beats), the quarter rest is a squiggle (1 beat) and the eighth rest is a little 7 (half a beat). Lift your hand, but keep counting through the silence.', undefined, undefined, { rhythm: R('ta sh ta sh ta-a sh-h ta ta s ti sh sh-h-h-h', { bpm: 72 }) }),
+  ],
+  exercises: [
+    drill('L0-5-a', 'Long or short?', 'Hear one bar on one key: whole, half or quarter notes?', { kind: 'value', pool: ['whole', 'half', 'quarter'], rounds: 6 }),
+    drill('L0-5-b', 'All four values', 'Whole, half, quarter or eighth notes?', { kind: 'value', pool: ['whole', 'half', 'quarter', 'eighth'], rounds: 8 }),
+  ],
+};
+
+/** Level 0, step 2: the staff itself, treble and bass, every line and space, before the keyboard. */
+export const STAFF_LESSON: LessonDef = {
+  id: 'L0-6', level: 0, title: 'The staff: lines and spaces, treble and bass', prerequisites: [],
+  summary: 'Five lines and four spaces, the treble and bass clefs, and the name of every line and space.',
+  teach: [
+    t('Five lines, four spaces', 'Music is written on the staff: five lines with four spaces between them, counted from the bottom up. A note sits either ON a line (the line runs through it) or IN a space. Each step up, line to space to line, is the next note up. The higher it sits, the higher it sounds.', undefined, undefined, { rhythm: M('treble', 'E4 F4 G4 A4 B4 C5 D5 E5 F5', { bpm: 72 }), teaches: ['staff'] }),
+    t('The treble clef', 'The treble clef (also called the G clef) starts the top staff. Its curl wraps around line 2 and names that line G, the G just above middle C. High notes, usually for the right hand, are written here.', undefined, undefined, { rhythm: M('treble', 'G4', { beats: 2 }) }),
+    t('Treble lines: E G B D F', 'The five treble lines, bottom to top, are E, G, B, D and F. Remember them as "Every Good Boy Does Fine". Watch each line get its note and say the letters with it.', undefined, undefined, { rhythm: M('treble', 'E4 G4 B4 D5 F5') }),
+    t('Treble spaces: F A C E', 'The four treble spaces, bottom to top, spell a word: F A C E, "face". Lines and spaces together go up the alphabet one step at a time: E (line), F (space), G (line), A (space)...', undefined, undefined, { rhythm: M('treble', 'F4 A4 C5 E5') }),
+    t('The bass clef', 'The bass clef (also called the F clef) starts the bottom staff. Its two dots sit either side of line 4 and name that line F, the F just below middle C. Low notes, usually for the left hand, are written here.', undefined, undefined, { rhythm: M('bass', 'F3', { beats: 2 }) }),
+    t('Bass lines: G B D F A', 'The five bass lines, bottom to top, are G, B, D, F and A: "Good Boys Do Fine Always". Careful: they are not the same as the treble lines.', undefined, undefined, { rhythm: M('bass', 'G2 B2 D3 F3 A3') }),
+    t('Bass spaces: A C E G', 'The four bass spaces, bottom to top, are A, C, E and G: "All Cows Eat Grass".', undefined, undefined, { rhythm: M('bass', 'A2 C3 E3 G3') }),
+    t('Middle C joins them', 'Put the two staves together and you have the grand staff, the piano\'s staff. Middle C sits on its own short ledger line between them: just below the treble staff, or just above the bass staff. It is the same key either way. Above it come D (hanging under the treble staff) and E (on the bottom line). Next you will find all of these notes on the keyboard.', [60], undefined, { rhythm: M('treble', 'C4 D4 E4 F4 G4'), teaches: ['ledger'] }),
+  ],
+  exercises: [
+    drill('L0-6-a', 'Treble lines and spaces', 'Name each note on the treble staff.', { kind: 'notename', pool: ['treble-lines', 'treble-spaces'], rounds: 10 }, ['noteReadingTreble']),
+    drill('L0-6-b', 'Bass lines and spaces', 'Name each note on the bass staff.', { kind: 'notename', pool: ['bass-lines', 'bass-spaces'], rounds: 10 }, ['noteReadingBass']),
+    drill('L0-6-c', 'Both staves', 'Treble or bass, line or space: name it.', { kind: 'notename', pool: ['treble-lines', 'treble-spaces', 'bass-lines', 'bass-spaces'], rounds: 10 }, ['noteReadingTreble', 'noteReadingBass']),
+  ],
 };
 
 /** Level 1: count out loud with syllables, and the Italian tempo words. */

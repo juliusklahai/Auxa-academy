@@ -1,7 +1,7 @@
 // Ear-training drills: question generators (pure, unit-tested). The EarDrill screen plays them and checks
 // answers given by tapping a choice or by playing on the keys.
 import type { DrillSpec } from '../core/types';
-import { countQuestion, keySigQuestion, meterQuestion, noteNameQuestion, roadmapQuestion, tempoQuestion } from './readingDrills';
+import { countQuestion, valueQuestion, keySigQuestion, meterQuestion, noteNameQuestion, roadmapQuestion, tempoQuestion } from './readingDrills';
 
 export interface Sound { midi: number; startMs: number; durMs: number }
 export interface DrillQuestion {
@@ -154,6 +154,7 @@ export function makeQuestion(spec: DrillSpec, rnd: Rnd = Math.random): DrillQues
   const beat = 600;
   switch (spec.kind) {
     case 'count': return countQuestion(spec.pool, rnd);
+    case 'value': return valueQuestion(spec.pool, rnd);
     case 'tempo': return tempoQuestion(spec.pool, rnd);
     case 'meter': return meterQuestion(spec.pool, rnd);
     case 'roadmap': return roadmapQuestion(spec.pool, rnd);

@@ -32,6 +32,7 @@ export function conceptsNeeded(ex: Exercise): Set<Concept> {
           c.add('syllables');
         }
         break;
+      case 'value': for (const v of d.pool) c.add(`value:${v}`); break;
       case 'tempo': for (const w of d.pool) c.add(`tempo:${w}`); break;
       case 'meter': for (const m of d.pool) c.add(`meter:${m}`); break;
       case 'interval': for (const i of d.pool) c.add(`interval:${i}`); break;

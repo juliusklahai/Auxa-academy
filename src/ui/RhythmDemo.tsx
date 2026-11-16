@@ -33,6 +33,9 @@ export function RhythmDemo({ demo, playKey = 0, compact = false, onDone }: { dem
   const beatsPerBar = ts[0] * (4 / ts[1]);
   const bpm = demo.bpm ?? 80;
   const items = demo.items;
+  const clef = demo.clef ?? 'treble';
+  const map = !!demo.map;
+  const homeMidi = clef === 'bass' ? 48 : 72, midLine = clef === 'bass' ? 50 : 71;
   const starts = items.reduce<number[]>((a, it, i) => { a.push(i ? a[i - 1] + items[i - 1].beats : 0); return a; }, []);
   const total = items.reduce((s, it) => s + it.beats, 0);
   const bars = Math.max(1, Math.ceil(total / beatsPerBar - 1e-6));
@@ -57,8 +60,8 @@ export function RhythmDemo({ demo, playKey = 0, compact = false, onDone }: { dem
     let run: StaveNote[] = [];
     items.forEach((it, i) => {
       const { d, dots, trip } = vexDuration(it.beats);
-      const key = it.rest ? 'b/4' : midiToVexKey(it.midi ?? 72, false);
-      const n = new StaveNote({ clef: 'treble', keys: [key], duration: d + (it.rest ? 'r' : ''), auto_stem: !it.rest, stem_direction: (it.midi ?? 72) >= 71 ? -1 : 1 });
+      const key = it.rest ? (clef === 'bass' ? 'd/3' : 'b/4') : midiToVexKey(it.midi ?? homeMidi, false);
+      const n = new StaveNote({ clef, keys: [key], duration: d + (it.rest ? 'r' : ''), auto_stem: !it.rest, stem_direction: (it.midi ?? homeMidi) >= midLine ? -1 : 1 });
       if (dots) Dot.buildAndAttach([n], { all: true });
       notes.push(n);
       perBar[Math.min(bars - 1, Math.floor(starts[i] / beatsPerBar + 1e-6))].push(n);
@@ -90,7 +93,7 @@ export function RhythmDemo({ demo, playKey = 0, compact = false, onDone }: { dem
       line.forEach((b, k) => {
         const w = (barNeed[b] / total) * avail + (li === 0 && k === 0 ? clefW : 0);
         const stave = new Stave(x, y, w);
-        if (li === 0 && k === 0 && !compact) stave.addClef('treble').addTimeSignature(`${ts[0]}/${ts[1]}`);
+        if (li === 0 && k === 0 && !compact) { stave.addClef(clef); if (!map) stave.addTimeSignature(`${ts[0]}/${ts[1]}`); }
         stave.setContext(ctx).draw();
         x += w;
         const bn = perBar[b];
@@ -130,7 +133,7 @@ export function RhythmDemo({ demo, playKey = 0, compact = false, onDone }: { dem
     stop();
     audio.stopAll();
     const beatMs = 60000 / bpm;
-    const count = demo.countIn === false ? 0 : beatsPerBar;
+    const count = demo.countIn === false || map ? 0 : beatsPerBar;
     for (let k = 0; k < count + Math.ceil(total); k++) audio.click(k % beatsPerBar === 0, k >= count, k * beatMs);
     const sounds = items.flatMap((it, i) => (it.rest ? [] : [{ midi: it.midi ?? 72, startMs: (count + starts[i]) * beatMs, durMs: Math.max(120, it.beats * beatMs * 0.92) }]));
     audio.playNotes(sounds, 0.7);
@@ -182,7 +185,12 @@ export function RhythmDemo({ demo, playKey = 0, compact = false, onDone }: { dem
         {head !== null && <span className="rd-head" style={{ left: head.x, top: head.top, height: head.h }} />}
         {now !== null && now < 0 && <span className="rd-count">{Math.floor(now + beatsPerBar) + 1}</span>}
       </div>
-      {!compact && (
+      {!compact && map && (
+        <div className="rd-beats">
+          <button className="btn small rd-play" onClick={play} aria-label="Play the rhythm"><Icon name="play" size={13} />{now !== null ? 'Again' : 'Play'}</button>
+        </div>
+      )}
+      {!compact && !map && (
         <div className="rd-beats">
           {Array.from({ length: bars * beatsPerBar }, (_, b) => (
             <span key={b} className={`rd-b ${beatNow === b ? 'on' : ''} ${b % beatsPerBar === 0 ? 'rd-down' : ''}`}>{(b % beatsPerBar) + 1}</span>

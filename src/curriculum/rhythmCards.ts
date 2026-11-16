@@ -26,3 +26,11 @@ export function R(spec: string, opts: { bpm?: number; timeSig?: [number, number]
   });
   return { items, bpm: opts.bpm ?? 80, timeSig: opts.timeSig, countIn: opts.countIn };
 }
+
+/** A map of the staff: each note appears in turn with its letter name under it ("E4 G4 B4 D5 F5"). */
+export function M(clef: 'treble' | 'bass', notes: string, opts: { bpm?: number; beats?: number } = {}): RhythmDemo {
+  const items = notes.trim().split(/\s+/).map((n) => ({ beats: opts.beats ?? 1, midi: nameToMidi(n), say: n.replace(/\d+$/, '').replace('#', '♯').replace(/(?<=[A-G])b$/, '♭') }));
+  // one bar holds them all, so the map never breaks across lines
+  const total = items.reduce((a, it) => a + it.beats, 0);
+  return { items, bpm: opts.bpm ?? 60, clef, map: true, countIn: false, timeSig: [Math.max(4, Math.ceil(total)), 4] };
+}

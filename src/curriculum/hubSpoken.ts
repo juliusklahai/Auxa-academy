@@ -3,9 +3,11 @@ export const HUB_SPOKEN: Record<string, string> = {
   // Level 0
   'L0-0': "Welcome! Before we play, let's get you sitting well, with soft round hands. Then you'll make your very first music on the black keys.",
   'L0-1': "Let's meet the keyboard. You'll find the groups of black keys, and the most important note of all, middle C.",
-  'L0-2': "Today you'll learn the names of the white keys, C, D, E, F and G, and play them with all five fingers.",
-  'L0-3': "Time for the black keys. You'll learn that a sharp is the key just to the right, and play your first sharps.",
-  'L0-4': "Music has a heartbeat, called the pulse. Let's feel it, count it, and play right on it.",
+  'L0-2': "Now every white key. A, B, C, D, E, F and G, how to find each one from the black keys, in every octave, and how they match the staff.",
+  'L0-3': "Time for the black keys. A sharp is the key just to the right, and a flat is the key just to the left. So every black key has two names.",
+  'L0-4': "Now we put it all together on one key. Middle C as whole notes, half notes, quarter notes and eighth notes, then mixed, always right on the click.",
+  'L0-5': "Before we read or play, let's learn how long notes last. Whole notes, half notes, quarter notes and eighth notes. You'll see each one and hear it.",
+  'L0-6': "Now the staff. Five lines, four spaces, the treble clef and the bass clef, and the name of every line and space.",
   // Level 1
   'L1-1': "Let's read some music! You'll learn the treble staff, and play C to G just by reading the notes.",
   'L1-2': "Some notes are long and some are short. Today you'll hold half notes and whole notes for just the right time.",

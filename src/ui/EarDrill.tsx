@@ -12,7 +12,7 @@ import { bumpProgress, progress, useSettings } from './settings';
 import { say, stopSpeaking } from './voice';
 import { witnessStart } from '../account/witness';
 import { DRILL_LINES } from '../curriculum/spoken';
-import { cellBar, countItems, CELLS, TEMPOS } from '../curriculum/readingDrills';
+import { cellBar, countItems, CELLS, TEMPOS, VALUES, valueBar, valueOfLabel } from '../curriculum/readingDrills';
 import { RhythmDemo } from './RhythmDemo';
 import { MeterDemo, TempoDemo } from './PulseDemos';
 
@@ -66,7 +66,7 @@ export function EarDrill({ exercise, onNext }: { exercise: Exercise; onNext?: ()
       firstTry.current = true;
       const next = slot + 1;
       setSlot(next);
-      if (next >= q.answers.length) window.setTimeout(() => { if (spec.kind === 'count') setRevealKey((k) => k + 1); else play(q.reveal); }, 250);
+      if (next >= q.answers.length) window.setTimeout(() => { if (spec.kind === 'count' || spec.kind === 'value') setRevealKey((k) => k + 1); else play(q.reveal); }, 250);
     } else {
       firstTry.current = false;
       if (choice) setTries((t) => ({ ...t, [choice]: 'wrong' }));
@@ -139,8 +139,8 @@ export function EarDrill({ exercise, onNext }: { exercise: Exercise; onNext?: ()
         <p className="drill-prompt">{q.prompt}</p>
         <div className="drill-listen">
           {q.sound.length > 0 && <button className="btn lime" onClick={() => play(q.sound)}><Icon name="play" size={15} />Play again</button>}
-          {q.context.length > 0 && <button className="btn" onClick={() => play(q.context)}><Icon name="ear" size={15} />Hear the key</button>}
-          {answered && <button className="btn" onClick={() => (spec.kind === 'count' ? setRevealKey((k) => k + 1) : play(q.reveal))}><Icon name="note" size={15} />Hear the answer</button>}
+          {q.context.length > 0 && <button className="btn" onClick={() => play(q.context)}><Icon name="ear" size={15} />{spec.kind === 'count' || spec.kind === 'value' || spec.kind === 'tempo' || spec.kind === 'meter' ? 'Hear the clicks' : 'Hear the key'}</button>}
+          {answered && <button className="btn" onClick={() => (spec.kind === 'count' || spec.kind === 'value' ? setRevealKey((k) => k + 1) : play(q.reveal))}><Icon name="note" size={15} />Hear the answer</button>}
           {!answered && primable && <button className="btn" onClick={() => setLearning(true)}><Icon name="ear" size={15} />Learn them again</button>}
         </div>
         {multi && (
@@ -158,10 +158,14 @@ export function EarDrill({ exercise, onNext }: { exercise: Exercise; onNext?: ()
                 <button key={o} className={`drill-opt ${tries[o] ?? ''} ${isAns ? (marks[0] === 'right' ? 'right' : 'shown') : ''}`} disabled={answered || tries[o] === 'wrong'}
                   onClick={() => answer(o, o === q.answers[slot])}>
                   {spec.kind === 'count' && <span className="opt-rhythm"><RhythmDemo demo={{ items: countItems(o), countIn: false }} compact /></span>}
+                  {spec.kind === 'value' && <span className="opt-rhythm"><RhythmDemo demo={{ items: valueBar(valueOfLabel(o)), countIn: false }} compact /></span>}
                   {optionLabel(spec.kind, o)}</button>
               );
             })}
           </div>
+        )}
+        {answered && spec.kind === 'value' && (
+          <div className="drill-reveal"><RhythmDemo demo={{ items: valueBar(valueOfLabel(q.answers[0])), bpm: 86 }} playKey={revealKey} /></div>
         )}
         {answered && spec.kind === 'count' && (
           <div className="drill-reveal"><RhythmDemo demo={{ items: countItems(q.answers[0]), bpm: 94 }} playKey={revealKey} /></div>
@@ -184,7 +188,7 @@ export function EarDrill({ exercise, onNext }: { exercise: Exercise; onNext?: ()
 }
 
 /** quizzes that show and play every possible answer before round 1 */
-const PRIMER_KINDS: string[] = ['count', 'tempo', 'meter', 'interval', 'quality', 'degree'];
+const PRIMER_KINDS: string[] = ['value', 'count', 'tempo', 'meter', 'interval', 'quality', 'degree'];
 
 /** Learn it first: every answer of the quiz, seen and heard, before the test begins. */
 function DrillPrimer({ exercise, onStart }: { exercise: Exercise; onStart: () => void }) {
@@ -194,6 +198,7 @@ function DrillPrimer({ exercise, onStart }: { exercise: Exercise; onStart: () =>
   const hear = (o: string) => { const q = makeQuestion({ ...spec, pool: [o] }); audio.stopAll(); audio.playNotes(q.sound, 0.7); };
   useEffect(() => () => audio.stopAll(), []);
   const intro: Record<string, string> = {
+    value: 'Each answer is a note value. Tap each one to see a whole bar of it appear on the staff as it sounds. Count 1 2 3 4 and notice how many notes fit in the bar.',
     count: 'Each answer in this quiz is a rhythm word. Tap each one to see its notes appear on the staff as they sound, and say the word along with it.',
     tempo: 'Each answer is a tempo word. Tap each one to hear the same tune at its speed, and watch its pulse.',
     meter: 'Each answer is a time signature. Tap each one to hear where its strong beats fall.',
@@ -212,6 +217,14 @@ function DrillPrimer({ exercise, onStart }: { exercise: Exercise; onStart: () =>
             {spec.pool.map((c) => <button key={c} className={`chip ${cell === c ? 'on' : ''}`} onClick={() => { setCell(c); setKey((k) => k + 1); }}><b>{CELLS[c].say}</b><small>{CELLS[c].name}</small></button>)}
           </div>
           <RhythmDemo key={cell} demo={{ items: cellBar(cell), bpm: 84 }} playKey={key} />
+        </>
+      )}
+      {spec.kind === 'value' && (
+        <>
+          <div className="primer-chips">
+            {spec.pool.map((c) => <button key={c} className={`chip ${cell === c ? 'on' : ''}`} onClick={() => { setCell(c); setKey((k) => k + 1); }}><b>{VALUES[c].label}</b><small>{VALUES[c].beats === 0.5 ? 'half a beat each' : VALUES[c].beats === 1 ? '1 beat each' : `${VALUES[c].beats} beats each`}</small></button>)}
+          </div>
+          <RhythmDemo key={cell} demo={{ items: valueBar(cell), bpm: 80 }} playKey={key} />
         </>
       )}
       {spec.kind === 'tempo' && <TempoDemo words={spec.pool.filter((w) => TEMPOS.some((t) => t.id === w))} />}

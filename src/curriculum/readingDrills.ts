@@ -79,6 +79,35 @@ export function countQuestion(pool: string[], rnd: Rnd): DrillQuestion {
   };
 }
 
+/* ---------------- note values: one note, one length, a whole bar of it ---------------- */
+export const VALUES: Record<string, { beats: number; say: string; label: string }> = {
+  whole: { beats: 4, say: 'ta-a-a-a', label: 'Whole notes' },
+  half: { beats: 2, say: 'ta-a', label: 'Half notes' },
+  quarter: { beats: 1, say: 'ta', label: 'Quarter notes' },
+  eighth: { beats: 0.5, say: 'ti', label: 'Eighth notes' },
+};
+export const valueOfLabel = (label: string) => Object.keys(VALUES).find((k) => VALUES[k].label === label) ?? 'quarter';
+/** one bar of a single note value on one key */
+export function valueBar(v: string, midi = 72): { beats: number; say: string; midi: number }[] {
+  const { beats, say } = VALUES[v] ?? VALUES.quarter;
+  return Array.from({ length: Math.round(4 / beats) }, () => ({ beats, say, midi }));
+}
+export function valueQuestion(pool: string[], rnd: Rnd): DrillQuestion {
+  const beatMs = 700;
+  const v = pick(pool, rnd), { beats, label } = VALUES[v] ?? VALUES.quarter;
+  const ctx = clicks(4, beatMs);
+  const notes: Sound[] = valueBar(v).map((n, i) => ({ midi: 72, startMs: 4 * beatMs + i * beats * beatMs, durMs: beats * beatMs * 0.92 }));
+  const per = Math.round(4 / beats);
+  return {
+    prompt: 'Four clicks, then one bar on one key. How long is each note?',
+    sound: [...ctx, ...notes], context: ctx,
+    answers: [label], options: pool.map((p) => VALUES[p].label),
+    reveal: [...ctx, ...notes],
+    explain: `${label}: each one lasts ${beats === 0.5 ? 'half a beat' : beats === 1 ? 'one beat' : `${beats} beats`}, so ${per === 1 ? 'one fills' : `${per} fill`} a bar of four beats.`,
+    tonic: 60,
+  };
+}
+
 /* ---------------- tempo words ---------------- */
 export const TEMPOS: { id: string; bpm: number; means: string }[] = [
   { id: 'Largo', bpm: 50, means: 'very slow and broad' },
@@ -197,7 +226,11 @@ export function roadmapQuestion(pool: string[], rnd: Rnd): DrillQuestion {
 const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 const WHITE = (lo: number, hi: number) => { const out: number[] = []; for (let m = lo; m <= hi; m++) if (![1, 3, 6, 8, 10].includes(m % 12)) out.push(m); return out; };
 const RANGES: Record<string, { clef: 'treble' | 'bass'; notes: number[]; tip: string }> = {
-  // around the landmarks first, then the whole staff, then ledger lines
+  // the lines alone and the spaces alone first, then around the landmarks, the whole staff, ledger lines
+  'treble-lines': { clef: 'treble', notes: [64, 67, 71, 74, 77], tip: 'Treble lines, bottom to top: E G B D F ("Every Good Boy Does Fine").' },
+  'treble-spaces': { clef: 'treble', notes: [65, 69, 72, 76], tip: 'Treble spaces, bottom to top, spell F A C E.' },
+  'bass-lines': { clef: 'bass', notes: [43, 47, 50, 53, 57], tip: 'Bass lines, bottom to top: G B D F A ("Good Boys Do Fine Always").' },
+  'bass-spaces': { clef: 'bass', notes: [45, 48, 52, 55], tip: 'Bass spaces, bottom to top: A C E G ("All Cows Eat Grass").' },
   'treble-near': { clef: 'treble', notes: WHITE(64, 72), tip: 'Find treble G (the line the clef curls round) and count steps from it.' },
   treble: { clef: 'treble', notes: WHITE(62, 79), tip: 'Lines bottom to top: E G B D F. Spaces spell F A C E.' },
   'bass-near': { clef: 'bass', notes: WHITE(50, 60), tip: 'Find bass F (the line between the two dots) and count steps from it.' },

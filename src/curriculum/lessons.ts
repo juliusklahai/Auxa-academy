@@ -5,7 +5,8 @@ import { nameToMidi } from '../core/music';
 import type { Clef, Exercise, Hand, Lesson, ScoreEvent, SkillId } from '../core/types';
 import { frac, MORE_LESSONS, type LessonDef } from './levels';
 import { ADVANCED_LESSONS } from './advanced';
-import { COUNT_LESSON, KEYSIG_LESSON, LANDMARK_LESSON, RHYTHM_LESSONS, SETUP_LESSON } from './basics';
+import { COUNT_LESSON, KEYSIG_LESSON, LANDMARK_LESSON, RHYTHM_LESSONS, SETUP_LESSON, STAFF_LESSON, VALUES_LESSON } from './basics';
+import { hands } from './levels';
 import { CHURCH_LESSONS } from './church';
 import { CRAFT_LESSONS, STYLE_LESSONS } from './styles';
 import { playAlongs, type PlayAlongSpec } from './playalong';
@@ -48,7 +49,7 @@ const BASE_LESSONS: Lesson[] = [
       { title: 'Sit well first', body: 'Sit facing the middle of the keyboard, forearms level with the keys, shoulders loose. Curve your fingers as if holding a small ball. Tension is the enemy: if your wrist feels tight, drop your hands to your lap, shake them out, and start again.' },
       { title: 'The black keys come in groups of 2 and 3', body: 'Look at the highlighted keys. The black keys always repeat in a pattern: a group of two, then a group of three. This pattern is your map of the whole piano.', show: [61, 63, 66, 68, 70] },
       { title: 'Middle C', body: 'C is the white key just LEFT of any group of two black keys. The C closest to the middle of the piano is "middle C", written C4. On the staff it sits on its own short line (a ledger line) below the treble staff.', show: [C4], play: [C4] },
-      { title: 'Notes on the staff', body: 'Music is written as notes on five lines, the staff. Each note you will play for now is a quarter note: a filled head with a stem, one steady beat. Watch middle C appear four times as it sounds. Soon you will count it as "ta".', rhythm: R('C4=ta C4=ta C4=ta C4=ta', { bpm: 66 }) },
+      { title: 'Middle C on the staff', body: 'You met middle C on its ledger line between the two staves. Here it is four times as quarter notes, one beat each. Find it on the keyboard as it sounds: the white key left of the two black keys, in the middle.', rhythm: R('C4=ta C4=ta C4=ta C4=ta', { bpm: 66 }) },
       { title: 'Finger numbers', body: 'Each hand numbers its fingers the same way: thumb = 1, index = 2, middle = 3, ring = 4, little finger = 5. Play middle C with right-hand finger 1 (your thumb), letting the weight of your arm sink into the key.' },
       { title: 'High and low', body: 'Moving right on the keyboard makes pitch go UP (higher). Moving left makes it go DOWN (lower). Listen: low C, middle C, high C.', show: [48, 60, 72], play: [48, 60, 72], sequential: true },
     ],
@@ -58,38 +59,51 @@ const BASE_LESSONS: Lesson[] = [
     ],
   },
   {
-    id: 'L0-2', level: 0, title: 'The musical alphabet: C D E F G', prerequisites: ['L0-1'],
-    summary: 'Learn the white-key names and play C to G with fingers 1 to 5.',
+    id: 'L0-2', level: 0, title: 'Every white key: A B C D E F G', prerequisites: ['L0-1'],
+    summary: 'Name every white key from the black-key landmarks, in every octave, and match it to the staff.',
     teach: [
       { title: 'Only seven letters', body: 'Music uses seven letter names, A B C D E F G, then repeats. From C going right: C D E F G A B, then C again one octave higher.', show: [60, 62, 64, 65, 67, 69, 71, 72] },
       { title: 'Landmarks', body: 'D is between the two black keys. E is just right of them. F is just left of the group of three black keys. G is the first gap inside that group.', show: [62, 64, 65, 67] },
+      { title: 'A and B', body: 'A is the next gap inside the group of three black keys, after G. B is just right of the group of three. Then comes C again, left of the next group of two.', show: [69, 71, 72], play: [67, 69, 71, 72], sequential: true },
+      { title: 'Every octave is the same', body: 'The pattern repeats all the way up and down the piano, and so do the names: every key just left of two black keys is a C, every key between them is a D, and so on. From one C to the next is an octave. Listen to the Ds, low to high.', show: [50, 62, 74], play: [50, 62, 74], sequential: true },
       { title: 'C position', body: 'Put RH finger 1 on middle C, then let fingers 2, 3, 4 and 5 rest on D, E, F and G. This is "C position". Listen to it played up and down.', show: [60, 62, 64, 65, 67], play: [60, 62, 64, 65, 67, 65, 64, 62, 60], sequential: true },
     ],
     exercises: [
       ex('L0-2-a', 'C position up and down', 'Play C D E F G F E D C with fingers 1-2-3-4-5-4-3-2-1.', 'treble', 'wait', seq('C4 D4 E4 F4 G4 F4 E4 D4 C4', 'RH', [1, 2, 3, 4, 5, 4, 3, 2, 1]), ['keyboardGeography', 'fingerTechnique'], { requiredPasses: 2 }),
       ex('L0-2-b', 'Find the letters', 'Play named notes in mixed order without key labels.', 'treble', 'wait', seq('E4 C4 G4 D4 F4 E4 G4 C4', 'RH'), ['keyboardGeography'], { hideLabels: true }),
+      ex('L0-2-c', 'Every D, every F, every A', 'The same letter in different octaves: low with the left hand, higher with the right.', 'treble', 'wait', hands('R:1 D4:1 D5:1 R:1 F4:1 F5:1 R:1 A4:1 A5:1', 'D3:1 R:2 F3:1 R:2 A3:1 R:2'), ['keyboardGeography'], { grand: true }),
+      ex('L0-2-d', 'All seven, A to A', 'Read each note from the staff and play A B C D E F G A. No letters on the keys.', 'treble', 'wait', seq('A4 B4 C5 D5 E5 F5 G5 A5', 'RH', [1, 2, 3, 1, 2, 3, 4, 5]), ['keyboardGeography', 'noteReadingTreble'], { hideLabels: true }),
     ],
   },
   {
-    id: 'L0-3', level: 0, title: 'Black keys: sharps', prerequisites: ['L0-2'],
-    summary: 'Name and play the black keys as sharps.',
+    id: 'L0-3', level: 0, title: 'Black keys: sharps and flats', prerequisites: ['L0-2'],
+    summary: 'Every black key has two names: a sharp of the key below, a flat of the key above.',
     teach: [
       { title: 'Sharp means one key higher', body: 'A sharp (#) raises a note to the very next key on the right. The black key right of C is C#. The black key right of F is F#.', show: [61, 66], play: [60, 61, 65, 66], sequential: true },
       { title: 'Two and three', body: 'In the group of two: C# and D#. In the group of three: F#, G# and A#.', show: [61, 63, 66, 68, 70], play: [61, 63, 66, 68, 70], sequential: true },
+      { title: 'Flat means one key lower', body: 'A flat (♭) lowers a note to the very next key on the left. The black key left of E is E♭; the one left of B is B♭. So every black key has two names: C# and D♭ are the same key. Which name is used depends on the music.', show: [63, 70], play: [64, 63, 71, 70], sequential: true },
     ],
     exercises: [
       ex('L0-3-a', 'Two-group and three-group', 'Play C# D# then F# G# A#.', 'treble', 'wait', seq('C#4 D#4 F#4 G#4 A#4', 'RH', [2, 3, 2, 3, 4]), ['keyboardGeography']),
+      ex('L0-3-b', 'The same keys as flats', 'Play D♭ E♭ then G♭ A♭ B♭.', 'treble', 'wait', seq('Db4 Eb4 Gb4 Ab4 Bb4', 'RH', [2, 3, 2, 3, 4]), ['keyboardGeography']),
     ],
   },
   {
-    id: 'L0-4', level: 0, title: 'Feel the pulse', prerequisites: ['L0-2'],
-    summary: 'Play steady quarter notes with the metronome.',
+    id: 'L0-4', level: 0, title: 'One key, every note value', prerequisites: ['L0-2'],
+    summary: 'Middle C in whole, half, quarter and eighth notes, then mixed, always with the click.',
     teach: [
       { title: 'The beat', body: 'Music has a steady pulse, like a heartbeat. The metronome clicks each beat. You will hear 4 count-in clicks, then play middle C exactly WITH each click.' },
-      { title: 'Quarter note', body: 'A quarter note (filled head with a stem) lasts one beat. Bars hold four beats here, so count "1, 2, 3, 4" aloud while you play, and watch each note appear right on its click.', show: [C4], rhythm: R('C4=ta C4=ta C4=ta C4=ta C4=ta C4=ta C4=ta C4=ta', { bpm: 60 }) },
+      { title: 'Quarter notes on middle C', body: 'A quarter note lasts one beat: one note on every click. Count "1, 2, 3, 4" aloud while you play, and watch each note appear right on its click.', show: [C4], rhythm: R('C4=ta C4=ta C4=ta C4=ta C4=ta C4=ta C4=ta C4=ta', { bpm: 60 }) },
+      { title: 'Every value on one key', body: 'Staying on one key lets you think only about length. Here is middle C as a whole note, then half notes, quarter notes and eighth notes, one bar each. Hold every note for its full value: press on the count, and lift exactly when the next note (or the end of its beats) arrives.', show: [C4], rhythm: R('C4=ta-a-a-a C4=ta-a C4=ta-a C4=ta C4=ta C4=ta C4=ta C4=ti C4=ti C4=ti C4=ti C4=ti C4=ti C4=ti C4=ti', { bpm: 66 }) },
+      { title: 'Mix them', body: 'Now the values change inside the bar. Keep counting the beat underneath and let each note last exactly as long as its shape says.', show: [C4], rhythm: R('C4=ta-a C4=ta C4=ta C4=ti C4=ti C4=ta C4=ta-a C4=ta-a-a-a', { bpm: 66 }) },
     ],
     exercises: [
-      ex('L0-4-a', 'Four steady Cs', 'Play four quarter-note Cs in time at 60 BPM.', 'treble', 'timed', seq('C4 C4 C4 C4 C4 C4 C4 C4'), ['pulse', 'rhythm'], { requiredPasses: 2 }),
+      ex('L0-4-w', 'All whole notes', 'Middle C, four beats each: play on 1 and hold through 4.', 'treble', 'timed', seq('C4:4 C4:4 C4:4', 'RH', [1, 1, 1]), ['pulse', 'rhythm']),
+      ex('L0-4-h', 'All half notes', 'Two beats each: play on 1 and on 3.', 'treble', 'timed', seq('C4:2 C4:2 C4:2 C4:2 C4:2 C4:2', 'RH', [1, 1, 1, 1, 1, 1]), ['pulse', 'rhythm']),
+      ex('L0-4-a', 'All quarter notes', 'One note on every click at 60 BPM.', 'treble', 'timed', seq('C4 C4 C4 C4 C4 C4 C4 C4'), ['pulse', 'rhythm'], { requiredPasses: 2 }),
+      ex('L0-4-e', 'All eighth notes', 'Two even notes in every beat: "1 and 2 and".', 'treble', 'timed', seq('C4:0.5 C4:0.5 C4:0.5 C4:0.5 C4:0.5 C4:0.5 C4:0.5 C4:0.5 C4:0.5 C4:0.5 C4:0.5 C4:0.5 C4:0.5 C4:0.5 C4:0.5 C4:0.5'), ['pulse', 'rhythm'], { tempo: 56 }),
+      ex('L0-4-m', 'Mix: whole, half and quarter', 'The value changes; the beat does not.', 'treble', 'timed', seq('C4:2 C4:1 C4:1 C4:4 C4:1 C4:1 C4:2 C4:4'), ['rhythm']),
+      ex('L0-4-n', 'Mix with eighth notes', 'All four values in three bars.', 'treble', 'timed', seq('C4:1 C4:0.5 C4:0.5 C4:2 C4:0.5 C4:0.5 C4:0.5 C4:0.5 C4:1 C4:1 C4:4'), ['rhythm'], { tempo: 56 }),
     ],
   },
   {
@@ -279,9 +293,9 @@ const BASE_LESSONS: Lesson[] = [
 const N = (s: string) => s.split(' ').map(nameToMidi);
 /** Play-along mastery pieces for the first levels: you play only what the lesson taught. */
 const BASE_PLAYALONG: Record<string, PlayAlongSpec> = {
-  'L0-1': { keys: [C4], hand: 'RH', styles: ['echo', 'call', 'echo', 'tempo'], tempo: 80 },
-  'L0-2': { keys: N('C4 D4 E4 F4 G4'), hand: 'RH', styles: ['call', 'melody', 'melody'] },
-  'L0-3': { keys: N('C#4 D#4 F#4 G#4 A#4'), hand: 'RH', styles: ['echo', 'call'] },
+  'L0-1': { keys: [C4], hand: 'RH', styles: ['echo', 'call', 'echo', 'tempo'], tempo: 80, values: [1, 2, 4] },
+  'L0-2': { keys: N('C4 D4 E4 F4 G4'), hand: 'RH', styles: ['call', 'melody', 'melody'], values: [1, 2, 4] },
+  'L0-3': { keys: N('C#4 D#4 F#4 G#4 A#4'), hand: 'RH', styles: ['echo', 'call'], values: [1, 2, 4] },
   'L0-4': { keys: [C4], hand: 'RH', styles: ['tempo', 'tempo'], tempo: 72, skills: ['pulse', 'rhythm'] },
   'L1-1': { keys: N('C4 D4 E4 F4 G4'), hand: 'RH', styles: ['melody', 'call'], hideLabels: true, skills: ['noteReadingTreble'] },
   'L1-2': { keys: N('C4 D4 E4 F4 G4'), hand: 'RH', styles: ['tempo', 'melody'], skills: ['rhythm'] },
@@ -308,7 +322,8 @@ function after(list: Lesson[], id: string, add: Lesson[]): Lesson[] {
   const i = list.findIndex((l) => l.id === id);
   return i < 0 ? [...list, ...add] : [...list.slice(0, i + 1), ...add, ...list.slice(i + 1)];
 }
-let piano: Lesson[] = [pa(SETUP_LESSON), ...pianoBase, ...more, ...CHURCH_LESSONS.map(pa), ...STYLE_LESSONS.map(pa)];
+// the foundation, in order: sit well, note values, the staff, the keys, then one key in every value
+let piano: Lesson[] = [pa(SETUP_LESSON), pa(VALUES_LESSON), pa(STAFF_LESSON), ...pianoBase, ...more, ...CHURCH_LESSONS.map(pa), ...STYLE_LESSONS.map(pa)];
 piano = after(piano, 'L1-2', [pa(COUNT_LESSON)]);
 piano = after(piano, 'L1-3', [pa(LANDMARK_LESSON)]);
 piano = after(piano, 'L5-2', [pa(KEYSIG_LESSON)]);
@@ -323,7 +338,9 @@ piano = piano.map((l, i) => [l, i] as const).sort((a, b) => a[0].level - b[0].le
     for (const s of l.teach) conceptsTaught(s).forEach((c) => taught.add(c));
     const spec = PA.get(l.id);
     if (!spec) return l;
-    const values = Object.entries(BEATS).filter(([k]) => taught.has(`value:${k}`)).map(([, b]) => b);
+    const known = Object.entries(BEATS).filter(([k]) => taught.has(`value:${k}`)).map(([, b]) => b);
+    // a lesson can keep its piece simpler than everything taught so far
+    const values = spec.values ? spec.values.filter((v) => known.includes(v)) : known;
     return { ...l, exercises: [...l.exercises, ...playAlongs(l.id, { ...spec, values: values.length ? values : [1] })] };
   });
 }
