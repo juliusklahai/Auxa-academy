@@ -13,12 +13,15 @@ export interface VoiceScoreOpts {
   /** times of the metronome clicks, ms from the start of the samples */
   clicks?: number[];
   a4?: number;
+  /** ms from the start of the samples: anything sung before this (during the count-in) is ignored */
+  singFrom?: number;
 }
 
 /** A take, written as a melody. Also returns the syllables (with their times in ms) for checking. */
 export function scoreFromVoice(samples: Float32Array, sampleRate: number, opts: VoiceScoreOpts = {}): (Melody & { syllables: Syllable[]; /** the singer's overall tuning against A = 440, cents */ tuning: number }) | null {
   const key: { tonic?: number; mode?: 'major' | 'minor'; offset?: number } = {};
-  const syl = findSyllables(analyzeVoice(samples, sampleRate, opts.a4 ?? 440), { clicks: opts.clicks, key });
+  const syl = findSyllables(analyzeVoice(samples, sampleRate, opts.a4 ?? 440), { clicks: opts.clicks, key })
+    .filter((s) => opts.singFrom === undefined || s.vowel >= opts.singFrom);
   if (!syl.length) return null;
   const r = readRhythm(syl.map((s) => ({ midi: s.midi, t: s.vowel, e: s.end })), { bpm: opts.bpm, origin: opts.origin, timeSig: opts.timeSig });
   if (!r) return null;

@@ -7,6 +7,7 @@ import { certLevels, earned } from '../progress/certs';
 import { Games } from './Games';
 import { Composer } from './Composer';
 import { VoiceHelp } from './VoiceHelp';
+import { CoachVoicePicker } from './CoachVoicePicker';
 import { useEffect, useRef, useState } from 'react';
 import { Select } from './Select';
 import { audio } from '../audio/engine';
@@ -492,6 +493,7 @@ export function SettingsView() {
           <label className="field">Key labels<Select value={st.labels} onChange={(e) => setSettings({ labels: e.target.value as 'letters' })}><option value="letters">Letters (C D E)</option><option value="solfege">Solfège (Do Re Mi)</option><option value="none">None</option></Select></label>
           <label className="check"><input type="checkbox" checked={st.hands} onChange={(e) => setSettings({ hands: e.target.checked })} /> Show guide hands on the keyboard</label>
           <label className="check"><input type="checkbox" checked={st.coachVoice !== false} onChange={(e) => setSettings({ coachVoice: e.target.checked })} /> Voice coach: read each lesson step aloud</label>
+          <CoachVoicePicker />
           <VoiceHelp />
           <label className="check"><input type="checkbox" checked={st.autoFocus} onChange={(e) => setSettings({ autoFocus: e.target.checked })} /> Full-screen practice when I press Start (Esc returns)</label>
           <label className="check"><input type="checkbox" checked={st.keyHints} onChange={(e) => setSettings({ keyHints: e.target.checked })} /> Show computer-keyboard letters on keys</label>

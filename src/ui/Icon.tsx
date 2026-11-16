@@ -15,6 +15,7 @@ const P: Record<string, string> = {
   metro: 'M8 21h8l-2-17h-4zM12 14l5-8M7 21h10',
   mic: 'M12 15a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v7a3 3 0 0 0 3 3zM19 11a7 7 0 0 1-14 0M12 18v3',
   speaker: 'M4 9v6h4l5 4V5L8 9H4zM16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12',
+  phone: 'M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM11 18h2',
   mute: 'M4 9v6h4l5 4V5L8 9H4zM17 9l5 6M22 9l-5 6',
   upload: 'M12 16V4M7 9l5-5 5 5M5 20h14',
   midi: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8 12h.01M16 12h.01M12 8h.01M9.5 15.5h.01M14.5 15.5h.01',

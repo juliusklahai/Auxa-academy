@@ -164,17 +164,19 @@ export function findSyllables(v: VoiceFrames, opts: SyllableOpts = {}): Syllable
     for (let k = Math.max(0, i - 2); k <= Math.min(n - 1, i + 2); k++) { const p = v.f0[k] ?? v.soft[k]; if (p !== null && voiced[k]) w.push(p); }
     return w.length ? medianOf(w) : null;
   });
-  // octave slips: a frame far from the melody around it moves by an octave
-  const allP = pitch.filter((p): p is number => p !== null);
-  const center = allP.length ? medianOf(allP) : 60;
+  // octave slips: pitch trackers sometimes jump an octave for a moment. Only brief jumps are fixed here
+  // (a frame an octave away from the 150 ms around it); a real leap to a held note is left alone, and
+  // a whole note that looks an octave off is judged later, against its neighbours.
+  const raw = pitch.slice();
   for (let i = 0; i < n; i++) {
-    let p = pitch[i];
+    let p = raw[i];
     if (p === null) continue;
     const near: number[] = [];
-    for (let k = Math.max(0, i - 150); k <= Math.min(n - 1, i + 150); k += 3) { const q = pitch[k]; if (q !== null) near.push(q); }
-    const c = (near.length ? medianOf(near) : center) * 0.5 + center * 0.5;
+    for (let k = Math.max(0, i - 15); k <= Math.min(n - 1, i + 15); k++) { const q = raw[k]; if (q !== null) near.push(q); }
+    if (near.length < 6) continue;
+    const c = medianOf(near);
     while (p - c > 9.5) p -= 12;
-    while (c - p > 8.5) p += 12;
+    while (c - p > 9.5) p += 12;
     pitch[i] = p;
   }
   // tone colour change: distance between the average spectrum just before and just after each frame
@@ -321,6 +323,17 @@ export function findSyllables(v: VoiceFrames, opts: SyllableOpts = {}): Syllable
       changed = true;
       break;
     }
+  }
+  // a whole note an octave away from both neighbours: a real octave leap is held and steady, a tracking
+  // error is short or wavering. Only the second kind moves.
+  for (let k = 0; k < pieces.length; k++) {
+    const q = pieces[k], nb = [pieces[k - 1], pieces[k + 1]].filter(Boolean).map((x) => x!.m);
+    if (!nb.length) continue;
+    const far = nb.every((m) => Math.abs(q.m - m) > 9.5);
+    if (!far || (len(q) >= 260 && q.spread < 0.5)) continue;
+    const c = medianOf(nb);
+    while (q.m - c > 9.5) q.m -= 12;
+    while (c - q.m > 9.5) q.m += 12;
   }
   const out: Syllable[] = pieces.map((q) => ({ start: q.st * ms, vowel: q.a * ms, end: q.b * ms, midi: q.m, cents: 0, spread: q.spread, cause: q.cause }));
   // the singer's own tuning: many people sing a little flat or sharp of A = 440 overall. Find the offset

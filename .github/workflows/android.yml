@@ -34,6 +34,8 @@ jobs:
           npm ci
           npx vite build --outDir native/android/app/src/main/assets/www --emptyOutDir
           rm -f native/android/app/src/main/assets/www/sw.js
+          # extra coach voices stream from the website, so the app download stays small
+          rm -rf native/android/app/src/main/assets/www/voices
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

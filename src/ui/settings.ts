@@ -30,6 +30,8 @@ export interface AppSettings {
   autoFocus: boolean;
   /** voice coach reads lesson steps aloud */
   coachVoice: boolean;
+  /** which voice the coach speaks with: a recorded voice id, or 'device' for the phone's own speech */
+  coachVoiceId: string;
   /** guide hands: anatomical 3D model or the older line drawing */
   handStyle: '3d' | '2d';
   handOpacity: number;
@@ -53,7 +55,7 @@ export interface AppSettings {
 const KEY = 'maestro.settings.v1';
 const DEFAULTS: AppSettings = {
   labels: 'letters', fingers: true, keyHints: false, highContrast: false, a4: 440, volume: 0.8, metronomeVolume: 0.6,
-  latencyMs: 60, noiseGate: 0.002, micSensitivity: 0.85, wrongBeep: false, mistakePolicy: 'restart', hands: true, micMode: 'piano', voiceLow: 57, voiceHigh: 74, outputMode: 'headphones', latencyMode: 'smooth', micDeviceId: '', micInstrument: 'piano', autoFocus: true, coachVoice: true,
+  latencyMs: 60, noiseGate: 0.002, micSensitivity: 0.85, wrongBeep: false, mistakePolicy: 'restart', hands: true, micMode: 'piano', voiceLow: 57, voiceHigh: 74, outputMode: 'headphones', latencyMode: 'smooth', micDeviceId: '', micInstrument: 'piano', autoFocus: true, coachVoice: true, coachVoiceId: 'af_heart',
   handStyle: '3d', handOpacity: 0.8, handColor: 'white', handLook: 'real', handStroke: 1, handsShow: 'both',
   handsListen: true, keyboard: true, kbScale: 1, kbKeys: 'auto', voiceLevel: 'easy', pianoSound: 'grand',
 };

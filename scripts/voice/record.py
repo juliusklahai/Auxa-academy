@@ -10,14 +10,15 @@ named by the same short id the app computes (FNV-1a of the spoken text), and voi
 import argparse, json, os, subprocess, sys, tempfile, time, warnings
 warnings.filterwarnings('ignore')
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-OUT = os.path.join(ROOT, 'public', 'voice')
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--voice', default='af_heart')
 ap.add_argument('--speed', type=float, default=0.95)
 ap.add_argument('--force', action='store_true', help='record everything again (after changing the voice)')
 ap.add_argument('--budget', type=float, default=0, help='stop cleanly after this many seconds (run again to continue)')
+ap.add_argument('--out', default='', help='folder under public/ (default: voice for the default voice, voices/<voice> for the others)')
 args = ap.parse_args()
+OUT = os.path.join(ROOT, 'public', args.out or ('voice' if args.voice == 'af_heart' else os.path.join('voices', args.voice)))
 
 lines = json.load(open(os.path.join(ROOT, 'scripts', 'voice', 'lines.json')))
 os.makedirs(OUT, exist_ok=True)
@@ -63,4 +64,4 @@ json.dump({'voice': args.voice, 'lines': keys}, open(os.path.join(OUT, 'index.js
 # drop recordings no line uses any more
 for f in os.listdir(OUT):
     if f.endswith('.mp3') and f[:-4] not in keys: os.unlink(os.path.join(OUT, f))
-print(f'done: {len(keys)} recordings in public/voice', flush=True)
+print(f'done: {len(keys)} recordings in {OUT}', flush=True)

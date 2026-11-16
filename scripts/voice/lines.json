@@ -16,6 +16,10 @@
   "text": "Put your thumb behind your middle finger to help it. Now let your whole arm drop into a black key, like a heavy feather, then float back up. Drop, and let go. The sound comes from weight, not from pushing."
  },
  {
+  "key": "126fe05c",
+  "text": "Every round note on the screen is a key to play, and the same key lights up on the keyboard. So for now, just follow the lights. Notes for your right hand are on the top lines, and notes for your left hand are on the bottom lines. Watch the notes appear, one beat each."
+ },
+ {
   "key": "47fa8070",
   "text": "Black keys sound nice in any order, so you can make music already! Low keys sound like a big bear. High keys sound like a little bird. Play low, then high, and listen."
  },
@@ -50,6 +54,10 @@
  {
   "key": "ea3e162e",
   "text": "Find a group of two black keys. The white key just to the left of them is called C. The C in the middle of the piano is called middle C. It is our home base. Listen."
+ },
+ {
+  "key": "21964c21",
+  "text": "Music is written as notes on five lines. Each note you play for now is a quarter note, a filled-in dot with a stick. It lasts one steady beat. Watch middle C appear, four times."
  },
  {
   "key": "a010201c",
@@ -196,12 +204,16 @@
   "text": "Some notes are long and some are short. Today you'll hold half notes and whole notes for just the right time."
  },
  {
-  "key": "a2cb56d9",
-  "text": "Some notes last longer. A half note is hollow with a stick, and lasts two beats. A whole note is hollow with no stick, and lasts four beats. Keep the key down while you count."
+  "key": "b9b882d1",
+  "text": "A half note is a hollow dot with a stick. It lasts two beats. Play it, and keep holding while you count one, two."
  },
  {
-  "key": "d58632d9",
-  "text": "Listen to the difference, C for one beat, D for two beats, and E for four beats."
+  "key": "60d5518a",
+  "text": "A whole note is a hollow dot with no stick. It lasts four beats, a whole bar. Play it, and hold it while you count one, two, three, four."
+ },
+ {
+  "key": "a0d1b6b0",
+  "text": "Now all three together, short, short, long. Watch how long each note stays lit. This is exactly what you'll play next."
  },
  {
   "key": "a71b992d",
@@ -220,16 +232,40 @@
   "text": "Rhythms have words you can say out loud. Say them, clap them, then play them. You'll also learn the words that tell you how fast to go."
  },
  {
-  "key": "fec5c807",
-  "text": "Rhythms have words. Say tah for one beat. tah-ah for two beats. tah-ah-ah for three, and tah-ah-ah-ah for four. A rest is a quiet shush. Say the words and your hands will follow."
+  "key": "0ce5a907",
+  "text": "Rhythms have words you can say. The quarter note says tah. One beat, one tah. Watch each note appear, and say tah with it."
+ },
+ {
+  "key": "4aff5e92",
+  "text": "The half note lasts two beats, so its word lasts two beats too. tah-ah. Keep the key down until the word ends."
+ },
+ {
+  "key": "9f3ebae7",
+  "text": "A dot makes a note longer by half. A dotted half lasts three beats. tah-ah-ah."
+ },
+ {
+  "key": "a15b46f4",
+  "text": "The whole note fills the whole bar. Four beats. tah-ah-ah-ah."
+ },
+ {
+  "key": "63e3d6dd",
+  "text": "A rest is a quiet beat. Lift your hand and whisper shush. A quarter rest is one quiet beat. A half rest is two, and a whole rest is a whole bar."
+ },
+ {
+  "key": "862160d0",
+  "text": "Now the words make a tune! tah, tah, tah-ah. tah-ah, tah-ah. tah, shush, tah, shush. tah-ah-ah-ah. Say it with the notes as they appear."
  },
  {
   "key": "6aafe169",
   "text": "Count the numbers too, one, two, three, four, in every bar. Clap and say the rhythm words while you count. When they line up, your rhythm is right."
  },
  {
-  "key": "023f449a",
-  "text": "Some words tell you how fast to play. They are Italian. Adagio is slow. Andante is walking speed. Allegro is quick and happy. Presto is super fast."
+  "key": "bfcb0edd",
+  "text": "The beat can be slow or fast. That speed is called the tempo, and the words are Italian. Adagio is slow. Andante is walking speed. Allegro is quick and happy. Presto is very fast. Tap each word to hear it."
+ },
+ {
+  "key": "8a2fdfc8",
+  "text": "Sometimes the music gives a number, like eighty-four. That's how many beats fit in one minute. Sixty is one beat every second."
  },
  {
   "key": "17d356ca",
@@ -322,6 +358,14 @@
  {
   "key": "969a7aa7",
   "text": "Your first real melody! You'll play the famous Ode to Joy, slowly and in time."
+ },
+ {
+  "key": "ddf1584e",
+  "text": "Ode to Joy has one new rhythm, so let's learn it first. An eighth note is half a beat. Two of them share one beat, joined by a line. Say tee tee."
+ },
+ {
+  "key": "b5767f9e",
+  "text": "A dotted quarter is long, then a quick eighth note fills the beat. Long, short. tah-i, ti. Ode to Joy ends its lines like this."
  },
  {
   "key": "b47784dc",
@@ -446,6 +490,10 @@
  {
   "key": "af0b4aa8",
   "text": "A little dot over a note means play it short and bouncy, like touching something hot. Let the key spring right back up. This is called staccato."
+ },
+ {
+  "key": "3790ca58",
+  "text": "Here each short note is an eighth note, then an eighth rest, half a beat of quiet. Say ti for the note, and whisper shush for the rest."
  },
  {
   "key": "dc214b50",
@@ -946,6 +994,10 @@
  {
   "key": "9ce500b6",
   "text": "Marches in two four, swaying six eight, and cut time. Let's feel each one."
+ },
+ {
+  "key": "a475ddc4",
+  "text": "The time signature has two numbers. The top one tells you how many beats are in each bar. Listen to where each one leans, four-four, three-four, and two-four."
  },
  {
   "key": "c387af18",
@@ -1570,6 +1622,10 @@
  {
   "key": "3d273868",
   "text": "Never try a whole song at once. Take one short line, play it again and again, and sing it back first. If you can sing it, you can find it on the piano."
+ },
+ {
+  "key": "aa0ee0df",
+  "text": "Number the notes from home. Home is one, do. Three is mi, bright and calm. Five is sol, strong and open. Hear the key, then each one."
  },
  {
   "key": "c0e1c61e",
@@ -2800,6 +2856,10 @@
   "text": "Listen to the note first. Hum it quietly inside your head. Then sing it on loo or ah. Deeper voices can sing it lower. The app accepts any octave."
  },
  {
+  "key": "0df80742",
+  "text": "Each note you sing is a quarter note, one beat. Take your time, the app waits for you."
+ },
+ {
   "key": "bd6d51a8",
   "text": "While you sing, a line shows your pitch. Green means right on. Amber means close. Red means off. If you are too low, think up. If you are too high, relax."
  },
@@ -2814,6 +2874,10 @@
  {
   "key": "9fa01c72",
   "text": "Do, re, mi, fa, sol are names for the steps of the scale. Do is home. Each one has its own feeling. Mi is bright. Sol is strong. Re wants to fall back to do."
+ },
+ {
+  "key": "75df8b9a",
+  "text": "Short notes are one beat, tah. The long note at the end is held longer. Hold it until the word ends."
  },
  {
   "key": "a0b187db",
@@ -2842,6 +2906,10 @@
  {
   "key": "ba8e0b46",
   "text": "Sight-singing means singing music you've just seen. Let's try a short phrase."
+ },
+ {
+  "key": "59b2fc8c",
+  "text": "First the rhythm. Short notes, then a long-short pair, tah-i ti, then a long note at the end. Say it or clap it before you sing."
  },
  {
   "key": "454f6252",

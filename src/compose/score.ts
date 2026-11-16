@@ -25,7 +25,10 @@ export function melodyXml(m: Melody, title: string, chords?: Harmony['slots'], a
 }
 
 export function satbXml(m: Melody, title: string, h: Harmony = harmonize(m)): string {
-  const [S, A, T, B] = h.voices;
+  const [S0, A, T, B] = h.voices;
+  // the words go under the soprano (the tune), note for note
+  const said = m.notes.filter((n) => n.lyric);
+  const S = said.length ? { ...S0, notes: S0.notes.map((n) => { const w = n.midi !== null ? said.find((x) => Math.abs(x.beat - n.beat) < 1e-6) : undefined; return w ? { ...n, lyric: w.lyric, syllabic: w.syllabic } : n; }) } : S0;
   // chord symbols only where the chord changes
   const chords = h.slots.filter((s, i) => s.chord && !(h.slots[i - 1]?.chord && h.slots[i - 1].chord!.degree === s.chord.degree && h.slots[i - 1].chord!.inv === s.chord.inv));
   return writeXml({

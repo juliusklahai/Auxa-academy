@@ -7,7 +7,7 @@ export interface PitchFrame { t: number; midi: number | null; rms: number; /** a
 /** One sung note: equal-tempered pitch, start/end in ms, and how sharp (+) or flat (-) it was. */
 export interface SungNote { midi: number; start: number; end: number; cents: number; /** how steady the pitch was (semitones, middle half of the readings) */ spread?: number }
 /** A written note or rest: start and length in beats from the first downbeat. */
-export interface MelodyNote { midi: number | null; beat: number; beats: number; /** sung syllable, for arranged parts ("Ooh") */ lyric?: string }
+export interface MelodyNote { midi: number | null; beat: number; beats: number; /** sung syllable, for arranged parts ("Ooh") */ lyric?: string; /** where the syllable sits in its word (MusicXML syllabic) */ syllabic?: 'single' | 'begin' | 'middle' | 'end' }
 export interface KeyInfo { tonic: number; mode: 'major' | 'minor'; fifths: number; name: string }
 export interface Melody { notes: MelodyNote[]; bpm: number; timeSig: [number, number]; key: KeyInfo; bars: number }
 

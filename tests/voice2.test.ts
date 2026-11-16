@@ -81,3 +81,23 @@ describe('sing to score v2: rhythm', () => {
     expect(r.notes[0].beat).toBe(0);
   });
 });
+
+describe('sing to score v2: octaves and the count-in', () => {
+  it('keeps a real, held octave leap', () => {
+    const a: number[] = [];
+    quiet(a, 300);
+    vowel(a, 60, 500); hiss(a, 60); vowel(a, 72, 600); hiss(a, 60); vowel(a, 71, 500);
+    quiet(a, 300);
+    const syl = findSyllables(analyzeVoice(Float32Array.from(a), SR));
+    expect(syl.map((s) => s.midi)).toEqual([60, 72, 71]);
+  });
+  it('ignores what is sung before the count-in ends', async () => {
+    const { scoreFromVoice } = await import('../src/compose/singToScore2');
+    const a: number[] = [];
+    quiet(a, 200); vowel(a, 50, 300); quiet(a, 1500); // a stray hum during the count-in
+    [60, 62, 64, 65].forEach((m) => { vowel(a, m, 520); hiss(a, 80); });
+    quiet(a, 300);
+    const r = scoreFromVoice(Float32Array.from(a), SR, { singFrom: 1900 })!;
+    expect(r.syllables.map((s) => s.midi)).toEqual([60, 62, 64, 65]);
+  });
+});

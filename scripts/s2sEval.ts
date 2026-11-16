@@ -51,6 +51,14 @@ function vsScore(mel: Melody, ref: [number, number][]) {
 
 export async function run(which = process.argv[2] ?? 'v1', verbose = process.argv.includes('-v')) {
   if (which === 'v2') { const m = await import('./s2sV2'); register('v2', m.pipe); }
+  if (which === 'app') {
+    const { scoreFromVoice } = await import('../src/compose/singToScore2');
+    register('app', (x, sr) => {
+      const r = scoreFromVoice(x, sr);
+      const notes = (r?.syllables ?? []).map((s) => ({ midi: s.midi, start: s.start, end: s.end, cents: s.cents, spread: s.spread }));
+      return { notes, meter: r?.timeSig, bpm: r?.bpm, melody: r };
+    });
+  }
   const tot = { truth: 0, det: 0, hit: 0, pitchOk: 0, pitchN: 0, meterOk: 0, songs: 0, refN: 0, refOk: 0, refExtra: 0, refMiss: 0, refDur: 0, refPairs: 0 };
   const refs = existsSync(`${TRUTH}refs.json`) ? JSON.parse(readFileSync(`${TRUTH}refs.json`, 'utf8')) : {};
   for (const [name, meter] of SONGS) {

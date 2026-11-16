@@ -81,7 +81,7 @@ export function writeXml(s: XmlScore): string {
             m += `<harmony><root><root-step>${rootStep}</root-step>${rootAlt ? `<root-alter>${rootAlt}</root-alter>` : ''}</root><kind text="${esc(head.replace(/^[A-G][#b]?/, ''))}">${kind}</kind>`
               + (slash ? `<bass><bass-step>${slash[0]}</bass-step>${slash[1] === '#' ? '<bass-alter>1</bass-alter>' : slash[1] === 'b' ? '<bass-alter>-1</bass-alter>' : ''}</bass>` : '') + '</harmony>';
           }
-          m += `<note><pitch><step>${sp.step}</step>${sp.alter ? `<alter>${sp.alter}</alter>` : ''}<octave>${sp.octave}</octave></pitch><duration>${bt * DIV}</duration>${ties}<voice>${vi + 1}</voice><type>${type}</type>${dot ? '<dot/>' : ''}${v.stem ? `<stem>${v.stem}</stem>` : ''}${v.staff > 0 ? `<staff>${v.staff}</staff>` : ''}${tied ? `<notations>${tied}</notations>` : ''}${n.lyric && k === 0 && !tiedIn ? `<lyric number="1"><syllabic>single</syllabic><text>${esc(n.lyric)}</text></lyric>` : ''}</note>`;
+          m += `<note><pitch><step>${sp.step}</step>${sp.alter ? `<alter>${sp.alter}</alter>` : ''}<octave>${sp.octave}</octave></pitch><duration>${bt * DIV}</duration>${ties}<voice>${vi + 1}</voice><type>${type}</type>${dot ? '<dot/>' : ''}${v.stem ? `<stem>${v.stem}</stem>` : ''}${v.staff > 0 ? `<staff>${v.staff}</staff>` : ''}${tied ? `<notations>${tied}</notations>` : ''}${n.lyric && k === 0 && !tiedIn ? `<lyric number="1"><syllabic>${n.syllabic ?? 'single'}</syllabic><text>${esc(n.lyric)}</text></lyric>` : ''}</note>`;
         });
         pos = en;
       }

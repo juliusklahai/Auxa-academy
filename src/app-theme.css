@@ -1392,3 +1392,15 @@ html.theme-dark .rd-syl { color: #eee; }
 html.theme-dark .drill-opt .opt-rhythm .rd-stage { background: #fff; border-radius: 8px; }
 .drill-reveal { margin: 10px 0; }
 @media (max-width: 520px) { .rd-beats > span { width: 22px; height: 22px; font-size: 11px; } .rd-beats { gap: 4px; } }
+
+.s2s-words { display: grid; gap: 6px; margin: 10px 0; }
+.s2s-words label { line-height: 1.4; }
+.s2s-words textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--line, #ddd); border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 15px; resize: vertical; background: var(--card, #fff); }
+.s2s-words .warn { color: #b26a00; }
+.coach-voice-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin: 6px 0; }
+.coach-voice { display: flex; align-items: center; gap: 10px; text-align: left; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line, #e3e3e3); background: var(--card, #fff); cursor: pointer; font: inherit; color: inherit; }
+.coach-voice.on { border-color: #19c9c0; box-shadow: 0 0 0 2px rgba(25, 201, 192, .18); }
+.coach-voice .cv-icon { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #eef8f7; flex: none; }
+.coach-voice .cv-text { display: grid; gap: 1px; flex: 1; min-width: 0; }
+.coach-voice .cv-text small { color: #777; font-size: 12px; }
+.coach-voice .cv-check { color: #0fb9b1; font-weight: 700; }

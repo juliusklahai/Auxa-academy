@@ -9,6 +9,7 @@ import { asSoprano, melodyXml, playbackNotes, satbXml } from '../compose/score';
 import { keyInfo, transcribe, type Melody, type PitchFrame } from '../compose/transcribe';
 import { decodeMono, framesFromSamples } from '../compose/audioFile';
 import { scoreFromVoice } from '../compose/singToScore2';
+import { fitLyrics, syllableCount } from '../compose/lyrics';
 import { mic, type MicFrame } from '../input/mic';
 import { Icon } from './Icon';
 import { ScoreView } from './ScoreView';
@@ -40,6 +41,8 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
   const [title, setTitle] = useState('My song');
   const [mel, setMel] = useState<Melody | null>(null);
   const [keyOverride, setKeyOverride] = useState('');
+  /** the words, typed by the singer ("A-maz-ing grace"), placed under the notes */
+  const [words, setWords] = useState('');
   const [count, setCount] = useState(0);
   const [live, setLive] = useState<{ name: string; cents: number } | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -83,7 +86,8 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
     const beatMs = 60000 / bpm;
     if (free) { setPhase('rec'); return; }
     metronome.start(bpm, ts[0]);
-    origin.current = performance.now() + 80 + ts[0] * beatMs;
+    // the singer follows the click as heard, which reaches the ear after the device's output delay
+    origin.current = performance.now() + 80 + ts[0] * beatMs + ((audio.ctx as AudioContext | undefined)?.outputLatency ?? 0) * 1000;
     setPhase('countin');
     for (let i = 0; i < ts[0]; i++) timers.current.push(window.setTimeout(() => setCount(ts[0] - i), 80 + i * beatMs));
     timers.current.push(window.setTimeout(() => { setPhase('rec'); setCount(0); if (!click) metronome.stop(); }, 80 + ts[0] * beatMs));
@@ -121,7 +125,8 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
       const o = (h.origin ?? ta.t0) - ta.t0, beat = 60000 / h.bpm;
       const clicks: number[] = [];
       for (let c = o - 8 * beat; c < ta.samples.length / ta.sampleRate * 1000; c += beat) if (c >= 0) clicks.push(c);
-      return scoreFromVoice(ta.samples, ta.sampleRate, { bpm: h.bpm * k, origin: k === 1 ? o : undefined, timeSig: ts, clicks, a4: audio.a4 });
+      // the count-in is not the song: a pickup may start on the last count-in beat, nothing earlier counts
+      return scoreFromVoice(ta.samples, ta.sampleRate, { bpm: h.bpm * k, origin: k === 1 ? o : undefined, timeSig: ts, clicks, a4: audio.a4, singFrom: o - 1.05 * beat });
     }
     if (h.free) {
       const auto = transcribe(fr, fx);
@@ -200,12 +205,14 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
     el.currentTime = 0; void el.play();
   };
 
+  const fitted = useMemo(() => (mel && words.trim() ? fitLyrics(mel.notes, words) : null), [mel, words]);
   const melody = useMemo(() => {
     if (!mel) return null;
-    if (!keyOverride) return mel;
+    const m = fitted ? { ...mel, notes: fitted.notes } : mel;
+    if (!keyOverride) return m;
     const [pc, mode] = keyOverride.split(':');
-    return { ...mel, key: keyInfo(+pc, mode as 'major' | 'minor') };
-  }, [mel, keyOverride]);
+    return { ...m, key: keyInfo(+pc, mode as 'major' | 'minor') };
+  }, [mel, keyOverride, fitted]);
   const harmony = useMemo(() => (melody ? harmonize(melody, style) : null), [melody, style]);
   const xml = useMemo(() => (!melody ? '' : view === 'satb' ? satbXml(melody, title, harmony!) : melodyXml(melody, title, undefined, asSung)), [melody, view, title, harmony, asSung]);
   const noteCount = melody?.notes.filter((n) => n.midi !== null).length ?? 0;
@@ -308,6 +315,14 @@ export function SingToScore({ micOn, startMic, openScore, onRecording }: { micOn
               <details className="s2s-how"><summary>How it is arranged</summary><ul>{harmony.techniques.map((t, i) => <li key={i}>{t}</li>)}</ul></details>
             </div>
           )}
+          <div className="s2s-words">
+            <label htmlFor="s2s-words"><b>Words</b> <span className="muted small">Type what you sang, with a hyphen between syllables: <i>A-maz-ing grace, how sweet the sound</i>. Any language works. Put _ where one syllable is held over another note.</span></label>
+            <textarea id="s2s-words" rows={2} value={words} onChange={(e) => setWords(e.target.value)} placeholder="A-maz-ing grace, how sweet the sound" />
+            {words.trim() && <span className={`small ${fitted?.extra ? 'warn' : 'muted'}`}>
+              {syllableCount(words)} syllables, {noteCount} notes
+              {fitted?.extra ? ` · ${fitted.extra} more syllable${fitted.extra > 1 ? 's' : ''} than notes (check the hyphens, or sing again)` : fitted?.held ? ` · ${fitted.held} note${fitted.held > 1 ? 's' : ''} held on one syllable` : ' · one syllable per note'}
+            </span>}
+          </div>
           <div className="s2s-score"><ScoreView xml={xml} zoom={0.85} /></div>
           <div className="s2s-actions">
             <button className="btn dark" onClick={play}><Icon name={playing ? 'pause' : 'play'} size={15} />{playing ? 'Stop' : 'Play it back'}</button>

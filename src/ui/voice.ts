@@ -1,6 +1,6 @@
 // Voice coach: reads instructions aloud when a lesson step opens, then the example plays (like a teacher
 // sitting next to you). Uses the phone's text-to-speech in the Android app, the browser's elsewhere.
-import { native } from '../native/bridge';
+import { native, isNativeApp } from '../native/bridge';
 import { getSettings } from './settings';
 import { lineKey, speakable } from './speechText';
 export { lineKey, speakable };
@@ -53,29 +53,71 @@ export const coachOn = () => getSettings().coachVoice !== false;
 
 
 // ---------- recorded voice ----------
+/** The coach's voices. Grace ships inside the app (works offline); the others stream the first time a line
+ *  is heard, and fall back to Grace when there is no connection. 'device' is the phone's own speech. */
+export const COACH_VOICES = [
+  { id: 'af_heart', name: 'Grace', about: 'Warm and friendly, American' },
+  { id: 'am_michael', name: 'Michael', about: 'Calm and clear, American' },
+  { id: 'bf_emma', name: 'Emma', about: 'Gentle, British' },
+  { id: 'device', name: 'Device voice', about: 'The speech built into this phone or computer' },
+] as const;
+const DEFAULT_VOICE = 'af_heart';
 const BASE = ((import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/');
-let recorded: Promise<Set<string>> | null = null;
-/** Which lines have a recording (voice/index.json lists them). */
-function recordings(): Promise<Set<string>> {
-  return (recorded ??= fetch(`${BASE}voice/index.json`, { cache: 'force-cache' }).then((r) => (r.ok ? r.json() : { lines: [] })).then((j: { lines: string[] }) => new Set(j.lines)).catch(() => new Set<string>()));
+const LIVE_SITE = 'https://juliusklahai.github.io/Auxa-academy/';
+const voiceId = () => { const v = getSettings().coachVoiceId; return COACH_VOICES.some((x) => x.id === v) ? v : DEFAULT_VOICE; };
+/** where a voice's recordings live: Grace in the app itself, the others on the website (kept out of the app download) */
+const voiceDir = (id: string) => (id === DEFAULT_VOICE ? `${BASE}voice/` : `${isNativeApp ? LIVE_SITE : BASE}voices/${id}/`);
+const recorded = new Map<string, Promise<Set<string>>>();
+/** Which lines a voice has recorded (its index.json lists them). */
+function recordings(id = voiceId()): Promise<Set<string>> {
+  if (id === 'device') return Promise.resolve(new Set());
+  let p = recorded.get(id);
+  if (!p) {
+    p = fetch(`${voiceDir(id)}index.json`, { cache: 'force-cache' }).then((r) => (r.ok ? r.json() : { lines: [] })).then((j: { lines: string[] }) => new Set(j.lines)).catch(() => new Set<string>());
+    recorded.set(id, p);
+    // offline or missing: forget it, so it is tried again later
+    void p.then((s) => { if (!s.size) recorded.delete(id); });
+  }
+  return p;
 }
 if (typeof window !== 'undefined') setTimeout(() => void recordings(), 1500); // warm up
 let player: HTMLAudioElement | null = null;
 let gen = 0;
 let playing: ((ok: boolean) => void) | null = null;
-function playRecording(key: string): Promise<boolean> {
+function playRecording(key: string, id = voiceId()): Promise<boolean> {
   return new Promise((res) => {
     const a = player ?? (player = new Audio());
     playing = res;
     a.onended = () => { playing = null; res(true); };
     a.onerror = () => { playing = null; res(false); };
-    a.src = `${BASE}voice/${key}.mp3`;
+    a.src = `${voiceDir(id)}${key}.mp3`;
     a.play().then(() => setSilent(false)).catch(() => res(false));
   });
 }
 /** Load the next likely lines in the background so they start at once. */
 export function prefetchLines(lines: string[]) {
-  void recordings().then((have) => { for (const l of lines) { const k = lineKey(speakable(l)); if (have.has(k)) { const x = new Audio(); x.preload = 'auto'; x.src = `${BASE}voice/${k}.mp3`; } } });
+  const id = voiceId();
+  void recordings(id).then((have) => { for (const l of lines) { const k = lineKey(speakable(l)); if (have.has(k)) { const x = new Audio(); x.preload = 'auto'; x.src = `${voiceDir(id)}${k}.mp3`; } } });
+}
+/** Recorded line in the chosen voice; Grace if that voice cannot be reached; false if neither has it. */
+async function playBest(key: string, g: number): Promise<boolean> {
+  const id = voiceId();
+  if (id === 'device') return false;
+  const have = await recordings(id);
+  if (g !== gen) return true;
+  if (have.has(key) && await playRecording(key, id)) return true;
+  if (g !== gen || id === DEFAULT_VOICE) return g !== gen;
+  const home = await recordings(DEFAULT_VOICE);
+  if (g !== gen) return true;
+  return home.has(key) ? playRecording(key, DEFAULT_VOICE) : false;
+}
+
+/** Hear a voice before choosing it (call inside a tap). */
+export function previewVoice(id: string): Promise<boolean> {
+  stopSpeaking();
+  if (id === 'device') return testVoice();
+  const g = gen;
+  return recordings(id).then((have) => (g !== gen ? false : playRecording(lineKey(speakable('Hello! I am your Auxa coach.')), have.size ? id : DEFAULT_VOICE)));
 }
 
 /** Say something. Resolves when it has been spoken (or straight away if the voice is off/unavailable). */
@@ -87,9 +129,7 @@ export function say(text: string, opts: { force?: boolean } = {}): Promise<void>
   const g = ++gen; // anything that stops the voice bumps gen, so a line still loading never starts late
   // a natural recorded voice when this line has been recorded, the device's speech otherwise
   const key = lineKey(line);
-  return recordings()
-    .then((have) => (g !== gen ? true : have.has(key) ? playRecording(key) : false))
-    .then((ok) => (ok || g !== gen ? undefined : speakLive(line, g)));
+  return playBest(key, g).then((ok) => (ok || g !== gen ? undefined : speakLive(line, g)));
 }
 
 function speakLive(line: string, g: number): Promise<void> {
