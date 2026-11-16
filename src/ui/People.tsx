@@ -229,11 +229,13 @@ function EditCard({ start, onClose }: { start: CardDraft; onClose: () => void })
 }
 
 /* ---------- the page ---------- */
+/** Classes for teachers are a future addition: the code and tables stay, the screens are hidden for now. */
+const CLASSES_ENABLED = false;
 type Filter = 'all' | 'saved' | Plays;
 export function PeopleView({ openLesson }: { openLesson?: (l: Lesson, ex?: number) => void }) {
-  const [view, setView] = useState<'people' | 'classes'>(() => { try { return (localStorage.getItem('maestro.people.view') as 'people' | 'classes') || 'people'; } catch { return 'people'; } });
+  const [view, setView] = useState<'people' | 'classes'>(() => { if (!CLASSES_ENABLED) return 'people'; try { return (localStorage.getItem('maestro.people.view') as 'people' | 'classes') || 'people'; } catch { return 'people'; } });
   const pickView = (v: 'people' | 'classes') => { setView(v); try { localStorage.setItem('maestro.people.view', v); } catch { /* private mode */ } };
-  const switcher = <div className="seg pp-seg" role="tablist">{(['people', 'classes'] as const).map((v) => <button key={v} role="tab" aria-selected={view === v} className={view === v ? 'on' : ''} onClick={() => pickView(v)}>{v === 'people' ? 'People' : 'Classes'}</button>)}</div>;
+  const switcher = !CLASSES_ENABLED ? null : <div className="seg pp-seg" role="tablist">{(['people', 'classes'] as const).map((v) => <button key={v} role="tab" aria-selected={view === v} className={view === v ? 'on' : ''} onClick={() => pickView(v)}>{v === 'people' ? 'People' : 'Classes'}</button>)}</div>;
   const a = useAccount();
   const { people, error, reload } = usePeople();
   const [q, setQ] = useState('');
@@ -248,7 +250,7 @@ export function PeopleView({ openLesson }: { openLesson?: (l: Lesson, ex?: numbe
     .filter((p) => !q.trim() || `${p.display_name} ${p.headline ?? ''} ${p.location ?? ''}`.toLowerCase().includes(q.trim().toLowerCase())), [people, me, filter, q, saved.join()]); // eslint-disable-line react-hooks/exhaustive-deps
   const draft: CardDraft = mine ?? { display_name: (a.profile?.display_name ?? '').trim(), headline: '', location: '', link_url: null, link_label: '', avatar_url: null, cover: 'forest', plays: ['piano'], visible: true };
 
-  if (view === 'classes') return <div className="page people"><PageHead title="Classes" sub="Learn together: join your teacher's class, or teach your own." />{switcher}<ClassesView openLesson={openLesson ?? (() => undefined)} /></div>;
+  if (CLASSES_ENABLED && view === 'classes') return <div className="page people"><PageHead title="Classes" sub="Learn together: join your teacher's class, or teach your own." />{switcher}<ClassesView openLesson={openLesson ?? (() => undefined)} /></div>;
   if (ACCOUNTS_ENABLED && !a.user) return (
     <div className="page people">
       <PageHead title="People" sub="See how other learners are getting on, and share your own playing." />

@@ -25,7 +25,7 @@ export const PLAN_ITEMS = {
     'Jazz, blues, gospel, Latin, highlife and Afrobeat styles',
     'Expressive touch, pedaling and advanced technique',
     'Sight-read and arrange for choir: soprano, alto, tenor, bass',
-    'The strictest singing coach, your own scores, and classes for teachers',
+    'The strictest singing coach, and your own scores',
   ],
 } as const;
 

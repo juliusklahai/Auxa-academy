@@ -186,7 +186,7 @@ export function AccountSheet({ onClose }: { onClose: () => void }) {
   );
 }
 
-/** The account's name: shown on certificates, in classes and on profile cards. */
+/** The account's name: shown on certificates and profile cards. */
 function NameField() {
   const a = useAccount();
   const [v, setV] = useState(a.profile?.display_name ?? '');
@@ -199,7 +199,7 @@ function NameField() {
   };
   return (
     <form className="acct-name" onSubmit={(e) => { e.preventDefault(); if (dirty && v.trim()) void save(); }}>
-      <label>Your name<small>Shown on your certificates, in classes and on your profile card.</small>
+      <label>Your name<small>Shown on your certificates and on your profile card.</small>
         <span className="acct-name-row"><input value={v} maxLength={40} autoComplete="name" onChange={(e) => { setV(e.target.value); setState(''); }} placeholder="Ama Kamara" />
           <button className="btn" disabled={!dirty || !v.trim() || state === 'saving'}>{state === 'saving' ? 'Saving…' : state === 'saved' && !dirty ? 'Saved' : 'Save'}</button></span>
       </label>
