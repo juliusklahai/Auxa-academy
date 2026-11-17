@@ -21,12 +21,12 @@ export function SyncNotice() {
   if (!ACCOUNTS_ENABLED) return null;
   if (!online) return (
     <div className="sync-notice" role="status"><Icon name="info" size={16} />
-      <span><b>You are offline.</b> You can keep practising, but this progress will not reach your account and will not count toward your certificate. Stay online while you practise if you want it to count.</span>
+      <span><b>You are offline.</b> Keep practising: your passes are saved on this phone and sent to your account when you are back online. To seal a certificate, you will then pass one exercise of each of those lessons online. Staying online is quickest.</span>
     </div>
   );
   if (!a.user) return (
     <div className="sync-notice" role="status"><Icon name="info" size={16} />
-      <span><b>Not signed in.</b> Practice here will not count toward a certificate. <button className="link-btn" onClick={() => window.dispatchEvent(new Event('maestro:account'))}>Sign in</button> and stay online to have your passes verified.</span>
+      <span><b>Not signed in.</b> Practice only counts toward a certificate on an account. <button className="link-btn" onClick={() => window.dispatchEvent(new Event('maestro:account'))}>Sign in</button> to have your passes verified.</span>
     </div>
   );
   return null;

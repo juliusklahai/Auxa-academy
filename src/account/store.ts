@@ -73,6 +73,8 @@ export function progressChanged() {
 export async function initAccount() {
   if (!ACCOUNTS_ENABLED) return;
   progress.onSave = progressChanged;
+  // back online: send what was practised offline (progress now; offline passes via witness.ts)
+  window.addEventListener('online', () => { if (state.user) void pushProgress().catch(() => undefined); void import('./witness').then((m) => m.flushOffline()); });
   // Arriving from a password-reset email: remember it before the sign-in code in the address is used up,
   // so we ask for a new password instead of just signing the person in.
   const q0 = new URLSearchParams(location.search);
