@@ -190,20 +190,31 @@ export function AccountSheet({ onClose }: { onClose: () => void }) {
 function NameField() {
   const a = useAccount();
   const [v, setV] = useState(a.profile?.display_name ?? '');
-  const [state, setState] = useState<'' | 'saving' | 'saved' | 'error'>('');
+  const [state, setState] = useState<'' | 'confirm' | 'saving' | 'saved' | 'error'>('');
+  const [err, setErr] = useState('');
   useEffect(() => { setV(a.profile?.display_name ?? ''); }, [a.profile?.display_name]);
-  const dirty = v.trim() !== (a.profile?.display_name ?? '').trim();
+  const current = (a.profile?.display_name ?? '').trim();
+  // one change allowed after the first name is set, then locked (checked again by the database)
+  const locked = !!current && (a.profile?.name_changes ?? 0) >= 1;
+  const dirty = v.trim().replace(/\s+/g, ' ') !== current;
   const save = async () => {
-    setState('saving');
-    try { await setDisplayName(v.trim()); setState('saved'); } catch { setState('error'); }
+    // changing an existing name uses the one change: ask first
+    if (current && state !== 'confirm') { setState('confirm'); return; }
+    setState('saving'); setErr('');
+    try { await setDisplayName(v.trim()); setState('saved'); }
+    catch (e) { setErr((e as Error).message); setState('error'); }
   };
   return (
-    <form className="acct-name" onSubmit={(e) => { e.preventDefault(); if (dirty && v.trim()) void save(); }}>
-      <label>Your name<small>Shown on your certificates and on your profile card.</small>
-        <span className="acct-name-row"><input value={v} maxLength={40} autoComplete="name" onChange={(e) => { setV(e.target.value); setState(''); }} placeholder="Ama Kamara" />
-          <button className="btn" disabled={!dirty || !v.trim() || state === 'saving'}>{state === 'saving' ? 'Saving…' : state === 'saved' && !dirty ? 'Saved' : 'Save'}</button></span>
+    <form className="acct-name" onSubmit={(e) => { e.preventDefault(); if (dirty && v.trim() && !locked) void save(); }}>
+      <label>Your name<small>{locked ? 'Shown on your certificates and profile card. You have used your one name change, so it is now locked.'
+        : current ? 'Shown on your certificates and profile card. You can change it once, so check the spelling.'
+        : 'Shown on your certificates and profile card. Use your real full name: you can change it only once later.'}</small>
+        <span className="acct-name-row"><input value={v} maxLength={40} autoComplete="name" disabled={locked} onChange={(e) => { setV(e.target.value); setState(''); }} placeholder="Ama Kamara" />
+          {!locked && <button className="btn" disabled={!dirty || !v.trim() || state === 'saving'}>{state === 'saving' ? 'Saving…' : state === 'confirm' ? 'Yes, change it' : state === 'saved' && !dirty ? 'Saved' : 'Save'}</button>}</span>
       </label>
-      {state === 'error' && <small className="tip">Could not save. Check your connection and try again.</small>}
+      {state === 'confirm' && <small className="tip">This is your only name change. After it, your name is locked as “{v.trim().replace(/\s+/g, ' ')}”. <button type="button" className="link-btn" onClick={() => { setV(current); setState(''); }}>Cancel</button></small>}
+      {state === 'error' && <small className="tip">{err || 'Could not save. Check your connection and try again.'}</small>}
+      {locked && <small className="muted">Spelled wrong? Contact Auxa support to correct it.</small>}
     </form>
   );
 }

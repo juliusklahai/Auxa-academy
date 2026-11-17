@@ -9,7 +9,7 @@ import { entitlementFrom, LOCAL_ENTITLEMENT, type Entitlement } from './gate';
 import { mergeProgress } from './merge';
 import type { ProgressData } from '../progress/store';
 
-export interface Profile { id: string; email: string; display_name: string | null; role: 'user' | 'admin' | 'teacher'; pro_until: string | null; plus_until: string | null; pro_source: string | null; stripe_status: string | null; progress: ProgressData | Record<string, never>; progress_updated_at: string | null }
+export interface Profile { id: string; email: string; display_name: string | null; /** name changes used (one allowed, then locked) */ name_changes?: number; role: 'user' | 'admin' | 'teacher'; pro_until: string | null; plus_until: string | null; pro_source: string | null; stripe_status: string | null; progress: ProgressData | Record<string, never>; progress_updated_at: string | null }
 export interface AccountState { ready: boolean; user: User | null; profile: Profile | null; ent: Entitlement; syncing: boolean; error: string; /** arrived from a password-reset email */ recovery: boolean }
 
 const CACHE = 'maestro.account.v1';
@@ -100,7 +100,7 @@ export async function initAccount() {
 /** Change the name on the account (used on certificates, classes and profile cards). */
 export async function setDisplayName(name: string) {
   const { error } = await (await supabase()).rpc('set_display_name', { n: name });
-  if (error) throw new Error(error.message);
+  if (error) { await refreshProfile(); throw new Error(error.message.replace(/^NAME_LOCKED:\s*/, '')); }
   await refreshProfile();
 }
 export const refreshProfile = async () => loadProfile((await (await supabase()).auth.getUser()).data.user ?? null);

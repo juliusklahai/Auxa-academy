@@ -62,7 +62,8 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
   const a = useAccount();
   // the name always comes from the learner's profile (account name, or the name given at onboarding)
   const meta = (a.user as { user_metadata?: { full_name?: string; name?: string; display_name?: string } } | null)?.user_metadata;
-  const shown = (a.profile?.display_name || meta?.display_name || meta?.full_name || meta?.name || getProfile()?.name || '').trim();
+  // signed in: only the account name (the database seals that one, and it can be changed just once)
+  const shown = (a.profile ? (a.profile.display_name ?? '') : (meta?.display_name || meta?.full_name || meta?.name || getProfile()?.name || '')).replace(/\s+/g, ' ').trim();
   const [shape, setShape] = useState<{ d: string; w: number } | null>(null);
   useEffect(() => { let live = true; void nameShape(shown).then((x) => { if (live) setShape(x); }); return () => { live = false; }; }, [shown]);
   // verified copy from the database, re-issued (after a pause) when the name changes

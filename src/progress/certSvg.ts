@@ -5,10 +5,11 @@ import { AUXA_PATHS, WORD_BOX } from '../ui/brandPaths';
 import { SIG_BOX, SIG_STROKES } from './signature';
 import QRCode from 'qrcode';
 import { guilloche, sealMelody, sealWave, verifyUrl } from './certSeal';
+import type { NameShape } from './nameShape';
 
 export interface CertOpts {
   /** the name drawn as a path (so the font never changes when saved): path at baseline, font size 128 */
-  nameShape?: { d: string; w: number };
+  nameShape?: NameShape;
   /** issued by the database: verification code and seal */
   code?: string;
   seal?: string;
@@ -25,6 +26,27 @@ function micro(id: string, d: string, text: string, size: number, fill: string, 
 function microSignature(tag: string, text: string, k: number) {
   const size = 4.6 / k; // about 4.6 px on the certificate
   return SIG_STROKES.map((d, i) => micro(`${tag}sg${i}`, d, text, size, '#141414', 3000, 900, false, true)).join('');
+}
+/**
+ * Security: the first letter of the name is not solid ink but rows of microtext, the first name in capitals
+ * run together with no spaces (JULIUSJULIUSJULIUS…), clipped to the letter's outline. Prints as the letter;
+ * under a magnifier it reads as the name. Coordinates are the name's own (font size 128).
+ */
+function microInitial(tag: string, s: NameShape, name: string) {
+  const f = s.first;
+  if (!f) return '';
+  const word = (name.trim().split(/\s+/)[0] ?? '').toUpperCase().replace(/[^\p{L}]/gu, '') || 'AUXA';
+  const fs = 4.6, lh = fs * 0.8, per = fs * 0.68; // tight rows, no letter spacing
+  const n = Math.ceil((f.x1 - f.x0 + 4 * per * word.length) / (per * word.length)) + 1;
+  let rows = '';
+  for (let y = f.y0 + fs * 0.7, r = 0; y <= f.y1 + fs; y += lh, r++) {
+    // each row starts a little further along the word, so the letters weave instead of lining up in columns
+    rows += `<tspan x="${(f.x0 - ((r * 2) % word.length) * per - 2 * per).toFixed(2)}" y="${y.toFixed(2)}">${esc(word.repeat(n))}</tspan>`;
+  }
+  return `<defs><clipPath id="${tag}fl"><path d="${f.d}"/></clipPath></defs>`
+    + `<path d="${f.d}" fill="#141414" fill-opacity="0.34"/>`
+    + `<text clip-path="url(#${tag}fl)" font-family="Arial, Helvetica, sans-serif" font-size="${fs}" font-weight="700" letter-spacing="0" fill="#141414">${rows}</text>`
+    + `<path d="${f.d}" fill="none" stroke="#141414" stroke-width="0.55"/>`;
 }
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 function qrSvg(text: string, x: number, y: number, size: number) {
@@ -64,7 +86,7 @@ export function certificateSvg(name: string, level: number, date: string, script
   <text x="${W / 2}" y="290" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="30" letter-spacing="10" fill="#047683">CERTIFICATE OF ACHIEVEMENT</text>
   <text x="${W / 2}" y="370" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="28" fill="#55554f">This certifies that</text>
   ${nameShape
-    ? (() => { const sc = Math.min(1, 1080 / Math.max(1, nameShape.w)); return `<path transform="translate(${(W / 2 - (nameShape.w * sc) / 2).toFixed(1)} 490) scale(${sc.toFixed(4)})" fill="#141414" d="${nameShape.d}"/>`; })()
+    ? (() => { const sc = Math.min(1, 1080 / Math.max(1, nameShape.w)); return `<g transform="translate(${(W / 2 - (nameShape.w * sc) / 2).toFixed(1)} 490) scale(${sc.toFixed(4)})"><path fill="#141414" d="${nameShape.d}"/>${microInitial(tag, nameShape, name)}</g>`; })()
     : `<text x="${W / 2}" y="490" text-anchor="middle" font-family="${SCRIPT}" font-size="128" fill="#141414">${esc(name || 'An Auxa learner')}</text>`}
   ${micro(`${tag}n`, `M${W / 2 - 420} 521 H${W / 2 + 420}`, mt, 3.4, '#141414', 840)}
   <text x="${W / 2}" y="590" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="28" fill="#55554f">has successfully completed</text>

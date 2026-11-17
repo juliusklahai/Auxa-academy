@@ -54,12 +54,6 @@ export function VerifyPage({ code }: { code: string }) {
             {rec.replaced_by && <p>The learner issued a newer copy (usually to fix the name): <a href={`#/verify/${rec.replaced_by}`}>{rec.replaced_by}</a>.</p>}
             <div className="cert-view vf-cert" dangerouslySetInnerHTML={{ __html: svg }} />
             <button className="btn lime" onClick={play}><Icon name="play" size={14} />Play this certificate's melody</button>
-            <h3>How to check a copy you were given</h3>
-            <ul>
-              <li>The name, level and date must match this page exactly.</li>
-              <li>The pattern around the level badge, the tiny text in its ring and the lit keys at the bottom are made from a secret seal only Auxa's database holds. They must look the same as above. Any edit or forgery shows a different pattern and melody.</li>
-              <li>The QR code on a genuine certificate always opens this page on {new URL(SITE).host}.</li>
-            </ul>
           </>
         )}
         {rec === null && <p>{err || 'Check the code for typos. Genuine codes look like AUX-XXXXX-XXXXX and open from the QR code on the certificate.'}</p>}

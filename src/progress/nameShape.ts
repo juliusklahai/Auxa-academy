@@ -9,7 +9,14 @@ function font() {
     .then(([m, buf]) => (m.parse ?? m.default!.parse)(buf)));
 }
 
-export async function nameShape(text: string, size = 128): Promise<{ d: string; w: number } | null> {
+/** The name as paths. The first letter is kept apart: the certificate fills it with microtext of the first name. */
+export interface NameShape {
+  d: string;
+  w: number;
+  first?: { d: string; x0: number; y0: number; x1: number; y1: number };
+}
+
+export async function nameShape(text: string, size = 128): Promise<NameShape | null> {
   if (!text.trim()) return null;
   try {
     return layoutName(await font(), text, size);
@@ -17,16 +24,21 @@ export async function nameShape(text: string, size = 128): Promise<{ d: string; 
 }
 
 /** Glyph by glyph with kerning (skips opentype's shaping, which this font's features trip up). */
-export function layoutName(f: import('opentype.js').Font, text: string, size = 128): { d: string; w: number } {
+export function layoutName(f: import('opentype.js').Font, text: string, size = 128): NameShape {
   const k = size / f.unitsPerEm;
   let x = 0, d = '';
+  let first: NameShape['first'];
   let prev: import('opentype.js').Glyph | null = null;
   for (const ch of text) {
     const g = f.charToGlyph(ch);
     if (prev) x += f.getKerningValue(prev, g) * k;
-    d += g.getPath(x, 0, size).toPathData(2);
+    const p = g.getPath(x, 0, size);
+    if (!first && /\p{L}/u.test(ch)) {
+      const b = p.getBoundingBox();
+      first = { d: p.toPathData(2), x0: b.x1, y0: b.y1, x1: b.x2, y1: b.y2 };
+    } else d += p.toPathData(2);
     x += (g.advanceWidth ?? 0) * k;
     prev = g;
   }
-  return { d, w: x };
+  return { d, w: x, first };
 }
