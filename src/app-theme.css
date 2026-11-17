@@ -1429,3 +1429,8 @@ html.native ::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .lat-rows td { padding: 4px 0; border-top: 1px solid var(--hair, #eee); } .lat-rows td:last-child { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; padding-left: 8px; }
 .lat-warn { display: flex; gap: 6px; align-items: flex-start; color: #9a6400; }
 @media (max-width: 520px) { .mix-row { grid-template-columns: 1fr 44px; } .mix-row input { grid-column: 1 / -1; grid-row: 2; } }
+
+.cert-pending { display: flex; align-items: center; gap: 14px; padding: 18px 16px; border: 1px dashed var(--hair, #ddd); border-radius: 16px; margin: 6px 0 10px; }
+.cert-pending > div { display: grid; gap: 4px; }
+.cert-pending .cert-seal { flex: none; }
+.cert-pending .cert-seal { background: var(--hair, #eee); color: var(--ink, #333); box-shadow: none; }

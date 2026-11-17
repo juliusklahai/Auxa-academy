@@ -92,8 +92,10 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
   return (
     <div className="sheet-back" onClick={onClose}>
       <div className="sheet cert-sheet" role="dialog" aria-label={`Level ${level} certificate`} onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-head"><div><small className="muted">{fresh ? 'Well done!' : 'Certificate'}</small><b>{fresh ? `You finished Level ${level}` : `Level ${level}`}</b></div><button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="close" size={16} /></button></div>
-        <div className="cert-view" dangerouslySetInnerHTML={{ __html: svg }} />
+        <div className="sheet-head"><div><small className="muted">{fresh ? 'Well done!' : 'Certificate'}</small><b>{cert ? (fresh ? `You finished Level ${level}` : `Level ${level}`) : `Level ${level}: not sealed yet`}</b></div><button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="close" size={16} /></button></div>
+        {/* the certificate itself (name, signature, seal) appears only once it is sealed and verified */}
+        {cert ? <div className="cert-view" dangerouslySetInnerHTML={{ __html: svg }} />
+          : <div className="cert-pending"><span className="cert-seal"><i>{level}</i></span><div><b>Level {level} · {LEVEL_NAMES[level]}</b><small className="muted">{state === 'issuing' ? 'Checking your verified passes…' : 'Your certificate appears here once Auxa has verified every exercise of this level and sealed it.'}</small></div></div>}
         <div className={`cert-status ${cert ? 'ok' : state}`}>
           {cert ? <><Icon name="check" size={14} /><span>Verified by Auxa · <b>{cert.code}</b></span></>
             : state === 'issuing' ? <span>Sealing your certificate…</span>
@@ -102,11 +104,11 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
             : <span>Sign in to get a verified certificate with its own code, QR and seal.</span>}
         </div>
         <p className="cert-from muted small">{shown ? <>Name from your profile. To change it, edit your name in <button className="link-btn" onClick={() => { onClose(); window.dispatchEvent(new Event('maestro:account')); }}>your account</button>.</> : <>Add your name in <button className="link-btn" onClick={() => { onClose(); window.dispatchEvent(new Event('maestro:account')); }}>your account</button> to put it on your certificate.</>}</p>
-        <div className="cert-actions">
+        {cert && <div className="cert-actions">
           <button className="btn lime" onClick={() => void shareLink()} disabled={!!busy || !cert}><Icon name="share" size={15} />{busy === 'link' ? 'Sharing…' : 'Share link'}</button>
           <button className="btn" onClick={() => void run('png', async () => download(await certToPng(svg, 2), `${base}.png`))} disabled={!!busy}><Icon name="download" size={15} />{busy === 'png' ? 'Saving…' : 'PNG'}</button>
           <button className="btn" onClick={() => void run('pdf', async () => download(await certToPdf(svg), `${base}.pdf`))} disabled={!!busy}><Icon name="download" size={15} />{busy === 'pdf' ? 'Saving…' : 'PDF'}</button>
-        </div>
+        </div>}
         {note && <p className="muted small">{note}</p>}
       </div>
     </div>
