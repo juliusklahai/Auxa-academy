@@ -8,6 +8,7 @@ import { saveBlob, shareLink as openShare, shareTargets, copyText, NeedsUpdate, 
 import { nameShape } from '../progress/nameShape';
 import { canIssue, issueCertificate, type IssuedCert } from '../account/certificates';
 import { useAccount } from '../account/store';
+import { playLevelTheme, stopLevelTheme } from '../audio/certTheme';
 import { levelVerification, type LevelCheck } from '../account/witness';
 import { lessonById } from '../curriculum/lessons';
 import { Icon } from './Icon';
@@ -68,6 +69,7 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
   useEffect(() => { let live = true; void nameShape(shown).then((x) => { if (live) setShape(x); }); return () => { live = false; }; }, [shown]);
   // verified copy from the database, re-issued (after a pause) when the name changes
   const [cert, setCert] = useState<IssuedCert | null>(null);
+  useEffect(() => () => stopLevelTheme(), []);
   const [todo, setTodo] = useState<LevelCheck[]>([]);
   const [state, setState] = useState<'idle' | 'issuing' | 'error' | 'offline' | 'verify'>(canIssue() ? 'issuing' : 'offline');
   const [err, setErr] = useState('');
@@ -77,7 +79,7 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
     setState('issuing'); setCert(null);
     const t = setTimeout(() => {
       issueCertificate(level, shown, LEVEL_NAMES[level] ?? '', certCitation(level))
-        .then((c) => { setCert(c); setState('idle'); })
+        .then((c) => { setCert(c); setState('idle'); if (fresh) playLevelTheme(level); })
         .catch((e: Error) => {
           const m = /^VERIFY:(\d+)\s*(.*)$/s.exec(e.message);
           if (m) { setErr(m[2]); setState('verify'); void levelVerification(level).then(setTodo); }
@@ -131,6 +133,7 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
             : <span>Sign in to get a verified certificate with its own code, QR and seal.</span>}
         </div>
         <p className="cert-from muted small">{shown ? <>Name from your profile. To change it, edit your name in <button className="link-btn" onClick={() => { onClose(); window.dispatchEvent(new Event('maestro:account')); }}>your account</button>.</> : <>Add your name in <button className="link-btn" onClick={() => { onClose(); window.dispatchEvent(new Event('maestro:account')); }}>your account</button> to put it on your certificate.</>}</p>
+        {cert && <button className="btn cert-theme" onClick={() => { stopLevelTheme(); playLevelTheme(level); }}><Icon name="play" size={15} />Play the Level {level} theme</button>}
         {cert && <div className="cert-actions">
           <button className="btn lime" onClick={() => void shareLink()} disabled={!!busy || !cert}><Icon name="share" size={15} />{busy === 'link' ? 'Sharing…' : 'Share link'}</button>
           <button className="btn" onClick={() => void save('png')} disabled={!!busy}><Icon name="download" size={15} />{busy === 'png' ? 'Saving…' : 'PNG'}</button>

@@ -36,7 +36,14 @@ mic.onNote = (n) => { if (mic.settings.mode === 'voice') emit({ midi: n.midi, on
 // learner is told, but it is never scored as a mistake.
 mic.onChord = (c) => {
   if (mic.settings.mode === 'voice') return;
-  const judged = judgeOnset(c.notes, getExpected(), mic.settings.minConfidence);
+  // the app's own notes (band, guide, demos) reach the microphone too, late with earphones or Bluetooth:
+  // a note the app is sounding is never the learner's, unless the lesson expects that very note
+  const exp = getExpected();
+  const lag = mic.echoLag();
+  const app = new Set([...audio.appSoundingAt(c.at), ...audio.appNotes.filter((n) => c.at - n.onMs >= -90 && c.at - n.onMs <= lag).map((n) => n.midi)]);
+  const notes = c.notes.filter((n) => !app.has(n.midi) || exp?.includes(n.midi));
+  if (!notes.length) return;
+  const judged = judgeOnset(notes, exp, mic.settings.minConfidence);
   const clear = judged.filter((n) => !n.unsure);
   const list = clear.length ? clear : judged.slice(0, 1).map((n) => ({ ...n, confidence: Math.min(n.confidence, mic.settings.minConfidence - 0.05) }));
   list.forEach((n) => emit({ midi: n.midi, on: true, velocity: 0.7, at: c.at, source: 'mic', confidence: n.unsure ? Math.min(n.confidence, 0.8) : Math.max(n.confidence, mic.settings.minConfidence) }));

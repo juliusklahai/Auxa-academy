@@ -1446,3 +1446,10 @@ html.native ::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .sync-notice { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; margin: 0 0 12px; border-radius: 14px; background: #fff4dc; color: #7a4f00; font-size: 14px; line-height: 1.4; }
 .sync-notice svg { flex: none; margin-top: 2px; }
 html.theme-dark .sync-notice { background: #3a2c10; color: #ffd98a; }
+
+.mic-fab { position: absolute; top: 44px; right: 12px; z-index: 5; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--hair, #ddd); background: var(--card, #fff); color: var(--ink, #222); display: grid; place-items: center; box-shadow: 0 4px 14px rgba(0,0,0,.14); cursor: pointer; }
+.mic-fab.live { background: #19c9c0; color: #04312f; border-color: transparent; animation: micPulse 1.8s ease-in-out infinite; }
+@keyframes micPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(25,201,192,.45), 0 4px 14px rgba(0,0,0,.14); } 50% { box-shadow: 0 0 0 8px rgba(25,201,192,0), 0 4px 14px rgba(0,0,0,.14); } }
+.mic-fab-note { position: absolute; top: 90px; right: 12px; z-index: 6; max-width: 280px; display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 12px; background: #fff4dc; color: #7a4f00; box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+.kb-fab { position: fixed; right: 16px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 40; width: 52px; height: 52px; border-radius: 50%; border: 0; background: #19c9c0; color: #04312f; display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0,0,0,.25); cursor: pointer; }
+html.focus-on .kb-fab { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }

@@ -56,11 +56,8 @@ export function KeyboardArea({ lo, hi, marks, labels, showKeyHints, scrollTo, ba
 
   if (!s.keyboard) {
     return (
-      <div className="card keys-card kb-hidden" onPointerUp={(e) => { if (!(e.target as HTMLElement).closest('button')) setSettings({ keyboard: true }); }}>
-        <span className="kb-handle static"><i /></span>
-        <span className="muted small">Keyboard tucked away. Play on your MIDI keyboard or piano, or tap here to bring it back.</span>
-        <button className="kb-btn" onClick={() => setSettings({ keyboard: true })}><Icon name="keys" size={14} /> Show keyboard</button>
-      </div>
+      // tucked away: no space taken at all, just a floating button to bring it back
+      <button className="kb-fab" onClick={() => setSettings({ keyboard: true })} aria-label="Show the keyboard" title="Show the keyboard"><Icon name="keys" size={20} /></button>
     );
   }
   const handsOn = !!hands && s.hands && handsVisible;

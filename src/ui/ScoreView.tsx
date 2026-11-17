@@ -80,6 +80,17 @@ export const ScoreView = forwardRef<ScoreViewHandle, Props>(function ScoreView({
       trRef.current = transpose;
     } catch { /* transposition unavailable: notation stays in the written key */ }
     osmd.current.render();
+    // one-line view: every staff (lead, treble, bass...) must fit the height of the canvas, so shrink the
+    // music until the whole system is visible (never larger than the chosen zoom)
+    if (horiz.current && scroller.current && host.current) {
+      const avail = scroller.current.clientHeight - 8;
+      const svg = host.current.querySelector('svg');
+      const h = svg ? svg.getBoundingClientRect().height : 0;
+      if (avail > 60 && h > avail) {
+        osmd.current.Zoom = Math.max(0.3, zoom * (avail / h) * 0.97);
+        osmd.current.render();
+      }
+    }
     collectStamps();
     indexNotes();
     colored.current.clear();
@@ -123,9 +134,11 @@ export const ScoreView = forwardRef<ScoreViewHandle, Props>(function ScoreView({
     const el = scroller.current;
     if (!el) return;
     let w = el.clientWidth, t = 0;
+    let hh = el.clientHeight;
     const ro = new ResizeObserver(() => {
-      if (Math.abs(el.clientWidth - w) < 40) return;
-      w = el.clientWidth;
+      // re-fit when the canvas gets a new size (sideways, or taller/shorter in the one-line view)
+      if (Math.abs(el.clientWidth - w) < 40 && !(horiz.current && Math.abs(el.clientHeight - hh) > 30)) return;
+      w = el.clientWidth; hh = el.clientHeight;
       clearTimeout(t);
       t = window.setTimeout(() => render(), 250);
     });

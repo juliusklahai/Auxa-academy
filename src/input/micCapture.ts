@@ -67,11 +67,11 @@ export class PianoCapture {
 
   setExpected(notes: number[] | null) { this.worker?.postMessage({ type: 'expected', notes }); }
   setAppNotes(notes: { midi: number; at: number }[]) { this.worker?.postMessage({ type: 'app', notes }); }
-  config(sensitivity: number, profile: SoundProfile, noiseGate: number) {
-    const k = `${sensitivity}|${profile}|${noiseGate}`;
+  config(sensitivity: number, profile: SoundProfile, noiseGate: number, echoLag: number) {
+    const k = `${sensitivity}|${profile}|${noiseGate}|${echoLag}`;
     if (k === this.lastCfg) return;
     this.lastCfg = k;
-    this.worker?.postMessage({ type: 'config', sensitivity, profile, noiseGate });
+    this.worker?.postMessage({ type: 'config', sensitivity, profile, noiseGate, echoLag });
   }
   reset() { this.worker?.postMessage({ type: 'reset' }); }
 

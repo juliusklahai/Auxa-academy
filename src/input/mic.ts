@@ -67,11 +67,13 @@ export class MicListener {
       // removed by the echo gate instead.
       audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, ...(this.deviceId ? { deviceId: { exact: this.deviceId } } : {}) },
     });
+    const label = this.stream.getAudioTracks()[0]?.label ?? '';
+    this.headsetMic = /headset|bluetooth|hands-?free|earphone|earbud|airpods|buds|wired|sco/i.test(label);
     const src = ctx.createMediaStreamSource(this.stream);
     this.analyser = ctx.createAnalyser();
     this.analyser.fftSize = 4096;
     // echo gate: what the app played near this onset (as heard at the mic) is not the learner
-    this.poly = new PolyTracker(ctx.sampleRate, getExpected, (t) => audio.appOnsetsNear(t + this.settings.latencyMs * 0, 130));
+    this.poly = new PolyTracker(ctx.sampleRate, getExpected, (t) => audio.appNotes.filter((n) => t - n.onMs >= -90 && t - n.onMs <= this.echoLag()).map((n) => n.midi));
     // the improved detector also when it has to run in the page (no AudioWorklet)
     this.poly.whiten = true; this.poly.lo = 21; this.poly.hi = 108;
     src.connect(this.analyser);
@@ -194,7 +196,7 @@ export class MicListener {
     const exp = getExpected();
     const k = exp ? exp.join(',') : '';
     if (k !== this.lastExpected) { this.lastExpected = k; cap.setExpected(exp); }
-    cap.config(this.sensitivity, this.profile, Math.min(0.0015, Math.max(0.0003, this.settings.noiseGate * 0.3)));
+    cap.config(this.sensitivity, this.profile, Math.min(0.0015, Math.max(0.0003, this.settings.noiseGate * 0.3)), this.echoLag());
     const now = performance.now();
     if (now - this.lastApp > 90) {
       this.lastApp = now;
@@ -203,6 +205,13 @@ export class MicListener {
       cap.setAppNotes(audio.appNotes.filter((n) => n.onMs > now - 1500).map((n) => ({ midi: n.midi, at: audioNow + (n.onMs - now) })));
     }
   }
+
+  /** How late the app's own notes can arrive at the microphone: the device's output delay (large for
+   *  Bluetooth earphones), plus the room, plus a margin. */
+  echoLag() { return Math.round(Math.min(900, 220 + audio.outLatency * 1000 + (this.headsetMic ? 250 : 0))); }
+
+  /** The microphone in use is the earphones' own (it sits next to the earbud and hears the band). */
+  headsetMic = false;
 
   /** A note event from the worker (onset on the audio clock). */
   private workerEvent(atAudio: number, list: { midi: number; confidence: number; expected: boolean }[]) {

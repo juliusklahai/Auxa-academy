@@ -9,7 +9,7 @@ type In =
   | { type: 'init'; sampleRate: number; port: MessagePort }
   | { type: 'expected'; notes: number[] | null }
   | { type: 'app'; notes: { midi: number; at: number }[] } // app notes, audio-clock ms
-  | { type: 'config'; sensitivity: number; profile: SoundProfile; noiseGate: number }
+  | { type: 'config'; sensitivity: number; profile: SoundProfile; noiseGate: number; echoLag: number }
   | { type: 'reset' };
 
 let L: PianoListener | null = null;
@@ -18,6 +18,8 @@ let appNotes: { midi: number; at: number }[] = [];
 /** audio-clock ms of the listener's first sample */
 let t0 = -1;
 let busyMs = 0, chunks = 0;
+/** how late the app's own notes can reach the microphone (output delay, earphones, the room) */
+let echoLag = 300;
 
 const post = (m: unknown) => (self as unknown as Worker).postMessage(m);
 
@@ -38,11 +40,11 @@ self.onmessage = (e: MessageEvent<In>) => {
     L = new PianoListener(m.sampleRate);
     t0 = -1;
     L.getExpected = () => expected;
-    L.getMasked = (ms) => appNotes.filter((n) => Math.abs(n.at - t0 - ms) <= 130).map((n) => n.midi);
+    L.getMasked = (ms) => appNotes.filter((n) => { const d = ms - (n.at - t0); return d >= -90 && d <= echoLag; }).map((n) => n.midi);
     m.port.onmessage = (ev: MessageEvent<{ frame: number; data: Float32Array }>) => feed(ev.data.frame, ev.data.data);
     post({ type: 'ready' });
   } else if (m.type === 'expected') expected = m.notes;
   else if (m.type === 'app') appNotes = m.notes;
-  else if (m.type === 'config' && L) { L.sensitivity = m.sensitivity; L.profile = m.profile; L.noiseGate = m.noiseGate; }
+  else if (m.type === 'config' && L) { L.sensitivity = m.sensitivity; L.profile = m.profile; L.noiseGate = m.noiseGate; echoLag = m.echoLag; }
   else if (m.type === 'reset' && L) L.tracker.reset();
 };
