@@ -13,6 +13,8 @@ import {
 import { FREE_LINE, PLAN_ITEMS } from '../account/planCopy';
 import { Icon } from './Icon';
 
+/** a plan date only while it is still in the future (removed or expired access shows as "-") */
+const activeDate = (s: string | null) => (s && new Date(s).getTime() > Date.now() ? fmtDate(s) : '-');
 const fmtDate = (s: string | null) => (s ? new Date(s).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
 
 type AuthMode = 'signin' | 'signup' | 'forgot' | 'link';
@@ -384,12 +386,45 @@ function PaymentTest({ onDone }: { onDone: () => void }) {
     <div className="card">
       <div className="card-head"><b>Payment test</b><span className="muted small">Real links, your account</span></div>
       <p className="muted small">Each button starts the real checkout, exactly as a learner would. You can stop on the payment page to check the link and the price, or pay a small amount to test the whole path: when it completes, the payment appears under Recent payments and your account is credited (harmless for an admin). Stripe in test mode accepts the card 4242 4242 4242 4242.</p>
-      <div className="row wrap">{PLANS.map((p) => <button key={p.id} className="btn" disabled={!!busy} onClick={() => void open(p.id, p.provider)}>{busy === p.id ? 'Opening…' : `${p.title} (${p.provider === 'stripe' ? 'card' : 'Monime'})`}</button>)}</div>
-      <form className="acct-row" onSubmit={(e) => { e.preventDefault(); void check(); }}>
+      <div className="pay-test-btns">{PLANS.map((p) => <button key={p.id} className="btn" disabled={!!busy} onClick={() => void open(p.id, p.provider)}>{busy === p.id ? 'Opening…' : `${p.title} (${p.provider === 'stripe' ? 'card' : 'Monime'})`}</button>)}</div>
+      <form className="acct-row pay-test-check" onSubmit={(e) => { e.preventDefault(); void check(); }}>
         <input placeholder="Monime checkout session id (cs_…)" value={sid} onChange={(e) => setSid(e.target.value)} />
         <button className="btn dark" disabled={busy === 'check'}>{busy === 'check' ? 'Checking…' : 'Check session'}</button>
       </form>
       {out && <p className="small">{out}</p>}
+    </div>
+  );
+}
+
+/** Recent payments and grants: folds away, 20 rows a page. */
+function Payments({ pays, people }: { pays: Awaited<ReturnType<typeof adminPayments>>; people: { id: string; email: string }[] }) {
+  const [open, setOpen] = useState(false);
+  const [page, setPage] = useState(0);
+  const per = 20, pages = Math.max(1, Math.ceil(pays.length / per));
+  const shown = pays.slice(page * per, page * per + per);
+  const who = (id: string) => people.find((p) => p.id === id)?.email ?? `${id.slice(0, 8)}…`;
+  return (
+    <div className="card">
+      <button className="card-head fold-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <b>Recent payments and grants</b><span className="muted small">{pays.length} · {open ? 'Hide' : 'Show'} <Icon name={open ? 'up' : 'down'} size={12} /></span>
+      </button>
+      {open && (
+        <>
+          <div className="table-scroll">
+            <table className="admin-table">
+              <thead><tr><th>Date</th><th>Person</th><th>Provider</th><th>Plan</th><th>Amount</th><th>Days</th></tr></thead>
+              <tbody>{shown.map((p) => <tr key={p.id}><td>{fmtDate(p.created_at)}</td><td>{who(p.user_id)}</td><td>{p.provider}</td><td>{p.plan}</td><td>{p.amount_minor != null ? `${(p.amount_minor / 100).toFixed(2)} ${p.currency?.toUpperCase() ?? ''}` : '-'}</td><td>{p.days_added ?? '-'}</td></tr>)}</tbody>
+            </table>
+          </div>
+          {pages > 1 && (
+            <div className="pager">
+              <button className="btn ghost sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>Previous</button>
+              <span className="muted small">Page {page + 1} of {pages}</span>
+              <button className="btn ghost sm" disabled={page >= pages - 1} onClick={() => setPage((p) => p + 1)}>Next</button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -425,9 +460,9 @@ export function AdminView() {
               <tr key={r.id}>
                 <td>{r.email}</td>
                 <td><Select value={r.role} onChange={(e) => act(() => adminSetRole(r.email, e.target.value), `Role updated for ${r.email}`)}><option>user</option><option>teacher</option><option>admin</option></Select></td>
-                <td>{fmtDate(r.pro_until) || '-'}</td>
-                <td>{fmtDate(r.plus_until) || '-'}</td>
-                <td>{r.pro_source ?? '-'}{r.stripe_status ? ` (${r.stripe_status})` : ''}</td>
+                <td>{activeDate(r.pro_until)}</td>
+                <td>{activeDate(r.plus_until)}</td>
+                <td>{activeDate(r.pro_until) !== '-' || activeDate(r.plus_until) !== '-' ? (r.pro_source ?? '-') : 'free'}{r.stripe_status ? ` (${r.stripe_status})` : ''}</td>
                 <td className="admin-acts">
                   {gbtn(`${r.id}:pro31`, 'Pro +1 mo', () => adminGrant(r.email, 31, 'pro'), `+1 month Pro for ${r.email}`)}
                   {gbtn(`${r.id}:plus31`, 'Plus +1 mo', () => adminGrant(r.email, 31, 'plus'), `+1 month Plus for ${r.email}`)}
@@ -441,13 +476,7 @@ export function AdminView() {
       </div>
       <NewsAdmin />
       <PaymentTest onDone={() => adminPayments().then(setPays).catch(() => undefined)} />
-      <div className="card">
-        <div className="card-head"><b>Recent payments and grants</b></div>
-        <table className="admin-table">
-          <thead><tr><th>Date</th><th>Provider</th><th>Plan</th><th>Amount</th><th>Days</th></tr></thead>
-          <tbody>{pays.map((p) => <tr key={p.id}><td>{fmtDate(p.created_at)}</td><td>{p.provider}</td><td>{p.plan}</td><td>{p.amount_minor != null ? `${(p.amount_minor / 100).toFixed(2)} ${p.currency?.toUpperCase() ?? ''}` : '-'}</td><td>{p.days_added ?? '-'}</td></tr>)}</tbody>
-        </table>
-      </div>
+      <Payments pays={pays} people={rows} />
     </div>
   );
 }

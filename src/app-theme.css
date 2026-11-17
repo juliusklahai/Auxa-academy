@@ -1476,3 +1476,25 @@ html .lib-card .lib, html.native .lib-card .lib { scrollbar-width: thin !importa
 .news-form input, .news-form textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--hair, #ddd); border-radius: 12px; padding: 9px 12px; font: inherit; background: var(--card, #fff); color: inherit; }
 .news-admin { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 .news-admin li { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+
+.lib-card { margin-bottom: 16px; }
+.pay-test-btns { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 12px; }
+.pay-test-check { display: flex; flex-wrap: wrap; gap: 8px; }
+.pay-test-check input { flex: 1 1 220px; min-width: 0; }
+.fold-head { width: 100%; background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center; }
+.fold-head span { display: inline-flex; gap: 6px; align-items: center; }
+.table-scroll { overflow-x: auto; margin-top: 10px; }
+.pager { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 10px; }
+/* the news panel stays on screen on phones */
+@media (max-width: 640px) {
+  .news-pop { position: fixed; left: 12px; right: 12px; top: calc(64px + env(safe-area-inset-top, 0px)); width: auto; max-height: 70vh; }
+}
+
+.news-back { position: fixed; inset: 0; z-index: 79; background: transparent; }
+.news-pop { padding: 14px 16px 16px; }
+.news-head { margin-bottom: 10px; }
+.news-head b { font-size: 16px; }
+.news-close { width: 30px; height: 30px; border-radius: 50%; border: 0; background: var(--hair-2, rgba(127,127,127,.14)); color: inherit; display: grid; place-items: center; cursor: pointer; }
+.news-pop li { padding: 10px 12px; gap: 3px; }
+.news-pop li b { font-size: 15px; }
+.news-pop li small { font-size: 11px; letter-spacing: .02em; }

@@ -205,7 +205,7 @@ export async function adminSearch(q: string) {
 export async function adminGrant(email: string, days: number, tier: 'pro' | 'plus' = 'pro') { const { data, error } = await (await supabase()).rpc('admin_grant', { p_email: email, p_days: days, p_tier: tier }); if (error) throw error; return data as string; }
 export async function adminSetRole(email: string, role: string) { const { error } = await (await supabase()).rpc('admin_set_role', { p_email: email, p_role: role }); if (error) throw error; }
 export async function adminPayments() {
-  const { data, error } = await (await supabase()).from('payments').select('*').order('created_at', { ascending: false }).limit(50);
+  const { data, error } = await (await supabase()).from('payments').select('*').order('created_at', { ascending: false }).limit(200);
   if (error) throw error;
   return data as { id: number; user_id: string; provider: string; plan: string; amount_minor: number | null; currency: string | null; days_added: number | null; created_at: string }[];
 }

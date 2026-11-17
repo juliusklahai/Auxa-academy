@@ -28,9 +28,10 @@ export function NewsBell() {
       <button className="nav-io news-bell" onClick={show} aria-label={unread ? `News: ${unread} new` : 'News'} title="News from Auxa">
         <Icon name="bell" size={17} />{unread > 0 && <span className="news-dot">{unread > 9 ? '9+' : unread}</span>}
       </button>
+      {open && <div className="news-back" onClick={() => setOpen(false)} />}
       {open && (
         <div className="news-pop" role="dialog" aria-label="News from Auxa">
-          <div className="news-head"><b>News from Auxa</b><button className="icon-btn" onClick={() => setOpen(false)} aria-label="Close"><Icon name="close" size={14} /></button></div>
+          <div className="news-head"><b>News from Auxa</b><button className="news-close" onClick={() => setOpen(false)} aria-label="Close"><Icon name="close" size={14} /></button></div>
           {items.length === 0 ? <p className="muted small">No news yet.</p> : (
             <ul>{items.map((n) => <li key={n.id} className={n.id > seen ? 'new' : ''}><small className="muted">{fmt(n.created_at)}</small><b>{n.title}</b>{n.body && <p>{n.body}</p>}</li>)}</ul>
           )}
