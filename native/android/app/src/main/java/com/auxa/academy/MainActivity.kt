@@ -51,9 +51,9 @@ class MainActivity : Activity() {
     private var pendingMic: PermissionRequest? = null
     private var pendingFiles: ValueCallback<Array<Uri>>? = null
     lateinit var midi: MidiBridge
+        private set
     /** low-latency piano sound for MIDI keyboards */
     val piano by lazy { NativePiano(this) }
-        private set
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
