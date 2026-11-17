@@ -17,13 +17,22 @@ interface NativeApi {
   /** voice coach (Android text-to-speech) */
   speak?(text: string, id: string, rate: number): void;
   stopSpeaking?(): void;
+  /** low-latency piano for MIDI keyboards (Android): load a sound (JSON), set its level, stop, report */
+  pianoSetup?(json: string): void;
+  pianoVolume?(v: number): void;
+  pianoDisable?(): void;
+  pianoStatus?(): string;
+  /** the clock MIDI arrival is stamped with */
+  uptimeMs?(): number;
 }
 
 declare global {
   interface Window {
     MaestroNative?: NativeApi;
     __maestroNative?: {
-      onMidi?: (bytes: number[]) => void;
+      /** MIDI bytes; sounded = the phone already played them; got = arrival time (uptimeMs clock) */
+      onMidi?: (bytes: number[], sounded?: boolean, got?: number) => void;
+      onPiano?: (ok: boolean) => void;
       onMidiDevices?: (names: string[]) => void;
       /** Android back button; return true when the app handled it */
       back?: () => boolean;
@@ -51,7 +60,9 @@ export function onBack(handler: () => boolean, priority = 0) {
   return () => { const i = backStack.indexOf(item); if (i >= 0) backStack.splice(i, 1); };
 }
 
-export function onNativeMidi(onBytes: (b: number[]) => void, onDevices: (names: string[]) => void) {
+export function onNativeMidi(onBytes: (b: number[], sounded?: boolean, got?: number) => void, onDevices: (names: string[]) => void) {
   hooks().onMidi = onBytes;
   hooks().onMidiDevices = onDevices;
 }
+
+export function onNativePiano(f: (ok: boolean) => void) { hooks().onPiano = f; }

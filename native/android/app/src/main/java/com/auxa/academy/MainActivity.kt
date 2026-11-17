@@ -51,6 +51,8 @@ class MainActivity : Activity() {
     private var pendingMic: PermissionRequest? = null
     private var pendingFiles: ValueCallback<Array<Uri>>? = null
     lateinit var midi: MidiBridge
+    /** low-latency piano sound for MIDI keyboards */
+    val piano by lazy { NativePiano(this) }
         private set
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -337,6 +339,7 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         midi.close()
+        piano.close()
         speaker.close()
         root.removeView(web)
         web.destroy()

@@ -39,6 +39,15 @@ export interface AppNote { midi: number; onMs: number; offMs: number }
 class AudioEngine {
   ctx: AudioContext | null = null;
   private master!: GainNode;
+  /** what you play (keyboard, MIDI, touch): its own path, without the limiter's look-ahead delay */
+  private liveBus!: GainNode;
+  /** the band's accompaniment and the guide melody, each with its own level */
+  private bandBus!: GainNode;
+  private guideBus!: GainNode;
+  /** where new voices connect (set around each scheduling call) */
+  private dest!: AudioNode;
+  /** levels of the four parts (Settings > Sound mixer), 0..1.5 */
+  mix = { live: 1, band: 1, guide: 1, metronome: 1 };
   private limiter!: DynamicsCompressorNode;
   private buffers = new Map<number, AudioBuffer>();
   private tap: AnalyserNode | null = null;
@@ -62,7 +71,7 @@ class AudioEngine {
   a4 = 440;
   volume = 0.8;
   metronomeVolume = 0.6;
-  latencyMode: 'smooth' | 'low' = 'smooth';
+  latencyMode: 'smooth' | 'low' = 'low';
   onAppNote: Listener | null = null;
   private _pianoSound: SoundId = 'grand';
   /** the sound the piano plays everywhere (keyboard, lessons, scores); recorded sounds load on first use */
@@ -106,6 +115,21 @@ class AudioEngine {
       this.tap = this.ctx.createAnalyser();
       this.tap.fftSize = 2048;
       this.limiter.connect(this.tap);
+      this.bandBus = this.ctx.createGain();
+      this.guideBus = this.ctx.createGain();
+      this.bandBus.connect(this.master);
+      this.guideBus.connect(this.master);
+      // live notes skip the compressor (it delays everything by its look-ahead); a soft clipper keeps
+      // big chords from distorting instead, with no delay at all
+      this.liveBus = this.ctx.createGain();
+      const soft = this.ctx.createWaveShaper();
+      const curve = new Float32Array(2048);
+      for (let i = 0; i < curve.length; i++) { const x = (i / (curve.length - 1)) * 2 - 1, a = Math.abs(x); curve[i] = a <= 0.7 ? x : Math.sign(x) * (0.7 + 0.3 * Math.tanh((a - 0.7) / 0.3)); }
+      soft.curve = curve;
+      this.liveBus.connect(soft).connect(this.ctx.destination);
+      soft.connect(this.tap);
+      this.dest = this.bandBus;
+      this.applyMix();
       this.buffers.clear();
       this.waves.clear();
       this.drumBufs.clear();
@@ -126,7 +150,20 @@ class AudioEngine {
   setVolume(v: number) {
     this.volume = v;
     if (this.master) this.master.gain.value = v * 0.75;
+    this.applyMix();
+    this.onMix?.();
   }
+  /** Set the levels of your piano, the band, the guide melody and the metronome. */
+  setMix(m: Partial<typeof this.mix>) { this.mix = { ...this.mix, ...m }; this.applyMix(); this.onMix?.(); }
+  onMix: (() => void) | null = null;
+  private applyMix() {
+    if (!this.liveBus) return;
+    this.liveBus.gain.value = this.volume * 0.75 * this.mix.live;
+    this.bandBus.gain.value = this.mix.band;
+    this.guideBus.gain.value = this.mix.guide;
+  }
+  /** the level the native low-latency piano should play at, to match the web piano */
+  get liveLevel() { return this.volume * 0.75 * this.mix.live; }
 
   /** Real output latency (seconds) so app notes can be matched to what the mic hears. */
   get outLatency(): number {
@@ -228,7 +265,7 @@ class AudioEngine {
     const v = Math.max(0.05, Math.min(1, velocity));
     // the layer already carries the loudness; velocity shades it within the layer
     gain.gain.value = bank.norm * bank.def.gain * 0.62 * (0.55 + 0.45 * v);
-    src.connect(gain).connect(this.master);
+    src.connect(gain).connect(this.dest);
     src.start(t, s.start);
     const startMs = performance.now() + (t - ctx.currentTime + this.outLatency) * 1000;
     const lenMs = s.loopEnd > 0 ? 60_000 : ((s.buf.duration - s.start) / rate) * 1000;
@@ -243,7 +280,7 @@ class AudioEngine {
     src.buffer = this.bufferFor(Math.max(21, Math.min(108, midi)));
     const gain = ctx.createGain();
     gain.gain.value = Math.max(0.05, Math.min(1, velocity)) * 0.55;
-    src.connect(gain).connect(this.master);
+    src.connect(gain).connect(this.dest);
     src.start(t);
     const now = performance.now();
     const startMs = now + (t - ctx.currentTime + this.outLatency) * 1000;
@@ -266,7 +303,9 @@ class AudioEngine {
     const t = when ?? ctx.currentTime;
     const prev = this.active.get(midi);
     if (prev) this.release(prev, t, 0.06);
+    this.dest = this.liveBus;
     const v = this.startVoice(midi, t, velocity);
+    this.dest = this.bandBus;
     this.active.set(midi, v);
   }
 
@@ -299,8 +338,12 @@ class AudioEngine {
    * `suppressMic`: mute microphone detection while it sounds (lesson demos). For play-along
    * accompaniment it is false; the microphone's echo gate ignores these notes instead.
    */
-  scheduleNote(midi: number, whenSec: number, durSec: number, velocity = 0.7, suppressMic = true, instrument: Instrument = 'piano') {
+  scheduleNote(midi: number, whenSec: number, durSec: number, velocity = 0.7, suppressMic = true, instrument: Instrument = 'piano', bus: 'band' | 'guide' = 'band') {
     const ctx = this.ensure();
+    this.dest = bus === 'guide' ? this.guideBus : this.bandBus;
+    try { this.scheduleOn(ctx, midi, whenSec, durSec, velocity, suppressMic, instrument); } finally { this.dest = this.bandBus; }
+  }
+  private scheduleOn(ctx: AudioContext, midi: number, whenSec: number, durSec: number, velocity: number, suppressMic: boolean, instrument: Instrument) {
     const t = Math.max(ctx.currentTime, whenSec);
     const end = t + Math.max(0.08, durSec);
     const now = performance.now();
@@ -337,7 +380,7 @@ class AudioEngine {
     src.buffer = this.bufferFor(Math.max(21, Math.min(108, midi)));
     const gain = ctx.createGain();
     gain.gain.value = Math.max(0.05, Math.min(1, velocity)) * 0.55;
-    src.connect(gain).connect(this.master);
+    src.connect(gain).connect(this.dest);
     src.start(t);
     const startMs = now + (t - ctx.currentTime + this.outLatency) * 1000;
     this.finishScheduled({ src, gain, startMs, endMs: startMs + src.buffer.duration * 1000, midi }, midi, t, end, suppressMic, now);
@@ -386,7 +429,7 @@ class AudioEngine {
     lp.type = 'lowpass';
     lp.frequency.value = Math.min(p.lp, f * 14);
     lp.Q.value = 0.6;
-    out.connect(lp).connect(this.master);
+    out.connect(lp).connect(this.dest);
     const peak = p.vol * Math.max(0.1, Math.min(1, velocity));
     const g = out.gain;
     g.setValueAtTime(0, t);
@@ -456,7 +499,7 @@ class AudioEngine {
     src.buffer = this.drumBuffer(kind);
     const g = ctx.createGain();
     g.gain.value = this.drumsVolume * velocity * (kind === 'hat' ? 0.35 : kind === 'snare' ? 0.45 : 0.7);
-    src.connect(g).connect(this.master);
+    src.connect(g).connect(this.bandBus);
     src.start(Math.max(ctx.currentTime, whenSec));
     const rec = { stop: (at: number) => { try { src.stop(at); } catch { /* done */ } } };
     this.synthNodes.add(rec);
@@ -489,7 +532,7 @@ class AudioEngine {
     const o = ctx.createOscillator();
     const g = ctx.createGain();
     o.frequency.value = accent ? 1760 : sub ? 990 : 1320;
-    const peak = this.metronomeVolume * (sub ? 0.15 : accent ? 0.5 : 0.32);
+    const peak = this.metronomeVolume * this.mix.metronome * (sub ? 0.15 : accent ? 0.5 : 0.32);
     g.gain.setValueAtTime(0, t);
     g.gain.linearRampToValueAtTime(peak, t + 0.002);
     g.gain.exponentialRampToValueAtTime(1e-4, t + 0.05);

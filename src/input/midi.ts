@@ -2,7 +2,7 @@
 // and the phone's own MIDI system inside the Auxa apps.
 import { native, onNativeMidi } from '../native/bridge';
 
-export interface MidiNoteEvent { midi: number; on: boolean; velocity: number; at: number }
+export interface MidiNoteEvent { midi: number; on: boolean; velocity: number; at: number; /** the phone's own low-latency piano already played it */ sounded?: boolean }
 
 export class MidiInput {
   access: MIDIAccess | null = null;
@@ -10,12 +10,25 @@ export class MidiInput {
   sustain = false;
   onNote: ((e: MidiNoteEvent) => void) | null = null;
   onDevices: ((names: string[]) => void) | null = null;
+  /** a second listener for device changes (the native piano) */
+  onDevicesChanged: ((names: string[]) => void) | null = null;
+  /** average delay from the phone's MIDI system to the page, ms (-1: unknown) */
+  bridgeMs = -1;
+  /** time of the last key press, for the latency check */
+  lastPressAt = 0;
+  private sounded = false;
 
   get supported() { return !!native || (typeof navigator !== 'undefined' && 'requestMIDIAccess' in navigator); }
 
   async connect(): Promise<string[]> {
     if (native) {
-      onNativeMidi((b) => this.bytes(b), (names) => { this.devices = names; this.onDevices?.(names); });
+      onNativeMidi((b, sounded, got) => {
+        // how long the note took to cross from the phone's MIDI system into the page (diagnostics)
+        if (got !== undefined && native?.uptimeMs) { const d = native.uptimeMs() - got; this.bridgeMs = this.bridgeMs < 0 ? d : this.bridgeMs * 0.8 + d * 0.2; }
+        this.sounded = !!sounded;
+        this.bytes(b);
+        this.sounded = false;
+      }, (names) => { this.devices = names; this.onDevices?.(names); this.onDevicesChanged?.(names); });
       native.midiStart();
       return this.devices;
     }
@@ -56,8 +69,8 @@ export class MidiInput {
   private message(d: number[]) {
     const cmd = d[0] & 0xf0;
     const at = performance.now();
-    if (cmd === 0x90 && d[2] > 0) this.onNote?.({ midi: d[1], on: true, velocity: d[2] / 127, at });
-    else if (cmd === 0x80 || (cmd === 0x90 && d[2] === 0)) this.onNote?.({ midi: d[1], on: false, velocity: 0, at });
+    if (cmd === 0x90 && d[2] > 0) { this.lastPressAt = at; this.onNote?.({ midi: d[1], on: true, velocity: d[2] / 127, at, sounded: this.sounded }); }
+    else if (cmd === 0x80 || (cmd === 0x90 && d[2] === 0)) this.onNote?.({ midi: d[1], on: false, velocity: 0, at, sounded: this.sounded });
     else if (cmd === 0xb0 && d[1] === 64) this.sustain = d[2] >= 64;
   }
 }

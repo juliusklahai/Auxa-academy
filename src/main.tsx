@@ -9,6 +9,8 @@ import './styles.css';
 import './landing.css';
 import './app-theme.css';
 import './ui/theme';
+import { isNativeApp } from './native/bridge';
+if (isNativeApp) document.documentElement.classList.add('native');
 import { installTooltips } from './ui/tooltip';
 installTooltips();
 

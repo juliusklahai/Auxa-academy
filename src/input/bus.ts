@@ -5,8 +5,10 @@ import { audio } from '../audio/engine';
 import type { InputSource } from '../core/types';
 import { mic } from './mic';
 import { midiIn } from './midi';
+import { judgeOnset } from './micPolicy';
+import { getExpected } from './expect';
 
-export interface LearnerNote { midi: number; on: boolean; velocity: number; at: number; source: InputSource; confidence: number; cents?: number }
+export interface LearnerNote { midi: number; on: boolean; velocity: number; at: number; source: InputSource; confidence: number; cents?: number; /** already sounded by the phone's native piano */ sounded?: boolean }
 type L = (n: LearnerNote) => void;
 const listeners = new Set<L>();
 
@@ -17,24 +19,27 @@ export function onLearnerNote(l: L): () => void {
 
 export function emit(n: LearnerNote) {
   // Sound the note for on-screen / computer-keyboard / MIDI input (an acoustic piano makes its own sound).
-  if (n.source !== 'mic') {
+  if (n.source !== 'mic' && !n.sounded) {
     if (n.on) audio.noteOn(n.midi, Math.max(0.35, n.velocity));
     else audio.noteOff(n.midi);
   }
   listeners.forEach((l) => l(n));
 }
 
-midiIn.onNote = (e) => emit({ midi: e.midi, on: e.on, velocity: e.velocity, at: e.at, source: 'midi', confidence: 1 });
+midiIn.onNote = (e) => emit({ midi: e.midi, on: e.on, velocity: e.velocity, at: e.at, source: 'midi', confidence: 1, sounded: e.sounded });
 // Voice: one note at a time.
 mic.onNote = (n) => { if (mic.settings.mode === 'voice') emit({ midi: n.midi, on: true, velocity: 0.7, at: n.at, source: 'mic', confidence: n.confidence, cents: n.cents }); };
-// Piano: every note struck together arrives as one chord event. Confident notes are passed on;
-// if nothing in the chord is clear, ONE uncertain observation is passed so the learner is told,
-// but it is never scored as a mistake.
+// Piano: every note struck together arrives as one chord event. The microphone policy decides what it
+// may mean (src/input/micPolicy.ts): clear expected notes count; overtone-like extras beside a correct
+// note are dropped (a phone hears partials too, and correct playing must never be called wrong); a clear
+// unexpected note is passed on as played. If nothing is clear, ONE uncertain observation is passed so the
+// learner is told, but it is never scored as a mistake.
 mic.onChord = (c) => {
   if (mic.settings.mode === 'voice') return;
-  const sure = c.notes.filter((n) => n.confidence >= mic.settings.minConfidence);
-  const list = sure.length ? sure : [...c.notes].sort((a, b) => b.confidence - a.confidence).slice(0, 1);
-  list.forEach((n) => emit({ midi: n.midi, on: true, velocity: 0.7, at: c.at, source: 'mic', confidence: n.confidence }));
+  const judged = judgeOnset(c.notes, getExpected(), mic.settings.minConfidence);
+  const clear = judged.filter((n) => !n.unsure);
+  const list = clear.length ? clear : judged.slice(0, 1).map((n) => ({ ...n, confidence: Math.min(n.confidence, mic.settings.minConfidence - 0.05) }));
+  list.forEach((n) => emit({ midi: n.midi, on: true, velocity: 0.7, at: c.at, source: 'mic', confidence: n.unsure ? Math.min(n.confidence, 0.8) : Math.max(n.confidence, mic.settings.minConfidence) }));
 };
 
 // Desktop keyboard: two rows mapped like a piano, starting at an adjustable octave.

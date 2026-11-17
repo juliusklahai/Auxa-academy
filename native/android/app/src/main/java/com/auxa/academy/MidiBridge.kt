@@ -9,6 +9,7 @@ import android.media.midi.MidiReceiver
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import org.json.JSONArray
 
 /**
@@ -69,11 +70,37 @@ class MidiBridge(private val a: MainActivity) {
     }
 
     private inner class Receiver : MidiReceiver() {
+        private var status = 0
         override fun onSend(msg: ByteArray, offset: Int, count: Int, timestamp: Long) {
+            val got = SystemClock.uptimeMillis()
+            // sound the keys right here, on the MIDI thread (no trip through the web page)
+            val piano = a.piano
+            val sounded = piano.enabled
+            if (sounded) {
+                var i = offset
+                val end = offset + count
+                while (i < end) {
+                    val b = msg[i].toInt() and 0xff
+                    if (b >= 0xf0) { i++; continue }
+                    if (b and 0x80 != 0) { status = b; i++ }
+                    if (status == 0) { i++; continue }
+                    val kind = status and 0xf0
+                    val need = if (kind == 0xc0 || kind == 0xd0) 1 else 2
+                    if (i + need > end) break
+                    val d1 = msg[i].toInt() and 0x7f
+                    val d2 = if (need == 2) msg[i + 1].toInt() and 0x7f else 0
+                    when {
+                        kind == 0x90 && d2 > 0 -> piano.noteOn(d1, d2 / 127f)
+                        kind == 0x80 || (kind == 0x90 && d2 == 0) -> piano.noteOff(d1)
+                        kind == 0xb0 && d1 == 64 -> piano.sustain(d2 >= 64)
+                    }
+                    i += need
+                }
+            }
             val sb = StringBuilder("[")
             for (i in 0 until count) { if (i > 0) sb.append(','); sb.append(msg[offset + i].toInt() and 0xff) }
             sb.append(']')
-            js("window.__maestroNative&&window.__maestroNative.onMidi&&window.__maestroNative.onMidi($sb)")
+            js("window.__maestroNative&&window.__maestroNative.onMidi&&window.__maestroNative.onMidi($sb,$sounded,$got)")
         }
     }
 

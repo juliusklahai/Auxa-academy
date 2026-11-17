@@ -28,6 +28,7 @@ import { LESSONS as ALL_LESSONS, lessonById } from './curriculum/lessons';
 import { readRoute, writeRoute } from './ui/route';
 import { stopSpeaking } from './ui/voice';
 import { audio } from './audio/engine';
+import { setNativePianoWanted, syncNativePiano } from './audio/nativePiano';
 import { ACCOUNTS_ENABLED } from './account/config';
 import { getAccount, initAccount, openUpgrade, useAccount, useUpgrade } from './account/store';
 import { allowFeature, allowLesson, lessonTier, TIER_NAME } from './account/gate';
@@ -86,7 +87,8 @@ export default function App() {
   const account = useAccount();
   // the piano's sound: the learner's choice with Pro or Plus, otherwise the concert grand
   const appSettings = useSettings();
-  useEffect(() => { audio.pianoSound = allowFeature(account.ent, 'sounds') ? appSettings.pianoSound : 'grand'; }, [account.ent, appSettings.pianoSound]);
+  useEffect(() => { audio.pianoSound = allowFeature(account.ent, 'sounds') ? appSettings.pianoSound : 'grand'; void syncNativePiano(); }, [account.ent, appSettings.pianoSound]);
+  useEffect(() => { setNativePianoWanted(appSettings.nativePiano !== false); }, [appSettings.nativePiano]);
   const [, bump] = useState(0);
   // Android back button (inside the Auxa app): close the lesson, then go back to Home, then leave
   const navRef = useRef({ lesson, tab });
@@ -125,6 +127,11 @@ export default function App() {
     if (!allowLesson(getAccount().ent, l)) { openUpgrade(`Level ${l.level} is part of ${TIER_NAME[lessonTier(l)]}`); return; }
     setExStart(ex); setLesson(l); setTab(l.track === 'voice' ? 'voice' : 'learn');
   };
+  // other screens (the certificate sheet) can open a lesson at a given exercise
+  useEffect(() => {
+    const f = (e: Event) => { const d = (e as CustomEvent).detail as { id: string; ex?: number }; const l = LESSONS.find((x) => x.id === d.id); if (l) { open(l, d.ex); window.scrollTo({ top: 0 }); } };
+    window.addEventListener('maestro:open-lesson', f); return () => window.removeEventListener('maestro:open-lesson', f);
+  }); // eslint-disable-line react-hooks/exhaustive-deps
   const nextLesson = lesson ? LESSONS.find((l) => l !== lesson && (l.track ?? 'piano') === (lesson.track ?? 'piano') && !progress.lessonComplete(l) && progress.lessonUnlocked(l, LESSONS)) : undefined;
   useEffect(() => { if (!lesson) setExpected(null); }, [lesson, tab]);
   const tabs = TABS;

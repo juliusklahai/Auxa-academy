@@ -6,6 +6,7 @@ import { freqToNote } from '../core/music';
 import { fixOctave, OnsetTracker, yin } from './pitch';
 import { PolyTracker, type SoundProfile } from './poly';
 import { getExpected } from './expect';
+import { PianoCapture } from './micCapture';
 
 export interface MicFrame { freq: number; midi: number; cents: number; confidence: number; rms: number; suppressed: boolean }
 export interface MicNote { midi: number; confidence: number; at: number /* performance.now() */; cents?: number }
@@ -27,6 +28,14 @@ export class MicListener {
   private buf = new Float32Array(4096);
   private poly: PolyTracker | null = null;
   private timer = 0;
+  /** the piano detector in a background worker (null: the older in-page detector runs instead) */
+  private capture: PianoCapture | null = null;
+  /** where piano analysis runs, for the diagnostics page */
+  get engine(): 'worker' | 'page' | 'off' { return !this.stream ? 'off' : this.capture ? 'worker' : 'page'; }
+  get workerLoad() { return this.capture?.load ?? 0; }
+  private lastExpected = '';
+  private lastApp = 0;
+  private wasSuppressed = false;
   tracker = new OnsetTracker();
   settings: MicSettings = { noiseGate: 0.002, minConfidence: 0.85, latencyMs: 60, mode: 'piano' };
   onFrame: ((f: MicFrame) => void) | null = null;
@@ -63,8 +72,16 @@ export class MicListener {
     this.analyser.fftSize = 4096;
     // echo gate: what the app played near this onset (as heard at the mic) is not the learner
     this.poly = new PolyTracker(ctx.sampleRate, getExpected, (t) => audio.appOnsetsNear(t + this.settings.latencyMs * 0, 130));
+    // the improved detector also when it has to run in the page (no AudioWorklet)
+    this.poly.whiten = true; this.poly.lo = 21; this.poly.hi = 108;
     src.connect(this.analyser);
     this.src = src;
+    // piano listening in a worker, fed every sample by an AudioWorklet
+    const cap = new PianoCapture();
+    if (await cap.start(ctx, src)) {
+      this.capture = cap;
+      cap.onEvent = (e) => this.workerEvent(e.at, e.notes);
+    }
     this.timer = window.setInterval(() => this.process(), 23);
   }
 
@@ -108,6 +125,8 @@ export class MicListener {
 
   stop() {
     this.stopCapture();
+    this.capture?.stop();
+    this.capture = null;
     clearInterval(this.timer);
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;
@@ -129,7 +148,8 @@ export class MicListener {
     const frame = { freq: est.freq, midi, cents, confidence: est.confidence, rms: est.rms, suppressed };
     this.onFrame?.(frame);
     this.frameListeners.forEach((l) => l(frame));
-    if (suppressed) { this.tracker.reset(); this.poly?.reset(); return; }
+    if (suppressed) { this.tracker.reset(); this.poly?.reset(); if (!this.wasSuppressed) this.capture?.reset(); this.wasSuppressed = true; return; }
+    this.wasSuppressed = false;
 
     if (this.settings.mode === 'voice') {
       // Singing: one note at a time with intonation
@@ -151,6 +171,7 @@ export class MicListener {
       return;
     }
     // Piano: polyphonic, chords and several notes at once
+    if (this.capture) { this.feedWorker(); return; }
     if (!this.poly) return;
     // the piano listener adapts to the room by itself; this is only an absolute floor (soft playing counts)
     this.poly.noiseGate = Math.min(0.0015, Math.max(0.0003, this.settings.noiseGate * 0.3));
@@ -165,6 +186,33 @@ export class MicListener {
     // expected notes first, so a correct chord with one unclear extra is matched before the extra
     [...ev.notes].sort((a, b) => Number(b.expected) - Number(a.expected))
       .forEach((n) => this.onNote?.({ midi: n.midi, confidence: n.confidence, at }));
+  }
+
+  /** Keep the worker up to date: the lesson's expected notes, the app's own notes, the settings. */
+  private feedWorker() {
+    const cap = this.capture!, ctx = audio.ctx!;
+    const exp = getExpected();
+    const k = exp ? exp.join(',') : '';
+    if (k !== this.lastExpected) { this.lastExpected = k; cap.setExpected(exp); }
+    cap.config(this.sensitivity, this.profile, Math.min(0.0015, Math.max(0.0003, this.settings.noiseGate * 0.3)));
+    const now = performance.now();
+    if (now - this.lastApp > 90) {
+      this.lastApp = now;
+      // the app's notes on the audio clock (echo gate), as heard at the microphone
+      const audioNow = ctx.currentTime * 1000;
+      cap.setAppNotes(audio.appNotes.filter((n) => n.onMs > now - 1500).map((n) => ({ midi: n.midi, at: audioNow + (n.onMs - now) })));
+    }
+  }
+
+  /** A note event from the worker (onset on the audio clock). */
+  private workerEvent(atAudio: number, list: { midi: number; confidence: number; expected: boolean }[]) {
+    if (this.settings.mode === 'voice' || !audio.ctx) return;
+    const at = performance.now() - (audio.ctx.currentTime * 1000 - atAudio) - this.settings.latencyMs;
+    if (performance.now() < audio.appPlayingUntil) return; // a lesson demo is playing: it is not the learner
+    const notes = list.map((n) => ({ midi: n.midi, confidence: n.confidence }));
+    this.onChord?.({ notes, at });
+    if (notes.every((n) => n.confidence < this.settings.minConfidence)) this.onUncertain?.();
+    [...list].sort((a, b) => Number(b.expected) - Number(a.expected)).forEach((n) => this.onNote?.({ midi: n.midi, confidence: n.confidence, at }));
   }
 
   /** Measure ambient level for ~1.5 s and set the noise gate above it. */
@@ -183,6 +231,8 @@ export class MicListener {
 }
 
 export const mic = new MicListener();
+// test builds: let browser tests watch the microphone pipeline
+if (typeof window !== 'undefined' && (import.meta as unknown as { env?: { MODE?: string } }).env?.MODE === 'localtest') (window as unknown as { __auxaMic: MicListener }).__auxaMic = mic;
 
 /** A plain-language explanation of why the microphone could not start, and how to fix it. */
 export function micHelp(e: unknown): string {

@@ -8,6 +8,8 @@ import { Games } from './Games';
 import { Composer } from './Composer';
 import { VoiceHelp } from './VoiceHelp';
 import { CoachVoicePicker } from './CoachVoicePicker';
+import { LatencyCheck } from './LatencyCheck';
+import { nativePianoAvailable } from '../audio/nativePiano';
 import { useEffect, useRef, useState } from 'react';
 import { Select } from './Select';
 import { audio } from '../audio/engine';
@@ -403,7 +405,7 @@ export function SettingsView() {
     await fn();
     if (was) { try { await mic.start(); setMicOn(true); } catch { setMicOn(false); } }
   };
-  const changeLatency = (m: 'smooth' | 'low') => restartMic(async () => { setSettings({ latencyMode: m }); await audio.setLatencyMode(m); });
+  const changeLatency = (m: 'smooth' | 'low') => restartMic(async () => { setSettings({ latencyMode: m, latencyChosen: true }); await audio.setLatencyMode(m); });
   const inTune = frame && frame.confidence >= st.micSensitivity && frame.rms > st.noiseGate;
   const exportJson = JSON.stringify(progress.data);
   const SECTIONS = [['input', 'Input', 'mic'], ['sound', 'Sound', 'wave'], ['learn', 'Learning', 'note'], ['data', 'Data', 'doc']] as const;
@@ -472,12 +474,22 @@ export function SettingsView() {
           <div className="card-head"><b>Sound</b></div>
           <div className="field">Piano sound<SoundPicker /></div>
           <label className="field">Piano volume<input type="range" min={0} max={1} step={0.05} value={st.volume} onChange={(e) => setSettings({ volume: +e.target.value })} /></label>
+          <div className="field">Mixer
+            <div className="mixer">
+              {([['mixLive', 'Your piano', 'what you play on a MIDI keyboard or the screen'], ['mixBand', 'Band', 'the accompaniment'], ['mixGuide', 'Melody guide', 'the grey notes the band plays for you'], ['mixMetronome', 'Metronome', 'clicks']] as const).map(([k, label, hint]) => (
+                <label key={k} className="mix-row"><span><b>{label}</b><small className="muted">{hint}</small></span><input type="range" min={0} max={1.5} step={0.05} value={st[k] ?? 1} onChange={(e) => setSettings({ [k]: +e.target.value })} /><span className="mix-val">{Math.round((st[k] ?? 1) * 100)}%</span></label>
+              ))}
+            </div>
+            <small className="muted">Turned your digital piano's speakers down so the band can be heard? Raise "Your piano" here and Auxa plays your keys for you, balanced against the band.</small>
+          </div>
+          {nativePianoAvailable() && <label className="check"><input type="checkbox" checked={st.nativePiano !== false} onChange={(e) => setSettings({ nativePiano: e.target.checked })} /> Low-latency piano for MIDI keyboards (the phone plays your keys directly)</label>}
+          <LatencyCheck />
           <div className="field">Playback quality
             <div className="seg">
-              <button className={st.latencyMode === 'smooth' ? 'on' : ''} onClick={() => changeLatency('smooth')}>Smooth (recommended)</button>
-              <button className={st.latencyMode === 'low' ? 'on' : ''} onClick={() => changeLatency('low')}>Lowest delay</button>
+              <button className={st.latencyMode === 'low' ? 'on' : ''} onClick={() => changeLatency('low')}>Lowest delay (recommended)</button>
+              <button className={st.latencyMode === 'smooth' ? 'on' : ''} onClick={() => changeLatency('smooth')}>Smoother</button>
             </div>
-            <small className="muted">Smooth uses a slightly larger audio buffer so playback never crackles on phones or busy computers. Lowest delay suits a fast computer with a MIDI keyboard.</small>
+            <small className="muted">Lowest delay keeps the sound of your keys immediate. Choose Smoother only if playback crackles on this device.</small>
           </div>
           <div className="field">You listen through
             <div className="seg">

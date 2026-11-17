@@ -339,7 +339,7 @@ function PracticePanel({ lesson, exercise: base, index, chips, onNext, nextLocke
     for (const n of bk) {
       if (n.beat < fromBeat - 1e-6 || n.beat >= toBeat - 1e-6) continue;
       const off = (n.beat - fromBeat) * mspb;
-      audio.scheduleNote(n.midi, base + off / 1000, (n.beats * mspb * 0.94) / 1000, n.vel ?? (n.line === 'melody' ? 0.56 : 0.36), false);
+      audio.scheduleNote(n.midi, base + off / 1000, (n.beats * mspb * 0.94) / 1000, n.vel ?? (n.line === 'melody' ? 0.56 : 0.36), false, 'piano', n.line === 'melody' ? 'guide' : 'band');
       if (n.line === 'melody') {
         timers.current.push(window.setTimeout(() => audio.onAppNote?.(n.midi, true), atMs + off + 30));
         timers.current.push(window.setTimeout(() => audio.onAppNote?.(n.midi, false), atMs + off + n.beats * mspb * 0.9));

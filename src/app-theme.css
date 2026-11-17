@@ -1406,3 +1406,26 @@ html.theme-dark .drill-opt .opt-rhythm .rd-stage { background: #fff; border-radi
 .coach-voice .cv-check { color: #0fb9b1; font-weight: 700; }
 /* dashboard cards keep the same 16px gap as the rest */
 .card.my-tracks, .card.place-invite { margin-bottom: 16px; }
+
+.cert-todo { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: none; border: 0; padding: 6px 0; font: inherit; color: inherit; cursor: pointer; }
+.cert-todo b { flex: 1; }
+
+.drill-listen .drill-next { margin-left: auto; }
+/* the phone app scrolls freely, without visible scrollbars */
+html.native, html.native body, html.native * { scrollbar-width: none; }
+html.native ::-webkit-scrollbar { display: none; width: 0; height: 0; }
+@media (pointer: coarse) { html, body, * { scrollbar-width: none; } ::-webkit-scrollbar { display: none; width: 0; height: 0; } }
+
+.mixer { display: grid; gap: 8px; margin-top: 6px; }
+.mix-row { display: grid; grid-template-columns: minmax(120px, 1fr) 2fr 44px; align-items: center; gap: 10px; }
+.mix-row span:first-child { display: grid; line-height: 1.2; }
+.mix-row small { font-size: 11px; }
+.mix-val { font-variant-numeric: tabular-nums; text-align: right; font-size: 13px; }
+.lat-check { border: 1px solid var(--hair, #e5e5e5); border-radius: 14px; padding: 12px 14px; margin: 8px 0 14px; display: grid; gap: 6px; }
+.lat-head { display: flex; justify-content: space-between; align-items: center; }
+.lat-total { font-weight: 700; padding: 2px 10px; border-radius: 99px; background: #eee; font-variant-numeric: tabular-nums; }
+.lat-total.ok { background: #d9f7f3; color: #0a7d76; } .lat-total.mid { background: #fff1d6; color: #9a6400; } .lat-total.bad { background: #fde2e2; color: #b42318; }
+.lat-rows { width: 100%; border-collapse: collapse; font-size: 13px; }
+.lat-rows td { padding: 4px 0; border-top: 1px solid var(--hair, #eee); } .lat-rows td:last-child { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; padding-left: 8px; }
+.lat-warn { display: flex; gap: 6px; align-items: flex-start; color: #9a6400; }
+@media (max-width: 520px) { .mix-row { grid-template-columns: 1fr 44px; } .mix-row input { grid-column: 1 / -1; grid-row: 2; } }

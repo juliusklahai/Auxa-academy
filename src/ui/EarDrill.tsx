@@ -142,6 +142,8 @@ export function EarDrill({ exercise, onNext }: { exercise: Exercise; onNext?: ()
           {q.context.length > 0 && <button className="btn" onClick={() => play(q.context)}><Icon name="ear" size={15} />{spec.kind === 'count' || spec.kind === 'value' || spec.kind === 'tempo' || spec.kind === 'meter' ? 'Hear the clicks' : 'Hear the key'}</button>}
           {answered && <button className="btn" onClick={() => (spec.kind === 'count' || spec.kind === 'value' ? setRevealKey((k) => k + 1) : play(q.reveal))}><Icon name="note" size={15} />Hear the answer</button>}
           {!answered && primable && <button className="btn" onClick={() => setLearning(true)}><Icon name="ear" size={15} />Learn them again</button>}
+          {/* the next step sits where the eyes already are, no scrolling */}
+          {answered && <button className="btn dark drill-next" onClick={next}>{round + 1 >= rounds ? 'See my score' : 'Next round'}<Icon name="next" size={15} /></button>}
         </div>
         {multi && (
           <div className="drill-slots">
@@ -173,7 +175,6 @@ export function EarDrill({ exercise, onNext }: { exercise: Exercise; onNext?: ()
         {answered && (
           <div className={`drill-explain ${marks.every((m) => m === 'right') ? 'ok' : ''}`}>
             <b>{marks.every((m) => m === 'right') ? 'Right first time.' : 'Got there.'}</b> {q.explain}
-            <button className="btn dark" onClick={next}>{round + 1 >= rounds ? 'See my score' : 'Next round'}<Icon name="next" size={15} /></button>
           </div>
         )}
         {!answered && q.byKey && <p className="muted small drill-hint">{spec.kind === 'bass' ? `Chord ${slot + 1}: play its lowest note on the keys.` : spec.kind === 'progression' ? 'You can also answer by playing each chord\'s bass note on the keys.' : 'You can also answer by playing the note on the keys.'}</p>}

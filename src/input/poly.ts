@@ -54,13 +54,30 @@ export interface PolyOptions {
   sensitivity?: number;       // 0.5 (strict) .. 1.5 (sensitive), default 1
   maxNotes?: number;
   masked?: number[];          // notes the app is playing (echo gate)
+  /** judge each partial against the noise level of its own frequency band (spectral whitening) */
+  whiten?: boolean;
+  /** spectrum whose band levels define the noise floor (the full spectrum when analysing "new energy") */
+  floorSpec?: Float32Array;
   debug?: (msg: string) => void;
 }
 
 const B_INHARM = 0.0003;
 const MAX_FREQ = 5000;
+/** weight of all 12 partials in the salience sum */
+const FULL_W = Array.from({ length: 12 }, (_, i) => 1 / Math.pow(i + 1, 0.7)).reduce((a, b) => a + b, 0);
 
-function partialFreq(f0: number, h: number) { return f0 * h * Math.sqrt(1 + B_INHARM * h * h); }
+/** missing-fundamental test: how clearly the lower note's own partials must show (tunable for the benchmark) */
+export const swapTune = { a: 3, share: 0.25 };
+let this_swapA = 3, this_swapShare = 0.25;
+/** set while estimateNotes runs with whitening: partials follow the real register-dependent stretch */
+let regStretch = false;
+function partialFreq(f0: number, h: number) {
+  const B = regStretch ? inharm(69 + 12 * Math.log2(f0 / 440)) : B_INHARM;
+  return f0 * h * Math.sqrt(1 + B * h * h);
+}
+/** String stiffness of a real piano by register: smallest in the low tenor, much larger in the treble. */
+export function inharm(midi: number) { return midi < 45 ? 0.00012 + (45 - midi) * 0.00001 : 0.00012 * Math.pow(2, ((midi - 45) / 12) * 1.25); }
+function partialFreqAt(midi: number, f0: number, h: number) { return f0 * h * Math.sqrt(1 + inharm(midi) * h * h); }
 
 let sideLobeRef: Float32Array | null = null;
 
@@ -106,6 +123,29 @@ function subtractNote(mag: Float32Array, binHz: number, midi: number, full = fal
   });
 }
 
+/** whitened mode: band floor percentile and confidence scale (tuned on scripts/pianoBench.ts) */
+export const bandPct = { p: 0.4, k: 2.5 };
+/** Noise level per frequency: the median of 1/4-octave bands, interpolated in log frequency. Low bands
+ *  carry hammer thump and room rumble, high bands carry hiss; each partial is judged against its own band. */
+export function bandFloor(mag: Float32Array, binHz: number, floor: number): (f: number) => number {
+  const edges: number[] = [];
+  for (let f = 25; f < 6000; f *= Math.pow(2, 0.25)) edges.push(f);
+  const lvl = edges.slice(0, -1).map((f, k) => {
+    const i0 = Math.max(1, Math.floor(f / binHz)), i1 = Math.min(mag.length - 1, Math.ceil(edges[k + 1] / binHz));
+    // wider than the band itself at the bottom, where a band holds only a few bins
+    const lo = Math.max(1, Math.min(i0, Math.floor((f * 0.7) / binHz))), hi = Math.max(i1, Math.ceil((edges[k + 1] * 1.3) / binHz));
+    const a = Array.from(mag.subarray(lo, hi + 1)).sort((x, y) => x - y);
+    return Math.max(floor, a[Math.floor(a.length * bandPct.p)] ?? floor);
+  });
+  const cs = edges.slice(0, -1).map((f, k) => Math.sqrt(f * edges[k + 1]));
+  return (f: number) => {
+    if (f <= cs[0]) return lvl[0];
+    if (f >= cs[cs.length - 1]) return lvl[lvl.length - 1];
+    const x = Math.log2(f / cs[0]) / 0.25, k = Math.floor(x), u = x - k;
+    return lvl[k] * (1 - u) + lvl[k + 1] * u;
+  };
+}
+
 /** Estimate the set of simultaneously sounding (new) notes in a magnitude spectrum. */
 export function estimateNotes(magIn: Float32Array, sampleRate: number, fftSize: number, floor: number, opts: PolyOptions = {}): PolyNote[] {
   const binHz = sampleRate / fftSize;
@@ -119,6 +159,10 @@ export function estimateNotes(magIn: Float32Array, sampleRate: number, fftSize: 
   const mag = Float32Array.from(magIn);
   sideLobeRef = magIn;
   const ref = Math.max(floor, 1e-7);
+  const bf = opts.whiten ? bandFloor(opts.floorSpec ?? magIn, binHz, ref) : null;
+  regStretch = !!opts.whiten;
+  this_swapA = swapTune.a; this_swapShare = swapTune.share;
+  const refAt = (f: number) => (bf ? Math.max(ref, bf(f)) : ref);
   const found: PolyNote[] = [];
   let first = 0;
   // Echo gate: notes the APP itself just played (accompaniment through speakers) are removed first
@@ -134,25 +178,51 @@ export function estimateNotes(magIn: Float32Array, sampleRate: number, fftSize: 
       let s = 0, hits = 0, fundA = 0;
       const hs = harmonics(f0);
       for (const h of hs) {
-        const a = peakAt(mag, binHz, partialFreq(f0, h), h === 1 ? 0.45 : 0.3).v / ref;
+        const pf = partialFreq(f0, h);
+        const a = peakAt(mag, binHz, pf, h === 1 ? 0.45 : 0.3).v / refAt(pf);
         const v = Math.log1p(Math.max(0, a - 1));
         if (a > 3) hits++;
         if (h === 1) fundA = a;
         s += v / Math.pow(h, 0.7);
       }
+      // high notes have only a few partials below the top of the range: judge them on what they can show
+      if (opts.whiten) s *= Math.min(2.2, FULL_W / hs.reduce((a, h) => a + 1 / Math.pow(h, 0.7), 0));
       // a real note shows several partials; a lone peak is not a note
       // Pure-toned sounds (electric piano, organ flute stops) may show only the fundamental:
       // allowed for those profiles when the fundamental itself is strong.
       const needHits = pureOk ? (fundA > 8 && fundA >= 0.2 * peakAll ? 1 : 2) : 2;
       if (hits < Math.min(needHits, hs.length)) continue;
       // the fundamental region must show energy for mid/high notes (rejects sub-octave ghosts)
-      const fund = peakAt(mag, binHz, f0, 0.45).v / ref;
+      const fund = peakAt(mag, binHz, f0, 0.45).v / refAt(f0);
       if ((p >= 48 || pureOk) && fund < 2) continue;
       const prior = expected.has(p) ? 1.2 : 1;
       if (opts.debug && expected.has(p)) opts.debug(`iter${iter} p${p} s=${s.toFixed(2)} hits=${hits} fund=${fund.toFixed(1)}`);
       if (s * prior > bestS) { bestS = s * prior; best = p; bestRaw = s; }
     }
     if (best < 0) break;
+    // Missing fundamental: a phone hardly picks up the lowest strings' fundamentals, so a bass note can
+    // look like its own octave or twelfth. If the note an octave/twelfth/two octaves below shows partials
+    // that the chosen note cannot explain (its odd partials, for the octave), the lower note was played.
+    if (opts.whiten) {
+      let swap = -1, swapE = 0;
+      for (const r of [2, 3, 4]) {
+        const q = best - Math.round(12 * Math.log2(r));
+        if (q < lo || found.some((n) => n.midi === q) || masked.has(q)) continue;
+        const fq = midiToFreq(q);
+        let own = 0, ownHits = 0, key = false;
+        // the lower note's strongest own partial a phone still hears: the 3rd (octave case) or the 2nd
+        const keyH = r === 2 ? 3 : 2;
+        for (let h = 1; h <= 12; h++) {
+          if (h % r === 0) continue;
+          const pf = partialFreqAt(q, fq, h);
+          if (pf > MAX_FREQ) break;
+          const a = peakAt(mag, binHz, pf, h === 1 ? 0.45 : 0.35).v / refAt(pf);
+          if (a > this_swapA) { ownHits++; own += Math.log1p(a - 1) / Math.pow(h, 0.7); if (h === keyH) key = true; }
+        }
+        if (key && ownHits >= 3 && own > swapE && own >= this_swapShare * bestRaw) { swap = q; swapE = own; }
+      }
+      if (swap >= 0) best = swap;
+    }
     if (iter === 0) first = bestRaw;
     const isExpectedNote = (m: number) => expected.has(m);
     const isExp = expected.has(best);
@@ -168,7 +238,7 @@ export function estimateNotes(magIn: Float32Array, sampleRate: number, fftSize: 
     const rel = bestRaw / first;
     const [r0, r1] = isExpectedNote(best) ? [0.12, 0.32] : [0.22, 0.48];
     const relConf = Math.max(0, Math.min(1, (rel - r0) / (r1 - r0)));
-    let conf = Math.min(1 - Math.exp(-bestRaw / (3.5 / sens)), 0.6 + 0.4 * relConf) * (relConf < 1 ? 0.8 + 0.2 * relConf : 1);
+    let conf = Math.min(1 - Math.exp(-bestRaw / ((opts.whiten ? bandPct.k : 3.5) / sens)), 0.6 + 0.4 * relConf) * (relConf < 1 ? 0.8 + 0.2 * relConf : 1);
     if (!isExp) {
       conf *= expected.size ? 0.93 : 0.97;
       // sits on a harmonic of an already detected lower note: likely an overtone artefact -> uncertain
@@ -197,6 +267,7 @@ export function estimateNotes(magIn: Float32Array, sampleRate: number, fftSize: 
     });
   }
   sideLobeRef = null;
+  regStretch = false;
   return found.sort((a, b) => a.midi - b.midi);
 }
 
@@ -272,7 +343,11 @@ export class PolyTracker {
   private fluxHist: number[] = [];
   private lastOnset = -1e9;
   private longHist: { t: number; mag: Float32Array }[] = [];
-  private pending: { t: number; pre: Float32Array | null } | null = null;
+  private pending: { t: number; pre: Float32Array | null; on?: Float32Array; before?: Float32Array } | null = null;
+  /** short spectra of the last few hops (to see which partials jumped at an attack) */
+  private shortHist: Float32Array[] = [];
+  /** short spectra around the attack being analysed */
+  private attack: { on?: Float32Array; before?: Float32Array } = {};
   /** absolute minimum level (very low on purpose: soft playing must still be heard) */
   noiseGate = 0.0004;
   sensitivity = 1;
@@ -280,6 +355,25 @@ export class PolyTracker {
   private noiseRms = 0;
   private shortFloor = 0;
   profile: SoundProfile = 'piano';
+  /** MIDI range searched for notes */
+  lo = 36; hi = 96;
+  whiten = false;
+  /** onset threshold above the typical flux (whitened mode) */
+  fluxBias = 7;
+  refractoryMs = 70;
+  /** a ringing note counts as struck again when its level held at least this well across an attack */
+  restrikeRatio = 1.05;
+  /** mean log gain of a note's partials at an attack that counts as that key struck again */
+  restrikeGain = 0.35;
+  /** with nothing else new at the attack, an expected ringing note that did not decay below this counts */
+  restrikeHold = -0.35;
+  /** an attack this soon after a much louder one is its ripple, not a new note */
+  echoMs = 160;
+  /** onset: flux above the typical level by this factor, and above the last two frames by fluxRise */
+  fluxMult = 1.3;
+  fluxRise = 1.3;
+  private lastOnsetFlux = 0;
+  private ready: PolyEvent[] = [];
   analysisDelayMs = 95;
   lastFlux = 0;
   /** Background noise spectrum (hum, fans, room tone), learned continuously from quiet moments. */
@@ -293,7 +387,7 @@ export class PolyTracker {
     /** notes the app started around this onset time (performance.now ms) */
     public getMasked: (onsetMs: number) => number[] = () => []) {}
 
-  reset() { this.prevShort = null; this.fluxHist = []; this.pending = null; this.longHist = []; this.confirm = null; }
+  reset() { this.prevShort = null; this.fluxHist = []; this.pending = null; this.longHist = []; this.confirm = null; this.ready = []; }
 
   /** New energy since before the onset, with the room's background noise removed. */
   private freshSpectrum(long: Float32Array, pre: Float32Array | null) {
@@ -317,7 +411,7 @@ export class PolyTracker {
   private analyse(long: Float32Array, pre: Float32Array | null, onsetMs: number, sens: number): PolyNote[] {
     const binHz = this.sampleRate / this.fftSize;
     const floor = this.floorOf(long);
-    const opts = { expected: this.getExpected(), sensitivity: sens, profile: this.profile, masked: this.getMasked(onsetMs) };
+    const opts = { expected: this.getExpected(), sensitivity: sens, profile: this.profile, masked: this.getMasked(onsetMs), lo: this.lo, hi: this.hi, whiten: this.whiten };
     const freshNotes = estimateNotes(this.freshSpectrum(long, pre), this.sampleRate, this.fftSize, floor, opts);
     if (!pre) return freshNotes;
     const ns = this.quietFrames > 8 ? this.noiseSpec : null;
@@ -344,6 +438,25 @@ export class PolyTracker {
       const dom = [...now].filter((n) => n.confidence >= 0.9).sort((a, b) => b.salience - a.salience)
         .find((d) => freshNotes.every((f) => OVER.includes(f.midi - d.midi)));
       if (dom) { out.clear(); out.set(dom.midi, { ...dom, confidence: Math.max(0.86, Math.min(dom.confidence, 0.95)) }); }
+    }
+    // Same key again at a similar strength: its partials barely grow (the string was still ringing) and
+    // the "new energy" view finds only scraps. An attack happened, so if nothing clear is new and the
+    // loudest sounding note held its level instead of decaying, that note was struck again.
+    if (this.whiten) {
+      const held = (m: number) => this.attackGain(m) >= this.restrikeGain;
+      const dom = [...now].filter((n) => n.confidence >= 0.9).sort((a, b) => b.salience - a.salience)[0];
+      // only scraps are new (anything "new" is much weaker than the ringing note): a re-strike of it
+      const scraps = [...out.values()].every((n) => n.confidence < 0.85 || n.salience < dom?.salience * 0.6);
+      if (dom && scraps && !out.has(dom.midi) && held(dom.midi)) { out.clear(); out.set(dom.midi, { ...dom, confidence: Math.max(0.86, Math.min(dom.confidence, 0.93)) }); }
+      // in a lesson: the expected key is sounding and held its level across this attack, so it was played
+      for (const m of opts.expected ?? []) {
+        const n = now.find((x) => x.midi === m && x.confidence >= 0.85);
+        if (!n || out.has(m)) continue;
+        // a clear jump of its own partials, or (when nothing else clearly new came with this attack) a level
+        // that did not fall: the same key played again at a similar strength
+        const nothingElse = ![...out.values()].some((o) => o.confidence >= 0.9 && o.salience >= n.salience * 0.5);
+        if (held(m) || (nothingElse && this.attackGain(m) >= this.restrikeHold)) out.set(m, { ...n, expected: true, confidence: Math.max(0.86, Math.min(n.confidence, 0.95)) });
+      }
     }
     // A note an octave/fifth above a sounding lower note can be that lower note struck again (its
     // fundamental partly cancels against the ringing string). The lesson's expectation decides; without
@@ -378,8 +491,11 @@ export class PolyTracker {
     let flux = 0;
     if (this.prevShort) for (let i = 2; i < 400; i++) if (sm[i] > eps) flux += Math.max(0, Math.log((sm[i] + eps) / (this.prevShort[i] + eps)));
     this.prevShort = sm;
+    this.shortHist.push(sm); if (this.shortHist.length > 4) this.shortHist.shift();
     this.lastFlux = flux;
-    const mean = this.fluxHist.length ? this.fluxHist.reduce((a, b) => a + b, 0) / this.fluxHist.length : 0;
+    // the typical recent flux: a median ignores the spikes of the previous notes (a mean would raise the
+    // bar after every attack and miss the next note of a fast run)
+    const mean = !this.fluxHist.length ? 0 : this.whiten ? [...this.fluxHist].sort((a, b) => a - b)[this.fluxHist.length >> 1] : this.fluxHist.reduce((a, b) => a + b, 0) / this.fluxHist.length;
     this.fluxHist.push(flux);
     if (this.fluxHist.length > 12) this.fluxHist.shift();
 
@@ -400,10 +516,19 @@ export class PolyTracker {
       this.confirm = null;
       const again = this.analyse(long, c.pre, c.onsetMs, this.sensitivity * 1.15);
       const kept = c.notes.filter((n) => n.confidence >= 0.8 || n.expected || again.some((a) => a.midi === n.midi));
-      return kept.length ? { notes: kept, onsetMs: c.onsetMs } : null;
+      const ev = kept.length ? { notes: kept, onsetMs: c.onsetMs } : null;
+      // the old tracker returned here and missed any attack in this very frame (quick repeated notes)
+      if (!this.whiten) return ev;
+      if (ev) this.ready.push(ev);
     }
+    const out = this.whiten ? this.detectOnset(buf, nowMs, flux, mean, rmsShort, long) : this.legacyOnset(buf, nowMs, flux, mean, rmsShort, long);
+    if (out) this.ready.push(out);
+    return this.ready.shift() ?? null;
+  }
 
-    const isOnset = rmsShort > Math.max(this.noiseGate, this.noiseRms * 1.8) && flux > mean * 1.8 + 7 / this.sensitivity && nowMs - this.lastOnset > 70;
+  private legacyOnset(buf: Float32Array, nowMs: number, flux: number, mean: number, rmsShort: number, long: Float32Array): PolyEvent | null {
+
+    const isOnset = rmsShort > Math.max(this.noiseGate, this.noiseRms * 1.8) && flux > mean * 1.8 + (this.whiten ? this.fluxBias : 7) / this.sensitivity && nowMs - this.lastOnset > (this.whiten ? this.refractoryMs : 70);
     if (isOnset && this.pending && nowMs - this.pending.t >= 30) {
       // a newer attack (e.g. the real note after a key-release click): analyse from here, keep the
       // spectrum from before the first onset so both are measured as new energy
@@ -428,5 +553,69 @@ export class PolyTracker {
       return { notes, onsetMs };
     }
     return null;
+  }
+
+  /** Onsets for the whitened tracker: median threshold, echo-onset guard, fast-note flush. */
+  private detectOnset(buf: Float32Array, nowMs: number, flux: number, mean: number, rmsShort: number, long: Float32Array): PolyEvent | null {
+    const since = nowMs - this.lastOnset;
+    // right after a loud attack the flux stays raised for a while: a real new note is a fresh spike,
+    // not a ripple a tenth the size of the last attack
+    const echo = since < this.echoMs && flux < this.lastOnsetFlux * 0.3;
+    // in a live room the flux never settles between notes, so a new note is judged as a clear rise over the
+    // last frames as well as over the typical level
+    const h = this.fluxHist, p1 = h[h.length - 2] ?? 0, p2 = h[h.length - 3] ?? 0;
+    const rising = flux >= Math.max(p1, p2) * this.fluxRise;
+    const isOnset = !echo && rmsShort > Math.max(this.noiseGate, this.noiseRms * 1.8) && rising && flux > mean * this.fluxMult + this.fluxBias / this.sensitivity && since > this.refractoryMs;
+    if (isOnset) this.lastOnsetFlux = flux;
+    if (isOnset && this.pending && nowMs - this.pending.t >= 45) {
+      // fast playing: the next note arrived before the last one was analysed. Analyse the last one now,
+      // from the spectrum just before this new attack, and start listening to the new one from there.
+      const before = [...this.longHist].reverse().find((h) => h.t <= nowMs - 12) ?? this.longHist[this.longHist.length - 1];
+      const { t, pre } = this.pending;
+      const onsetMs = t - (1024 / this.sampleRate) * 1000;
+      this.attack = { on: this.pending.on, before: this.pending.before };
+      const notes = this.analyse(before.mag, pre, onsetMs, this.sensitivity);
+      this.pending = { t: nowMs, pre: before.mag, ...this.attackShort() };
+      this.lastOnset = nowMs;
+      return notes.length ? { notes, onsetMs } : null;
+    }
+    if (isOnset && this.pending) { this.pending.t = nowMs; this.lastOnset = nowMs; }
+    else if (isOnset) {
+      this.lastOnset = nowMs;
+      const pre = [...this.longHist].reverse().find((h) => h.t <= nowMs - 25)?.mag ?? null;
+      this.pending = { t: nowMs, pre, ...this.attackShort() };
+    }
+    if (this.pending && nowMs - this.pending.t >= this.analysisDelayMs) {
+      const { t, pre } = this.pending;
+      this.attack = { on: this.pending.on, before: this.pending.before };
+      this.pending = null;
+      const onsetMs = t - (1024 / this.sampleRate) * 1000;
+      const notes = this.analyse(long, pre, onsetMs, this.sensitivity);
+      if (!notes.length) return null;
+      if (this.confirmMs > 0 && notes.some((n) => !n.expected && n.confidence < 0.8)) { this.confirm = { t: nowMs, onsetMs, notes, pre }; return null; }
+      return { notes, onsetMs };
+    }
+    return null;
+  }
+
+  /** the short spectrum at this attack and the one from ~2 hops before it */
+  private attackShort() { const h = this.shortHist; return { on: h[h.length - 1], before: h[Math.max(0, h.length - 3)] }; }
+
+  /** How much a note's own partials jumped at the attack (mean log gain, short window). A ringing
+   *  string that was not touched only decays; one that was struck again jumps. */
+  attackGain(midi: number): number {
+    const { on, before } = this.attack;
+    if (!on || !before || on === before) return 0;
+    const binHz = this.sampleRate / 2048, f0 = midiToFreq(midi);
+    let g = 0, n = 0;
+    for (let h = 1; h <= 8; h++) {
+      const f = f0 * h * Math.sqrt(1 + inharm(midi) * h * h);
+      if (f > 5000) break;
+      const i = Math.round(f / binHz);
+      if (i < 2 || i >= on.length - 1) continue;
+      const a = Math.max(on[i - 1], on[i], on[i + 1]), b = Math.max(before[i - 1], before[i], before[i + 1]);
+      g += Math.log((a + 1e-9) / (b + 1e-9)); n++;
+    }
+    return n ? g / n : 0;
   }
 }

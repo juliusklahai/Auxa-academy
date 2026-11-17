@@ -17,4 +17,13 @@ class NativeBridge(private val a: MainActivity) {
     /** voice coach: read a line aloud; onSpeechDone(id) is called when it ends */
     @JavascriptInterface fun speak(text: String, id: String, rate: Float) = a.speaker.speak(text.take(4000), id, rate)
     @JavascriptInterface fun stopSpeaking() = a.speaker.stop()
+    /** native low-latency piano for MIDI keyboards: load a sound; onPiano(ok) is called when ready */
+    @JavascriptInterface fun pianoSetup(json: String) = a.piano.setup(json) { ok ->
+        a.runOnUiThread { a.web.evaluateJavascript("window.__maestroNative&&window.__maestroNative.onPiano&&window.__maestroNative.onPiano($ok)", null) }
+    }
+    @JavascriptInterface fun pianoVolume(v: Float) { a.piano.volume = v.coerceIn(0f, 1.5f) }
+    @JavascriptInterface fun pianoDisable() = a.piano.disable()
+    @JavascriptInterface fun pianoStatus(): String = a.piano.status()
+    /** the clock MIDI arrival times are stamped with (to measure the bridge's own delay) */
+    @JavascriptInterface fun uptimeMs(): Double = android.os.SystemClock.uptimeMillis().toDouble()
 }
