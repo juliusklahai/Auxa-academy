@@ -1434,3 +1434,7 @@ html.native ::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .cert-pending > div { display: grid; gap: 4px; }
 .cert-pending .cert-seal { flex: none; }
 .cert-pending .cert-seal { background: var(--hair, #eee); color: var(--ink, #333); box-shadow: none; }
+
+.sync-notice { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; margin: 0 0 12px; border-radius: 14px; background: #fff4dc; color: #7a4f00; font-size: 14px; line-height: 1.4; }
+.sync-notice svg { flex: none; margin-top: 2px; }
+html.theme-dark .sync-notice { background: #3a2c10; color: #ffd98a; }

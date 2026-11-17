@@ -22,6 +22,7 @@ import { EarDrill } from './EarDrill';
 import { coachOn, say, stopSpeaking } from './voice';
 import { demoFor } from '../curriculum/teachDemos';
 import { witnessStart } from '../account/witness';
+import { SyncNotice } from './SyncNotice';
 import { demoScript } from '../hands3d/demos';
 import { TeachDemo, playDemo } from './TeachDemo';
 import { exerciseLine, hubLine, RESULT_LINES, stepLine } from '../curriculum/spoken';
@@ -136,6 +137,7 @@ export function LessonView({ lesson, onNextLesson, nextLocked, initialExercise }
   const nextEx = exIdx < lesson.exercises.length - 1 ? () => setExIdx(exIdx + 1) : onNextLesson;
   return (
     <div className="page lesson">
+      {phase !== 'teach' && <SyncNotice />}
       {phase === 'hub'
         ? <LessonHub lesson={lesson} onLearn={() => { setStep(0); setPhase('teach'); }} onExercise={(i) => { setExIdx(i); setPhase('practice'); }} />
         : phase === 'teach'
