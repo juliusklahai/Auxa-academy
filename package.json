@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "build:hand": "esbuild tools/build-hand.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/build-hand.mjs && node node_modules/.cache/build-hand.mjs"
+    "build:hand": "esbuild tools/build-hand.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/build-hand.mjs && node node_modules/.cache/build-hand.mjs",
+    "build:og": "esbuild tools/og-image.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/og.mjs && node node_modules/.cache/og.mjs > node_modules/.cache/og-c.svg && node node_modules/.cache/og.mjs home > node_modules/.cache/og-h.svg && rsvg-convert -w 1200 -h 630 node_modules/.cache/og-c.svg -o public/og-certificate.png && rsvg-convert -w 1200 -h 630 node_modules/.cache/og-h.svg -o public/og-image.png"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "^5.3.0",

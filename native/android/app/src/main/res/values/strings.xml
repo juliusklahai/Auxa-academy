@@ -3,4 +3,6 @@
     <string name="offline">You are offline. Auxa will open as soon as you are connected.</string>
     <string name="retry">Try again</string>
     <string name="mic_denied">Auxa needs the microphone to hear you play and sing. You can allow it in Settings.</string>
+    <string name="no_share_app">No app on this phone can share this.</string>
+    <string name="no_viewer_app">No app on this phone can open this file.</string>
 </resources>

@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
@@ -12,6 +13,9 @@ import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
+import android.util.Base64
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -202,6 +206,64 @@ class MainActivity : Activity() {
         catch (_: ActivityNotFoundException) { Toast.makeText(this, url, Toast.LENGTH_LONG).show() }
     }
 
+    // ---------- sharing and saving (the WebView has no share sheet and ignores <a download>) ----------
+
+    fun shareText(title: String, text: String) = runOnUiThread {
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, text)
+            putExtra(Intent.EXTRA_SUBJECT, title)
+        }
+        try { startActivity(Intent.createChooser(send, title)) }
+        catch (_: ActivityNotFoundException) { Toast.makeText(this, R.string.no_share_app, Toast.LENGTH_LONG).show() }
+    }
+
+    private var pendingSave: ByteArray? = null
+
+    /** Runs on the JavaScript bridge thread, so the disk work stays off the screen's thread. */
+    fun saveFile(base64: String, name: String, mime: String): String {
+        val bytes = try { Base64.decode(base64, Base64.DEFAULT) } catch (_: IllegalArgumentException) { return "" }
+        val file = name.replace(Regex("[^A-Za-z0-9 ._()-]"), "_").take(120).ifBlank { "Auxa-file" }
+        if (Build.VERSION.SDK_INT < 29) {
+            // Android 8–9: no shared folders without a storage permission, so the person picks where to save
+            pendingSave = bytes
+            runOnUiThread {
+                val pick = Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(mime).putExtra(Intent.EXTRA_TITLE, file)
+                try { startActivityForResult(pick, REQ_SAVE) } catch (_: ActivityNotFoundException) { pendingSave = null; savedResult("") }
+            }
+            return "picker"
+        }
+        val image = mime.startsWith("image/")
+        val collection = if (image) MediaStore.Images.Media.EXTERNAL_CONTENT_URI else MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, file)
+            put(MediaStore.MediaColumns.MIME_TYPE, mime)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, (if (image) Environment.DIRECTORY_PICTURES else Environment.DIRECTORY_DOWNLOADS) + "/Auxa")
+            put(MediaStore.MediaColumns.IS_PENDING, 1)
+        }
+        val uri = try { contentResolver.insert(collection, values) } catch (_: Exception) { null } ?: return ""
+        return try {
+            contentResolver.openOutputStream(uri)!!.use { it.write(bytes) }
+            values.clear(); values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+            contentResolver.update(uri, values, null, null)
+            uri.toString()
+        } catch (_: Exception) {
+            try { contentResolver.delete(uri, null, null) } catch (_: Exception) {}
+            ""
+        }
+    }
+
+    private fun savedResult(uri: String) = runOnUiThread {
+        web.evaluateJavascript("window.__maestroNative&&window.__maestroNative.onSaved&&window.__maestroNative.onSaved(${org.json.JSONObject.quote(uri)})", null)
+    }
+
+    fun openFile(uri: String, mime: String) = runOnUiThread {
+        if (!uri.startsWith("content://")) return@runOnUiThread
+        val view = Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(uri), mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        try { startActivity(view) }
+        catch (_: ActivityNotFoundException) { Toast.makeText(this, R.string.no_viewer_app, Toast.LENGTH_LONG).show() }
+    }
+
     private fun isOurPage(u: Uri) = u.host == Uri.parse(BuildConfig.START_URL).host
 
     private inner class Client : WebViewClient() {
@@ -279,6 +341,16 @@ class MainActivity : Activity() {
     @Deprecated("Activity result API needs AndroidX; the platform callback is all we need")
     override fun onActivityResult(code: Int, result: Int, data: Intent?) {
         super.onActivityResult(code, result, data)
+        if (code == REQ_SAVE) {
+            val bytes = pendingSave; pendingSave = null
+            val out = data?.data
+            if (result != RESULT_OK || out == null || bytes == null) { savedResult(""); return }
+            Thread {
+                val ok = try { contentResolver.openOutputStream(out)!!.use { it.write(bytes) }; true } catch (_: Exception) { false }
+                savedResult(if (ok) out.toString() else "")
+            }.start()
+            return
+        }
         if (code != REQ_FILES) return
         val cb = pendingFiles ?: return
         pendingFiles = null
@@ -355,6 +427,7 @@ class MainActivity : Activity() {
         const val SCHEME = "com.auxa.academy"
         private const val REQ_MIC = 1
         private const val REQ_FILES = 2
+        private const val REQ_SAVE = 3
         private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
         private val BG = Color.rgb(0x14, 0x16, 0x1c)
     }

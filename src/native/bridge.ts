@@ -24,6 +24,13 @@ interface NativeApi {
   pianoStatus?(): string;
   /** the clock MIDI arrival is stamped with */
   uptimeMs?(): number;
+  /** save a file (base64) to Pictures/Auxa or Downloads/Auxa; returns a content:// address, "" on failure,
+   *  or "picker" on Android 8–9, where the answer comes back on __maestroNative.onSaved */
+  saveFile?(base64: string, name: string, mime: string): string;
+  /** open a saved file in the phone's viewer */
+  openFile?(uri: string, mime: string): void;
+  /** the phone's share sheet with this text */
+  shareText?(title: string, text: string): void;
 }
 
 declare global {
@@ -37,6 +44,8 @@ declare global {
       /** Android back button; return true when the app handled it */
       back?: () => boolean;
       onSpeechDone?: (id: string) => void;
+      /** Android 8–9 save picker: the saved file's address, or "" when cancelled */
+      onSaved?: (uri: string) => void;
     };
   }
 }

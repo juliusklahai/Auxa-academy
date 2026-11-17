@@ -24,6 +24,12 @@ class NativeBridge(private val a: MainActivity) {
     @JavascriptInterface fun pianoVolume(v: Float) { a.piano.volume = v.coerceIn(0f, 1.5f) }
     @JavascriptInterface fun pianoDisable() = a.piano.disable()
     @JavascriptInterface fun pianoStatus(): String = a.piano.status()
+    /** certificates and exports: save to Pictures/Auxa (images) or Downloads/Auxa; returns a content:// address,
+     *  "" when it failed, or "picker" on Android 8–9 (the result then arrives on onSaved) */
+    @JavascriptInterface fun saveFile(base64: String, name: String, mime: String): String = a.saveFile(base64, name, mime)
+    @JavascriptInterface fun openFile(uri: String, mime: String) = a.openFile(uri, mime)
+    /** the phone's share sheet (WhatsApp, Messages, Gmail, copy…) */
+    @JavascriptInterface fun shareText(title: String, text: String) = a.shareText(title.take(200), text.take(4000))
     /** the clock MIDI arrival times are stamped with (to measure the bridge's own delay) */
     @JavascriptInterface fun uptimeMs(): Double = android.os.SystemClock.uptimeMillis().toDouble()
 }

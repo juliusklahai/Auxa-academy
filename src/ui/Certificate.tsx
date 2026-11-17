@@ -1,9 +1,10 @@
 // A printable, shareable, verifiable certificate for finishing a level. Drawn as SVG; saved as PNG or PDF.
 // Signed-in learners get a code from the database; the link and QR open the public verify page.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { LEVEL_NAMES } from '../curriculum/levels';
 import { certificateSvg, certCitation, W, H } from '../progress/certSvg';
-import { verifyUrl } from '../progress/certSeal';
+import { shareUrl } from '../progress/certSeal';
+import { saveBlob, shareLink as openShare, shareTargets, copyText, NeedsUpdate, APP_UPDATE_URL, type Saved } from '../native/files';
 import { nameShape } from '../progress/nameShape';
 import { canIssue, issueCertificate, type IssuedCert } from '../account/certificates';
 import { useAccount } from '../account/store';
@@ -22,7 +23,6 @@ export async function certToPng(svg: string, scale = 1): Promise<Blob> {
     return await new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('Could not save the image.'))), 'image/png'));
   } finally { URL.revokeObjectURL(url); }
 }
-const download = (b: Blob, file: string) => { const u = URL.createObjectURL(b); const el = document.createElement('a'); el.href = u; el.download = file; el.click(); setTimeout(() => URL.revokeObjectURL(u), 2000); };
 export async function certToPdf(svg: string): Promise<Blob> {
   const png = await certToPng(svg, 2);
   const dataUrl = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(png); });
@@ -88,14 +88,32 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
   const svg = useMemo(() => certificateSvg(shown, level, cert?.earned_on ?? date, undefined, { nameShape: shape ?? undefined, code: cert?.code, seal: cert?.seal }), [shown, level, date, shape, cert]);
   const [busy, setBusy] = useState('');
   const [note, setNote] = useState('');
+  const [saved, setSaved] = useState<Saved | null>(null);
+  const [update, setUpdate] = useState(false);
+  const [panel, setPanel] = useState(false);
+  const feedback = useRef<HTMLDivElement>(null);
   const base = `Auxa-Level-${level}-certificate`;
-  const run = async (k: string, f: () => Promise<void>) => { setBusy(k); setNote(''); try { await f(); } catch (e) { if ((e as Error).name !== 'AbortError') setNote((e as Error).message); } finally { setBusy(''); } };
-  const link = cert ? verifyUrl(cert.code) : '';
+  const reset = () => { setNote(''); setSaved(null); setUpdate(false); };
+  const run = async (k: string, f: () => Promise<void>) => {
+    setBusy(k); reset();
+    try { await f(); }
+    catch (e) {
+      if (e instanceof NeedsUpdate) setUpdate(true);
+      if ((e as Error).name !== 'AbortError') setNote((e as Error).message);
+    } finally { setBusy(''); }
+  };
+  // keep the result in view: the sheet can be taller than the phone screen
+  useEffect(() => { if (note || saved || panel) feedback.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, [note, saved, panel]);
+  const link = cert ? shareUrl(cert.code) : '';
+  const shareText = `I finished Level ${level} (${LEVEL_NAMES[level]}) on Auxa Academy. Check my certificate, and learn piano with a teacher that listens:`;
   const shareLink = () => run('link', async () => {
-    const text = `I finished Level ${level} (${LEVEL_NAMES[level]}) on Auxa Academy. Check my certificate, and learn piano with a teacher that listens:`;
-    if (navigator.share) { await navigator.share({ title: `Level ${level} certificate`, text, url: link }); return; }
-    await navigator.clipboard.writeText(`${text} ${link}`);
-    setNote('Link copied. Paste it anywhere to share.');
+    setPanel(false);
+    if (!(await openShare(`Level ${level} certificate`, shareText, link))) setPanel(true);
+  });
+  const copyLink = async () => { reset(); setNote((await copyText(`${shareText} ${link}`)) ? 'Link copied. Paste it anywhere to share.' : link); };
+  const save = (k: 'png' | 'pdf') => run(k, async () => {
+    const blob = k === 'png' ? await certToPng(svg, 2) : await certToPdf(svg);
+    setSaved(await saveBlob(blob, `${base}.${k}`));
   });
   return (
     <div className="sheet-back" onClick={onClose}>
@@ -105,7 +123,7 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
         {cert ? <div className="cert-view" dangerouslySetInnerHTML={{ __html: svg }} />
           : <div className="cert-pending"><span className="cert-seal"><i>{level}</i></span><div><b>Level {level} · {LEVEL_NAMES[level]}</b><small className="muted">{state === 'issuing' ? 'Checking your verified passes…' : 'Your certificate appears here once Auxa has verified every exercise of this level and sealed it.'}</small></div></div>}
         <div className={`cert-status ${cert ? 'ok' : state}`}>
-          {cert ? <><Icon name="check" size={14} /><span>Verified by Auxa · <b>{cert.code}</b></span></>
+          {cert ? <><Icon name="check" size={14} /><span>Verified by Auxa</span></>
             : state === 'issuing' ? <span>Sealing your certificate…</span>
             : state === 'error' ? <><span>{err}</span><button className="link-btn" onClick={() => setAttempt((n) => n + 1)}>Try again</button></>
             : state === 'verify' ? <div className="cert-verify"><span>{err}</span>{todoLessons(todo).length > 0 && <><p className="muted small">Passes played online count straight away. Practice done offline is sent when you are back online, and counts once you pass one exercise of that lesson online. Tap a lesson to go straight to what is left.</p><ul>{todoLessons(todo).map((x) => <li key={x.id}><button className="cert-todo" onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('maestro:open-lesson', { detail: { id: x.id, ex: x.ex } })); }}><b>{x.title}</b> <small>{x.confirm ? 'done offline: play one exercise to confirm' : `${x.left} to play`}</small><Icon name="next" size={13} /></button></li>)}</ul></>}<button className="link-btn" onClick={() => setAttempt((n) => n + 1)}>Check again</button></div>
@@ -114,10 +132,20 @@ export function CertificateSheet({ level, date, onClose, fresh }: { level: numbe
         <p className="cert-from muted small">{shown ? <>Name from your profile. To change it, edit your name in <button className="link-btn" onClick={() => { onClose(); window.dispatchEvent(new Event('maestro:account')); }}>your account</button>.</> : <>Add your name in <button className="link-btn" onClick={() => { onClose(); window.dispatchEvent(new Event('maestro:account')); }}>your account</button> to put it on your certificate.</>}</p>
         {cert && <div className="cert-actions">
           <button className="btn lime" onClick={() => void shareLink()} disabled={!!busy || !cert}><Icon name="share" size={15} />{busy === 'link' ? 'Sharing…' : 'Share link'}</button>
-          <button className="btn" onClick={() => void run('png', async () => download(await certToPng(svg, 2), `${base}.png`))} disabled={!!busy}><Icon name="download" size={15} />{busy === 'png' ? 'Saving…' : 'PNG'}</button>
-          <button className="btn" onClick={() => void run('pdf', async () => download(await certToPdf(svg), `${base}.pdf`))} disabled={!!busy}><Icon name="download" size={15} />{busy === 'pdf' ? 'Saving…' : 'PDF'}</button>
+          <button className="btn" onClick={() => void save('png')} disabled={!!busy}><Icon name="download" size={15} />{busy === 'png' ? 'Saving…' : 'PNG'}</button>
+          <button className="btn" onClick={() => void save('pdf')} disabled={!!busy}><Icon name="download" size={15} />{busy === 'pdf' ? 'Saving…' : 'PDF'}</button>
         </div>}
-        {note && <p className="muted small">{note}</p>}
+        <div ref={feedback}>
+          {cert && panel && <div className="cert-share" role="group" aria-label="Share your certificate">
+            <small className="muted">Share your certificate on</small>
+            <div className="cert-share-row">
+              {shareTargets(shareText, link).map((t) => <a key={t.name} className="btn" href={t.href} target="_blank" rel="noopener noreferrer">{t.name}</a>)}
+              <button className="btn" onClick={() => void copyLink()}>Copy link</button>
+            </div>
+          </div>}
+          {saved && <div className="cert-note ok"><Icon name="check" size={14} /><span>Saved to {saved.where}.</span>{saved.open && <button className="link-btn" onClick={saved.open}>Open</button>}</div>}
+          {note && <div className={`cert-note${update ? '' : ' plain'}`}><span>{note}</span>{update && <a className="link-btn" href={APP_UPDATE_URL} target="_blank" rel="noopener noreferrer">Get the update</a>}</div>}
+        </div>
       </div>
     </div>
   );

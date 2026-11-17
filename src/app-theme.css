@@ -932,6 +932,14 @@ html.theme-dark .people { --pc-bg: #1f1f21; --pc-ink: #f4f4f5; --pc-ink2: #c4c4c
 .cert-name { display: grid; gap: 6px; font-size: 13.5px; font-weight: 500; margin-top: 14px; }
 .cert-name input { height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line2); background: var(--card); color: var(--ink); font: inherit; font-size: 15px; }
 .cert-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.cert-share { margin-top: 14px; display: grid; gap: 8px; }
+.cert-share-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.cert-share-row .btn { text-decoration: none; padding-inline: 14px; min-height: 40px; }
+.cert-note { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; padding: 10px 12px; border-radius: 12px; font-size: 13.5px; background: var(--pillbg); color: var(--ink); border: 1px solid color-mix(in srgb, #e0806b 45%, transparent); }
+.cert-note.plain { border-color: var(--hair); }
+.cert-note.ok { border-color: color-mix(in srgb, var(--lime) 45%, transparent); }
+.cert-note.ok svg { color: #0b2a33; background: var(--lime); border-radius: 50%; padding: 2px; }
+.cert-note .link-btn { margin-left: auto; }
 .certs .card-head { display: flex; justify-content: space-between; align-items: baseline; }
 .cert-row { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding: 4px 0 2px; }
 .cert-chip { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 14px 10px 10px; border-radius: 16px; border: 1px solid var(--hair); background: var(--pillbg); color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
