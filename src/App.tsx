@@ -29,6 +29,9 @@ import { readRoute, writeRoute } from './ui/route';
 import { stopSpeaking } from './ui/voice';
 import { audio } from './audio/engine';
 import { setNativePianoWanted, syncNativePiano } from './audio/nativePiano';
+import { NewsBell } from './ui/NewsPanel';
+import { applyNotify, browserNewsCheck, practisedToday } from './notify';
+import { onLearnerNote } from './input/bus';
 import { ACCOUNTS_ENABLED } from './account/config';
 import { getAccount, initAccount, openUpgrade, useAccount, useUpgrade } from './account/store';
 import { allowFeature, allowLesson, lessonTier, TIER_NAME } from './account/gate';
@@ -89,6 +92,9 @@ export default function App() {
   const appSettings = useSettings();
   useEffect(() => { audio.pianoSound = allowFeature(account.ent, 'sounds') ? appSettings.pianoSound : 'grand'; void syncNativePiano(); }, [account.ent, appSettings.pianoSound]);
   useEffect(() => { setNativePianoWanted(appSettings.nativePiano !== false); }, [appSettings.nativePiano]);
+  // notifications: the Android app schedules the reminder and news checks itself
+  useEffect(() => { applyNotify({ remindOn: !!appSettings.remindOn, remindTime: appSettings.remindTime || '18:00', newsOn: appSettings.newsOn !== false }); }, [appSettings.remindOn, appSettings.remindTime, appSettings.newsOn]);
+  useEffect(() => { void browserNewsCheck(); let day = ''; return onLearnerNote(() => { const d = new Date().toDateString(); if (d !== day) { day = d; practisedToday(); } }); }, []);
   const [, bump] = useState(0);
   // Android back button (inside the Auxa app): close the lesson, then go back to Home, then leave
   const navRef = useRef({ lesson, tab });
@@ -183,6 +189,7 @@ export default function App() {
           </nav>
           <div className="app-end">
             <InputPills openSetup={() => go('settings')} />
+            <NewsBell />
             <UserMenu onAccount={() => setAcctOpen(true)} onSetup={() => go('settings')} onAdmin={() => go('admin')} onHome={goHome} current={tab} />
           </div>
         </header>

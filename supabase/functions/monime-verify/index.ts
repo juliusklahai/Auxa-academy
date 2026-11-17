@@ -1,5 +1,6 @@
 // Confirms Monime payments and credits 31 days of Pro or Plus. Called two ways:
-//  1. By Monime's webhook (checkout_session.completed / payment events) with our shared secret header.
+//  1. By Monime's webhook (checkout_session.completed / payment events). No shared secret is needed:
+//     the payload is only a hint. Whatever it says, the session is re-read from Monime's API below.
 //  2. By the app when the learner returns from checkout (signed in), as a fallback if the webhook is late.
 // We never trust the payload: the checkout session is re-read from Monime's API with our secret token,
 // and it must be "completed" with our metadata. Each session can be credited only once.
@@ -26,8 +27,10 @@ async function credit(sessionId: string, expectUser?: string) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   const body = await req.json().catch(() => ({}));
-  // webhook: Monime sends our custom header (set when creating the webhook)
-  if (req.headers.get('x-maestro-secret') && req.headers.get('x-maestro-secret') === Deno.env.get('MONIME_WEBHOOK_SECRET')) {
+  // webhook: an event from Monime (no signed-in user). Safe without a secret: credit() only acts on a
+  // session that Monime's own API reports as completed, with our metadata, and only once.
+  const isEvent = !req.headers.get('Authorization')?.includes('.') && (body?.event || body?.object || body?.data);
+  if (isEvent) {
     const id = body?.object?.type === 'checkout_session' || String(body?.event?.name ?? '').startsWith('checkout_session') ? body?.object?.id : body?.data?.checkoutSessionId ?? body?.object?.id;
     if (id) await credit(String(id));
     return new Response('ok');

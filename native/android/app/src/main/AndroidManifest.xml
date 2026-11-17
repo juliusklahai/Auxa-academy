@@ -6,6 +6,9 @@
     <!-- listening to the piano and to your singing -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- daily practice reminder and news from Auxa -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <uses-feature android:name="android.software.midi" android:required="false" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
@@ -40,5 +43,11 @@
                 <data android:scheme="com.auxa.academy" android:host="auth" />
             </intent-filter>
         </activity>
+        <receiver android:name=".NotifyReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

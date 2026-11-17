@@ -329,8 +329,19 @@ class MainActivity : Activity() {
         }
     }
 
+    /** ask for permission to show notifications (Android 13+); the answer goes to the page */
+    fun askNotifications() {
+        if (Build.VERSION.SDK_INT >= 33 && !Notify.allowed(this)) requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQ_NOTIFY)
+        else web.evaluateJavascript("window.__maestroNative&&window.__maestroNative.onNotify&&window.__maestroNative.onNotify(true)", null)
+    }
+
     override fun onRequestPermissionsResult(code: Int, perms: Array<out String>, results: IntArray) {
         super.onRequestPermissionsResult(code, perms, results)
+        if (code == REQ_NOTIFY) {
+            val ok = results.firstOrNull() == PackageManager.PERMISSION_GRANTED
+            web.evaluateJavascript("window.__maestroNative&&window.__maestroNative.onNotify&&window.__maestroNative.onNotify($ok)", null)
+            return
+        }
         if (code != REQ_MIC) return
         val req = pendingMic ?: return
         pendingMic = null
@@ -426,6 +437,7 @@ class MainActivity : Activity() {
             "xml" to "application/xml", "musicxml" to "application/xml", "mxl" to "application/vnd.recordare.musicxml", "webmanifest" to "application/manifest+json", "wasm" to "application/wasm", "txt" to "text/plain")
         const val SCHEME = "com.auxa.academy"
         private const val REQ_MIC = 1
+        private const val REQ_NOTIFY = 7
         private const val REQ_FILES = 2
         private const val REQ_SAVE = 3
         private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT

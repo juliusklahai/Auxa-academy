@@ -1,12 +1,13 @@
 // Account UI: sign in, plan status, upgrade (Stripe subscriptions or Monime passes), and the admin page.
-import { isNativeApp } from '../native/bridge';
+import { isNativeApp, native, storeBilling } from '../native/bridge';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Select } from './Select';
 import { ACCOUNTS_ENABLED, MONIME_ENABLED, PLANS, type PlanOption } from '../account/config';
+import { deleteNews, fetchNews, postNews, type News } from '../notify';
 import { TIER_NAME } from '../account/gate';
 import { toggleTheme, useTheme } from './theme';
 import {
-  adminGrant, adminPayments, adminSearch, adminSetRole, authMessage, closeUpgrade, endRecovery, openBillingPortal, openUpgrade, refreshProfile, setDisplayName,
+  adminGrant, adminPayments, adminSearch, adminSetRole, verifyMonime, authMessage, closeUpgrade, endRecovery, openBillingPortal, openUpgrade, refreshProfile, setDisplayName,
   deleteAccount, sendPasswordReset, signInWithEmail, signInWithGoogle, signInWithPassword, signOut, signUp, startCheckout, updatePassword, useAccount, useUpgrade, type Profile,
 } from '../account/store';
 import { FREE_LINE, PLAN_ITEMS } from '../account/planCopy';
@@ -240,7 +241,8 @@ export function UpgradeSheet() {
         {!a.user && <SignInForm compact />}
         <div className="tier-grid">
           {tiers.map((t) => {
-            const opts = PLANS.filter((p) => p.tier === t && (p.provider === 'stripe' || MONIME_ENABLED));
+            // installed from an app store: that store's own billing only (outside payment links are not allowed)
+            const opts = storeBilling ? [] : PLANS.filter((p) => p.tier === t && (p.provider === 'stripe' || MONIME_ENABLED));
             return (
               <div key={t} className={`tier ${t}`}>
                 <div className="tier-head"><b>{TIER_NAME[t]}</b>{t === 'plus' && <span className="tag">Everything</span>}</div>
@@ -257,6 +259,7 @@ export function UpgradeSheet() {
             );
           })}
         </div>
+        {storeBilling && <p className="small tip">Buying {storeBilling === 'play' ? 'through Google Play' : 'through the App Store'} is coming to this version soon. A plan you already have on your account works here too.</p>}
         {err && <p className="err small">{err}</p>}
         <p className="muted small">{a.user ? 'Card plans renew monthly and can be cancelled any time. Mobile money passes last 1 month and never auto-renew.' : 'Sign in first, then pick a plan.'} {FREE_LINE}</p>
       </div>
@@ -330,6 +333,67 @@ export function UserMenu({ onAccount, onSetup, onAdmin, onHome, current }: { onA
   );
 }
 
+/** Admin: post news. It appears in everyone's news panel, and the Android app shows it as a
+ *  notification within a few hours (when the learner has news notifications on). */
+function NewsAdmin() {
+  const [items, setItems] = useState<News[]>([]);
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [msg, setMsg] = useState('');
+  const load = () => fetchNews(true).then(setItems).catch((e) => setMsg(e.message));
+  useEffect(() => { void load(); }, []);
+  const post = async () => {
+    if (!title.trim()) return;
+    try { await postNews(title.trim(), body.trim()); setTitle(''); setBody(''); setMsg('Posted. Android phones show it within a few hours; everyone sees it in News.'); await load(); }
+    catch (e) { setMsg((e as Error).message); }
+  };
+  return (
+    <div className="card">
+      <div className="card-head"><b>News and notifications</b><span className="muted small">{items.length} posted</span></div>
+      <form className="news-form" onSubmit={(e) => { e.preventDefault(); void post(); }}>
+        <input placeholder="Title (up to 80 letters)" maxLength={80} value={title} onChange={(e) => setTitle(e.target.value)} />
+        <textarea placeholder="Message (optional, up to 400 letters)" maxLength={400} rows={2} value={body} onChange={(e) => setBody(e.target.value)} />
+        <div className="row wrap"><button className="btn dark" disabled={!title.trim()}>Post to everyone</button>{native?.notifyTest && <button type="button" className="btn" onClick={() => native!.notifyTest!(title || 'Auxa', body || 'This is how a notification looks.')}>Preview on this phone</button>}</div>
+      </form>
+      {msg && <p className="small">{msg}</p>}
+      <ul className="news-admin">{items.map((n) => <li key={n.id}><span><b>{n.title}</b> <small className="muted">{new Date(n.created_at).toLocaleDateString()}</small>{n.body && <small className="muted"> · {n.body}</small>}</span><button className="btn ghost sm" onClick={() => deleteNews(n.id).then(load).catch((e) => setMsg(e.message))}>Delete</button></li>)}</ul>
+    </div>
+  );
+}
+
+/** Admin: open each real payment link (the admin's own unlimited plan does not hide them here), and
+ *  re-check a Monime session the way the webhook does. A completed test payment shows up below under
+ *  Recent payments, credited to the admin's own account. */
+function PaymentTest({ onDone }: { onDone: () => void }) {
+  const [busy, setBusy] = useState('');
+  const [out, setOut] = useState('');
+  const [sid, setSid] = useState(() => localStorage.getItem('maestro.monime.pending') ?? '');
+  const open = async (id: string, provider: 'stripe' | 'monime') => {
+    setBusy(id); setOut('');
+    try { await startCheckout(id, provider); } catch (e) { setOut(`${id}: ${(e as Error).message}`); }
+    setBusy('');
+  };
+  const check = async () => {
+    if (!sid.trim()) return;
+    setBusy('check'); setOut('');
+    try { const r = await verifyMonime(sid.trim()); setOut(`Monime session ${sid.trim()}: ${r.status ?? (r.ok ? 'ok' : 'not completed')}`); onDone(); }
+    catch (e) { setOut((e as Error).message); }
+    setBusy('');
+  };
+  return (
+    <div className="card">
+      <div className="card-head"><b>Payment test</b><span className="muted small">Real links, your account</span></div>
+      <p className="muted small">Each button starts the real checkout, exactly as a learner would. You can stop on the payment page to check the link and the price, or pay a small amount to test the whole path: when it completes, the payment appears under Recent payments and your account is credited (harmless for an admin). Stripe in test mode accepts the card 4242 4242 4242 4242.</p>
+      <div className="row wrap">{PLANS.map((p) => <button key={p.id} className="btn" disabled={!!busy} onClick={() => void open(p.id, p.provider)}>{busy === p.id ? 'Opening…' : `${p.title} (${p.provider === 'stripe' ? 'card' : 'Monime'})`}</button>)}</div>
+      <form className="acct-row" onSubmit={(e) => { e.preventDefault(); void check(); }}>
+        <input placeholder="Monime checkout session id (cs_…)" value={sid} onChange={(e) => setSid(e.target.value)} />
+        <button className="btn dark" disabled={busy === 'check'}>{busy === 'check' ? 'Checking…' : 'Check session'}</button>
+      </form>
+      {out && <p className="small">{out}</p>}
+    </div>
+  );
+}
+
 /** Admin: find people, grant or remove Pro days, set roles, see recent payments. */
 export function AdminView() {
   const a = useAccount();
@@ -340,7 +404,11 @@ export function AdminView() {
   const load = () => adminSearch(q).then(setRows).catch((e) => setMsg(e.message));
   useEffect(() => { if (a.ent.admin) { void load(); adminPayments().then(setPays).catch(() => undefined); } }, [a.ent.admin]); // eslint-disable-line
   if (!a.ent.admin) return <div className="card"><b>Admins only.</b></div>;
-  const act = async (f: () => Promise<unknown>, ok: string) => { try { await f(); setMsg(ok); await load(); } catch (e) { setMsg((e as Error).message); } };
+  const act = async (f: () => Promise<unknown>, ok: string) => { try { await f(); setMsg(ok); await load(); adminPayments().then(setPays).catch(() => undefined); } catch (e) { setMsg((e as Error).message); } };
+  // giving or removing paid access needs a second tap, so nobody grants a year by accident
+  const [arm, setArm] = useState('');
+  const confirmAct = (key: string, f: () => Promise<unknown>, ok: string) => { if (arm !== key) { setArm(key); window.setTimeout(() => setArm((k) => (k === key ? '' : k)), 4000); return; } setArm(''); void act(f, ok); };
+  const gbtn = (key: string, label: string, f: () => Promise<unknown>, ok: string) => <button className={`btn ghost sm ${arm === key ? 'armed' : ''}`} onClick={() => confirmAct(key, f, ok)}>{arm === key ? `Confirm ${label}?` : label}</button>;
   return (
     <div className="admin">
       <div className="card">
@@ -361,16 +429,18 @@ export function AdminView() {
                 <td>{fmtDate(r.plus_until) || '-'}</td>
                 <td>{r.pro_source ?? '-'}{r.stripe_status ? ` (${r.stripe_status})` : ''}</td>
                 <td className="admin-acts">
-                  <button className="btn ghost sm" onClick={() => act(() => adminGrant(r.email, 31, 'pro'), `+1 month Pro for ${r.email}`)}>Pro +1 mo</button>
-                  <button className="btn ghost sm" onClick={() => act(() => adminGrant(r.email, 31, 'plus'), `+1 month Plus for ${r.email}`)}>Plus +1 mo</button>
-                  <button className="btn ghost sm" onClick={() => act(() => adminGrant(r.email, 366, 'plus'), `+1 year Plus for ${r.email}`)}>Plus +1 yr</button>
-                  <button className="btn ghost sm" onClick={() => act(() => adminGrant(r.email, 0), `Paid access removed for ${r.email}`)}>Remove</button>
+                  {gbtn(`${r.id}:pro31`, 'Pro +1 mo', () => adminGrant(r.email, 31, 'pro'), `+1 month Pro for ${r.email}`)}
+                  {gbtn(`${r.id}:plus31`, 'Plus +1 mo', () => adminGrant(r.email, 31, 'plus'), `+1 month Plus for ${r.email}`)}
+                  {gbtn(`${r.id}:plus366`, 'Plus +1 yr', () => adminGrant(r.email, 366, 'plus'), `+1 year Plus for ${r.email}`)}
+                  {gbtn(`${r.id}:remove`, 'Remove', () => adminGrant(r.email, 0), `Paid access removed for ${r.email}`)}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      <NewsAdmin />
+      <PaymentTest onDone={() => adminPayments().then(setPays).catch(() => undefined)} />
       <div className="card">
         <div className="card-head"><b>Recent payments and grants</b></div>
         <table className="admin-table">

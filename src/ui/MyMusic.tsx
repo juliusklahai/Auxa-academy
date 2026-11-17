@@ -486,6 +486,17 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
     return (
       <div className="page">
         <PageHead title="My Music" sub="Open a score, play it or sing it, and every note is checked." />
+        {lib.length > 0 && (
+          <div className="card lib-card">
+            <div className="card-head"><b>Your library</b><span className="muted small">{lib.length} saved on this device</span></div>
+            <div className="lib">{lib.map((it) => (
+              <div key={it.id} className="lib-row">
+                <button className="link-row" onClick={() => load(it.xml, false)}><Icon name="note" size={15} /> <b>{it.title}</b> <span className="muted">{it.composer}</span></button>
+                <button className="btn" onClick={() => deleteScore(it.id).then(() => listScores().then(setLib))} aria-label={`Remove ${it.title}`}>Remove</button>
+              </div>))}
+            </div>
+          </div>
+        )}
         <div className="drop card" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) onFile(f); }}>
           <Icon name="doc" size={40} stroke={1.4} />
           <h2>Open your sheet music</h2>
@@ -498,17 +509,6 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
           <input ref={fileIn} type="file" accept=".musicxml,.xml,.mxl,application/vnd.recordare.musicxml+xml,application/vnd.recordare.musicxml" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ''; }} />
         </div>
         <SongShelf onOpen={openSong} />
-        {lib.length > 0 && (
-          <div className="card">
-            <div className="card-head"><b>Your library</b><span className="muted small">Saved on this device</span></div>
-            <div className="lib">{lib.map((it) => (
-              <div key={it.id} className="lib-row">
-                <button className="link-row" onClick={() => load(it.xml, false)}><Icon name="note" size={15} /> <b>{it.title}</b> <span className="muted">{it.composer}</span></button>
-                <button className="btn" onClick={() => deleteScore(it.id).then(() => listScores().then(setLib))} aria-label={`Remove ${it.title}`}>Remove</button>
-              </div>))}
-            </div>
-          </div>
-        )}
       </div>
     );
   }

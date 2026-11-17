@@ -29,6 +29,8 @@ export interface AppSettings {
   mixLive: number; mixBand: number; mixGuide: number; mixMetronome: number;
   /** MIDI keyboards: the phone plays the piano sound itself, with the lowest delay (Android app) */
   nativePiano: boolean;
+  /** daily practice reminder (Android app) at remindTime "HH:MM"; news from Auxa */
+  remindOn: boolean; remindTime: string; newsOn: boolean;
   micDeviceId: string;
   /** what the microphone is hearing */
   micInstrument: 'piano' | 'epiano' | 'organ' | 'synth' | 'mono' | 'voice';
@@ -61,7 +63,7 @@ export interface AppSettings {
 const KEY = 'maestro.settings.v1';
 const DEFAULTS: AppSettings = {
   labels: 'letters', fingers: true, keyHints: false, highContrast: false, a4: 440, volume: 0.8, metronomeVolume: 0.6,
-  latencyMs: 60, noiseGate: 0.002, micSensitivity: 0.85, wrongBeep: false, mistakePolicy: 'restart', hands: true, micMode: 'piano', voiceLow: 57, voiceHigh: 74, outputMode: 'headphones', latencyMode: 'low', mixLive: 1, mixBand: 1, mixGuide: 1, mixMetronome: 1, nativePiano: true, micDeviceId: '', micInstrument: 'piano', autoFocus: true, coachVoice: true, coachVoiceId: 'af_heart',
+  latencyMs: 60, noiseGate: 0.002, micSensitivity: 0.85, wrongBeep: false, mistakePolicy: 'restart', hands: true, micMode: 'piano', voiceLow: 57, voiceHigh: 74, outputMode: 'headphones', latencyMode: 'low', mixLive: 1, mixBand: 1, mixGuide: 1, mixMetronome: 1, nativePiano: true, micDeviceId: '', micInstrument: 'piano', autoFocus: true, coachVoice: true, coachVoiceId: 'af_heart', remindOn: false, remindTime: '18:00', newsOn: true,
   handStyle: '3d', handOpacity: 0.8, handColor: 'white', handLook: 'real', handStroke: 1, handsShow: 'both',
   handsListen: true, keyboard: true, kbScale: 1, kbKeys: 'auto', voiceLevel: 'easy', pianoSound: 'grand',
 };

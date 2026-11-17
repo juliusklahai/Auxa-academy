@@ -9,6 +9,7 @@ import { Composer } from './Composer';
 import { VoiceHelp } from './VoiceHelp';
 import { CoachVoicePicker } from './CoachVoicePicker';
 import { LatencyCheck } from './LatencyCheck';
+import { NotifySettings } from './NewsPanel';
 import { nativePianoAvailable } from '../audio/nativePiano';
 import { useEffect, useRef, useState } from 'react';
 import { Select } from './Select';
@@ -506,6 +507,7 @@ export function SettingsView() {
           <label className="check"><input type="checkbox" checked={st.hands} onChange={(e) => setSettings({ hands: e.target.checked })} /> Show guide hands on the keyboard</label>
           <label className="check"><input type="checkbox" checked={st.coachVoice !== false} onChange={(e) => setSettings({ coachVoice: e.target.checked })} /> Voice coach: read each lesson step aloud</label>
           <CoachVoicePicker />
+          <NotifySettings />
           <VoiceHelp />
           <label className="check"><input type="checkbox" checked={st.autoFocus} onChange={(e) => setSettings({ autoFocus: e.target.checked })} /> Full-screen practice when I press Start (Esc returns)</label>
           <label className="check"><input type="checkbox" checked={st.keyHints} onChange={(e) => setSettings({ keyHints: e.target.checked })} /> Show computer-keyboard letters on keys</label>

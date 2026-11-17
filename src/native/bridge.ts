@@ -22,8 +22,17 @@ interface NativeApi {
   pianoVolume?(v: number): void;
   pianoDisable?(): void;
   pianoStatus?(): string;
+  /** package that installed the app (com.android.vending = Google Play) */
+  installSource?(): string;
   /** the clock MIDI arrival is stamped with */
   uptimeMs?(): number;
+  /** notifications: daily reminder + news */
+  notifyConfigure?(json: string): void;
+  notifyStatus?(): string;
+  notifyRequest?(): void;
+  notifyPractised?(day: string): void;
+  notifySeen?(id: number): void;
+  notifyTest?(title: string, body: string): void;
   /** save a file (base64) to Pictures/Auxa or Downloads/Auxa; returns a content:// address, "" on failure,
    *  or "picker" on Android 8–9, where the answer comes back on __maestroNative.onSaved */
   saveFile?(base64: string, name: string, mime: string): string;
@@ -40,6 +49,7 @@ declare global {
       /** MIDI bytes; sounded = the phone already played them; got = arrival time (uptimeMs clock) */
       onMidi?: (bytes: number[], sounded?: boolean, got?: number) => void;
       onPiano?: (ok: boolean) => void;
+      onNotify?: (ok: boolean) => void;
       onMidiDevices?: (names: string[]) => void;
       /** Android back button; return true when the app handled it */
       back?: () => boolean;
@@ -75,3 +85,9 @@ export function onNativeMidi(onBytes: (b: number[], sounded?: boolean, got?: num
 }
 
 export function onNativePiano(f: (ok: boolean) => void) { hooks().onPiano = f; }
+
+export function onNativeNotify(f: (ok: boolean) => void) { hooks().onNotify = f; }
+
+/** The app came from an app store that requires its own billing (Google Play now, the App Store later).
+ *  Card and mobile-money checkout must not appear there. */
+export const storeBilling = (() => { try { return native?.installSource?.() === 'com.android.vending' ? 'play' : (window as unknown as { webkit?: { messageHandlers?: { auxa?: unknown } } }).webkit?.messageHandlers?.auxa ? 'apple' : null; } catch { return null; } })();

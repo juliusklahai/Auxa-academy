@@ -31,5 +31,17 @@ class NativeBridge(private val a: MainActivity) {
     /** the phone's share sheet (WhatsApp, Messages, Gmail, copy…) */
     @JavascriptInterface fun shareText(title: String, text: String) = a.shareText(title.take(200), text.take(4000))
     /** the clock MIDI arrival times are stamped with (to measure the bridge's own delay) */
+    /** notifications: daily reminder + news (json: on, hour, minute, title, body, news, url, key) */
+    @JavascriptInterface fun notifyConfigure(json: String) = Notify.configure(a, json)
+    @JavascriptInterface fun notifyStatus(): String = if (Notify.allowed(a)) "granted" else "ask"
+    @JavascriptInterface fun notifyRequest() = a.runOnUiThread { a.askNotifications() }
+    @JavascriptInterface fun notifyPractised(day: String) = Notify.practisedToday(a, day)
+    @JavascriptInterface fun notifySeen(id: Double) = Notify.seen(a, id.toLong())
+    @JavascriptInterface fun notifyTest(title: String, body: String) = Notify.post(a, Notify.CH_NEWS, 1999, title, body)
+    /** who installed the app ("com.android.vending" = Google Play): outside payment is hidden for Play installs */
+    @JavascriptInterface fun installSource(): String = try {
+        if (android.os.Build.VERSION.SDK_INT >= 30) a.packageManager.getInstallSourceInfo(a.packageName).installingPackageName ?: ""
+        else @Suppress("DEPRECATION") (a.packageManager.getInstallerPackageName(a.packageName) ?: "")
+    } catch (_: Exception) { "" }
     @JavascriptInterface fun uptimeMs(): Double = android.os.SystemClock.uptimeMillis().toDouble()
 }
