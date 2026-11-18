@@ -85,7 +85,7 @@ function Terms() {
         <li>Do not misuse Auxa: no attempts to break, copy or resell it, get around plan limits, or harm other people or our systems.</li>
       </ul>
       <h3>Your content</h3>
-      <p>Scores you open, tunes you sing and arrangements you make belong to you (or to whoever owns their copyright). Only open or share music you have the right to use. Auxa processes your content only to provide the app to you.</p>
+      <p>Scores you open or scan, tunes you sing and arrangements you make belong to you (or to whoever owns their copyright). Only open, scan or share music you have the right to use; a scan of copyrighted music is for your own practice. Scanning runs on your device: your pages are not uploaded. Auxa processes your content only to provide the app to you.</p>
       <h3>Lessons and songs</h3>
       <p>Auxa's lessons, exercises, original songs, voice coach scripts, design and software belong to us or our licensors. Classical and traditional pieces in the library are in the public domain; our arrangements of them are ours.</p>
       <h3>Plans and payments</h3>
@@ -145,6 +145,8 @@ function Licenses() {
         <li><b>three.js</b> (MIT): the 3D hands.</li>
         <li><b>Supabase JS</b> (MIT): accounts.</li>
         <li><b>fflate</b> (MIT): opening compressed MusicXML.</li>
+        <li><b>Sheet Music Transformer</b> by Antonio Ríos-Vila, Jorge Calvo-Zaragoza, David Rizo and Thierry Paquet (MIT): the model that reads scanned sheet music, run on your device with <b>ONNX Runtime Web</b> (MIT).</li>
+        <li><b>PDF.js</b> (Apache-2.0): opening PDF sheet music for scanning.</li>
         <li><b>Manrope</b> font (SIL Open Font License).</li>
       </ul>
       <p><b>Instrument sounds.</b> The recorded instruments are used under these licenses (sounds trimmed and converted for the app):</p>

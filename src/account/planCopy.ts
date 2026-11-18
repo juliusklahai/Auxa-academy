@@ -17,6 +17,7 @@ export const PLAN_ITEMS = {
     'Rhythm, keys, scales and the chords behind the songs you know',
     'Accompany hymns and congregational singing',
     'The full song library, with play-along backing',
+    'Your own sheet music: open MusicXML or scan a printed page',
     'A sharper singing coach, and progress saved on every device',
   ],
   plus: [
@@ -25,7 +26,7 @@ export const PLAN_ITEMS = {
     'Jazz, blues, gospel, Latin, highlife and Afrobeat styles',
     'Expressive touch, pedaling and advanced technique',
     'Sight-read and arrange for choir: soprano, alto, tenor, bass',
-    'The strictest singing coach, and your own scores',
+    'The strictest singing coach',
   ],
 } as const;
 

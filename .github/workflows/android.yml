@@ -36,6 +36,8 @@ jobs:
           rm -f native/android/app/src/main/assets/www/sw.js
           # extra coach voices stream from the website, so the app download stays small
           rm -rf native/android/app/src/main/assets/www/voices
+          # the sheet scanner's reader also loads from the website on first use
+          rm -rf native/android/app/src/main/assets/www/omr
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

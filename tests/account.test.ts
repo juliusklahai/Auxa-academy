@@ -22,9 +22,10 @@ describe('Free and Pro', () => {
     expect(allowVoiceLevel(free, 'easy')).toBe(true);
     expect(allowVoiceLevel(free, 'pro')).toBe(false);
     expect(allowFeature(free, 'import')).toBe(false);
+    expect(allowFeature(free, 'scan')).toBe(false);
     expect(allowFeature(free, 'sounds')).toBe(false);
   });
-  it('pro: Levels 3-6, every song, Standard singing; not Levels 7-9, strict singing or import', () => {
+  it('pro: Levels 3-6, every song, Standard singing, own scores and scanning; not Levels 7-9 or strict singing', () => {
     const lv = (n: number) => LESSONS.find((l) => l.level === n && (l.track ?? 'piano') === 'piano')!;
     expect(pro.tier).toBe('pro');
     expect(allowLesson(pro, lv(3)) && allowLesson(pro, lv(6))).toBe(true);
@@ -32,7 +33,8 @@ describe('Free and Pro', () => {
     expect(SONGS.every((s) => allowSong(pro, s))).toBe(true);
     expect(allowVoiceLevel(pro, 'standard')).toBe(true);
     expect(allowVoiceLevel(pro, 'strict')).toBe(false);
-    expect(allowFeature(pro, 'import')).toBe(false);
+    expect(allowFeature(pro, 'import')).toBe(true);
+    expect(allowFeature(pro, 'scan')).toBe(true);
     expect(allowFeature(pro, 'sounds')).toBe(true);
   });
   it('plus and admin unlock everything; an expired pass falls back to free', () => {

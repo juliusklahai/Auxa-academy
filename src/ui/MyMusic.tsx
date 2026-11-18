@@ -29,6 +29,7 @@ import { Icon } from './Icon';
 import { icon, ReportCard } from './LessonView';
 import type { KeyMark } from './Piano';
 import { PitchRoll } from './PitchRoll';
+import { SheetScan } from './SheetScan';
 import { ScoreView, noteKey, type ScoreViewHandle } from './ScoreView';
 import { isPhone, useFocusMode } from './focus';
 import { FocusBar, FloatHead, RotateHint } from './FocusBar';
@@ -149,6 +150,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
   const shownXml = useMemo(() => (score ? displayXml(score.xml) : ''), [score]);
   const [fix, setFix] = useState(false);
   const [more, setMore] = useState(false);
+  const [scan, setScan] = useState(false);
   const fixTimer = useRef(0);
   const bandNotes = useMemo(() => (score && (band.pad || band.bass || band.melody) ? makeBand(score, band) : []), [score, band]);
   const allNotes = useMemo(() => (score ? [...score.notes, ...bandNotes].sort((a, b) => a.startQ - b.startQ) : []), [score, bandNotes]);
@@ -190,7 +192,7 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
     load(songXml(id), false);
   };
   const pickFile = () => {
-    if (!allowFeature(getAccount().ent, 'import')) { openUpgrade('Open your own MusicXML and choir scores with Plus'); return; }
+    if (!allowFeature(getAccount().ent, 'import')) { openUpgrade('Open your own MusicXML and choir scores with Pro'); return; }
     fileIn.current?.click();
   };
 
@@ -497,17 +499,19 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
             </div>
           </div>
         )}
-        <div className="drop card" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) onFile(f); }}>
+        {scan && <SheetScan onClose={() => setScan(false)} onDone={(x) => { setScan(false); load(x); }} />}
+        {!scan && <div className="drop card" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) onFile(f); }}>
           <Icon name="doc" size={40} stroke={1.4} />
           <h2>Open your sheet music</h2>
-          <p className="muted">MusicXML from MuseScore, Sibelius, Finale, Dorico, Noteflight and others: <b>.musicxml</b>, <b>.xml</b> or compressed <b>.mxl</b>. Drop a file here or choose one.</p>
+          <p className="muted">MusicXML from MuseScore, Sibelius, Finale, Dorico, Noteflight and others: <b>.musicxml</b>, <b>.xml</b> or compressed <b>.mxl</b>. Drop a file here or choose one, or scan a printed page or PDF.</p>
           <div className="row wrap" style={{ justifyContent: 'center' }}>
             <button className="btn dark" onClick={() => pickFile()}><Icon name="plus" size={15} /> Open MusicXML</button>
+            <button className="btn dark" onClick={() => { if (!allowFeature(getAccount().ent, 'scan')) { openUpgrade('Scan printed sheet music with Pro'); return; } setScan(true); }}><Icon name="camera" size={15} /> Scan sheet music</button>
             <button className="btn" onClick={() => load(demoChoraleXml(), false)}>Try the SATB demo chorale</button>
           </div>
           {err && <p className="small tip">{err}</p>}
           <input ref={fileIn} type="file" accept=".musicxml,.xml,.mxl,application/vnd.recordare.musicxml+xml,application/vnd.recordare.musicxml" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ''; }} />
-        </div>
+        </div>}
         <SongShelf onOpen={openSong} />
       </div>
     );

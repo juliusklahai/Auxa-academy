@@ -1,5 +1,6 @@
 // Minimal stroke icon set (inline SVG, offline, crisp at any size).
 const P: Record<string, string> = {
+  camera: 'M4 8h3.5l1.8-2.6h5.4L16.5 8H20v11H4z M12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
   home: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
   path: 'M5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM19 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM5 15V9a4 4 0 0 1 4-4h8M19 9v6a4 4 0 0 1-4 4H7',
   piano: 'M3 5h18v14H3zM8 5v8M13 5v8M18 5v8M8 13v6M13 13v6M18 13v6',
