@@ -802,7 +802,7 @@ html, body { overflow-x: clip; max-width: 100%; }
 .toast-ok { position: fixed; left: 50%; bottom: calc(100px + var(--sab)); transform: translateX(-50%); z-index: 400; background: #1f1f1d; color: #fff; padding: 12px 18px; border-radius: 99px; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.3); animation: dock-in .2s ease-out; }
 
 /* ---------- sheet scan ---------- */
-.scan { display: grid; gap: 14px; }
+.scan { display: grid; gap: 14px; margin-bottom: 16px; }
 .scan h2, .scan h3 { margin: 0; }
 .scan-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .scan-head p { margin: 4px 0 0; }
