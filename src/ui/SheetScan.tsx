@@ -62,7 +62,7 @@ export function SheetScan({ onClose, onDone }: { onClose: () => void; onDone: (x
     try {
       const got = await loadPages(list);
       setPages((p) => [...p, ...got]);
-      if (!title) setTitle(list[0].name.replace(/\.[a-z0-9]+$/i, '').replace(/[_-]+/g, ' ').replace(/\s+p\d+$/, '').trim());
+      if (!title) setTitle(list[0].name.split('.')[0].replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim());
     } catch (e) { setErr('Could not open that file: ' + (e as Error).message); }
     setBusy('');
   };
@@ -224,18 +224,19 @@ export function SheetScan({ onClose, onDone }: { onClose: () => void; onDone: (x
   return (
     <div className="scan card">
       {head('Check and fix', `${score.measures.length} bars read. ${bad.length ? `${bad.length} bar${bad.length > 1 ? 's' : ''} need a look (marked).` : 'Every bar adds up.'} Play each line and compare it with the page; tap a bar to fix a note.`)}
+      <label className="scan-field">Name<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title of the piece" maxLength={120} /></label>
       {fixed > 0 && <p className="small muted">Removed {fixed} repeated bar{fixed > 1 ? 's' : ''} the reader wrote twice.</p>}
       <div className="scan-review">
         {views.map((v, s) => {
           const idx = bySystem[s] ?? [];
-          const shows = v.bars && idx.length !== v.bars ? `The page shows ${v.bars} bars here; ${idx.length} were read.` : '';
+          const shows = v.bars && idx.length > v.bars ? `The page seems to show ${v.bars} bar${v.bars === 1 ? '' : 's'} here, but ${idx.length} were read. Check for a repeated bar.` : '';
           return (
             <div key={s} className="scan-sys">
               <img src={v.img} alt={`Line ${s + 1} as printed`} />
               <div className="scan-bars">
                 <button className="btn small" onClick={() => idx.length && playBars(idx[0], idx[idx.length - 1])}><Icon name="play" size={14} /> Line {s + 1}</button>
                 {idx.map((i) => <button key={i} className={`bar-chip ${badSet.has(i) ? 'bad' : ''}`} onClick={() => setEdit(i)} title={badSet.get(i) ?? 'Bar ' + (i + 1)}>{i + 1}</button>)}
-                {v.staves !== 2 && <span className="small muted">This line has {v.staves} staff{v.staves === 1 ? '' : 's'}; the reader is made for piano (two staves), so check it closely.</span>}
+                {v.staves !== 2 && <span className="small muted">This line has {v.staves === 1 ? 'one staff' : `${v.staves} staves`}; the reader is made for piano (two staves), so check it closely.</span>}
                 {shows && <span className="small warn-text">{shows}</span>}
               </div>
             </div>

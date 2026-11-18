@@ -21,3 +21,13 @@ export function scoreId(title: string, xml: string) {
   for (let i = 0; i < xml.length; i += 7) h = (h * 31 + xml.charCodeAt(i)) | 0;
   return `${title}-${xml.length}-${(h >>> 0).toString(36)}`;
 }
+
+/** Give a score a new title inside its MusicXML (work title and movement title). */
+export function retitleXml(xml: string, title: string): string {
+  const e = title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  let x = xml;
+  if (/<work-title>[\s\S]*?<\/work-title>/.test(x)) x = x.replace(/<work-title>[\s\S]*?<\/work-title>/, `<work-title>${e}</work-title>`);
+  else if (/<work>/.test(x)) x = x.replace('<work>', `<work><work-title>${e}</work-title>`);
+  else x = x.replace(/(<score-partwise[^>]*>)/, `$1<work><work-title>${e}</work-title></work>`);
+  return x.replace(/<movement-title>[\s\S]*?<\/movement-title>/, `<movement-title>${e}</movement-title>`);
+}

@@ -2,7 +2,7 @@
 // Pure functions on 8-bit grey pixels so they run in a worker and in tests.
 
 export interface Gray { w: number; h: number; px: Uint8Array }
-export interface Staff { top: number; bottom: number; gap: number }
+export interface Staff { top: number; bottom: number; gap: number; x0?: number; x1?: number }
 export interface System { top: number; bottom: number; staves: Staff[]; bars: number; barXs: number[]; left: number; right: number }
 
 export const TARGET_GAP = 18; // the reader was trained on pages where staff lines are 18 px apart
@@ -102,17 +102,36 @@ export function findStaves(g: Gray): Staff[] {
   return st;
 }
 
+/** Where a staff's lines start and end: the longest dark run along its middle line (ignores page borders). */
+function extent(g: Gray, st: Staff): [number, number] {
+  const y = Math.round((st.top + st.bottom) / 2);
+  let best: [number, number] = [0, g.w - 1], bl = 0;
+  for (const yy of [y - 1, y, y + 1]) {
+    let run = 0;
+    for (let x = 0; x <= g.w; x++) {
+      if (x < g.w && g.px[yy * g.w + x] < 160) { run++; continue; }
+      if (run > bl) { bl = run; best = [x - run, x - 1]; }
+      run = 0;
+    }
+  }
+  return best;
+}
+
 /** Group staves into systems (staves joined by barlines), crop margins and count the bars in each. */
 export function findSystems(g: Gray, staves = findStaves(g)): System[] {
   const dark = (x: number, y: number) => g.px[y * g.w + x] < 160;
   const colRun = (x: number, y0: number, y1: number) => { let n = 0; for (let y = y0; y <= y1; y++) if (dark(x, y)) n++; return n / Math.max(1, y1 - y0 + 1); };
+  for (const st of staves) [st.x0, st.x1] = extent(g, st);
   const groups: Staff[][] = [];
   for (const s of staves) {
     const p = groups.length ? groups[groups.length - 1][groups[groups.length - 1].length - 1] : null;
     if (p) {
+      // only look between the two staves' own left and right ends, so a scanned page border or a
+      // binding shadow down the side of the page does not glue separate lines of music together
       const y0 = Math.ceil(p.bottom) + 2, y1 = Math.floor(s.top) - 2;
+      const xa = Math.max(0, Math.round(Math.max(p.x0!, s.x0!) - s.gap * 2)), xb = Math.min(g.w - 1, Math.round(Math.min(p.x1!, s.x1!) + s.gap));
       let joined = 0;
-      if (y1 > y0) for (let x = 0; x < g.w; x++) if (colRun(x, y0, y1) > 0.97) joined++;
+      if (y1 > y0) for (let x = xa; x <= xb; x++) if (colRun(x, y0, y1) > 0.97) joined++;
       if (joined >= 2) { groups[groups.length - 1].push(s); continue; }
     }
     groups.push([s]);
@@ -123,15 +142,11 @@ export function findSystems(g: Gray, staves = findStaves(g)): System[] {
     if (k > 0) top = Math.max(top, Math.round((groups[k - 1][groups[k - 1].length - 1].bottom + gr[0].top) / 2));
     if (k + 1 < groups.length) bottom = Math.min(bottom, Math.round((gr[gr.length - 1].bottom + groups[k + 1][0].top) / 2));
     top = Math.max(0, top); bottom = Math.min(g.h, bottom);
-    // where the staff lines start and end
-    const ly = Math.round(gr[0].top);
-    let left = 0, right = g.w - 1;
-    while (left < g.w && !dark(left, ly)) left++;
-    while (right > 0 && !dark(right, ly)) right--;
-    // barlines: thin dark columns running from the top line of the first staff to the bottom line of the last
-    const y0 = Math.round(gr[0].top), y1 = Math.round(gr[gr.length - 1].bottom);
+    const left = Math.min(...gr.map((s) => s.x0!)), right = Math.max(...gr.map((s) => s.x1!));
+    // barlines: thin dark columns crossing every staff of the system at the same place (the gaps between
+    // staves are not required: piano-vocal scores leave them open for the words)
     const cols: number[] = [];
-    for (let x = left; x <= right; x++) if (colRun(x, y0, y1) > 0.92) cols.push(x);
+    for (let x = left; x <= right; x++) if (gr.every((st) => colRun(x, Math.round(st.top), Math.round(st.bottom)) > 0.92)) cols.push(x);
     const clusters: number[][] = [];
     for (const x of cols) { const c = clusters[clusters.length - 1]; if (c && x - c[c.length - 1] <= gap * 0.8) c.push(x); else clusters.push([x]); }
     const lines = clusters.filter((c) => c[c.length - 1] - c[0] < gap * 1.2 && c[0] > left + gap * 1.5);

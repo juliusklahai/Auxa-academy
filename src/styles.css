@@ -848,3 +848,29 @@ html, body { overflow-x: clip; max-width: 100%; }
 .note-chip.on { border-color: var(--lime2); box-shadow: 0 0 0 3px rgba(30,227,220,.25); }
 .note-chip.add { border-style: dashed; color: var(--muted); font-size: 13px; }
 .note-tools { display: grid; gap: 10px; padding: 12px; border-radius: 14px; background: var(--soft); }
+
+/* rename a saved score */
+.page-head:has(.head-rename) { padding-right: 100px; }
+.head-rename { position: absolute; top: 0; right: 48px; }
+.rename-row { display: flex; gap: 8px; align-items: center; flex: 1; min-width: 0; }
+.rename-row input { flex: 1; min-width: 0; font: inherit; font-size: 15px; padding: 9px 12px; border-radius: 12px; border: 1px solid var(--line2); background: var(--white); color: var(--ink); }
+.rename-row.head { margin: 0 0 14px; }
+
+/* My Music mixer: name and sound on one line, M and S beside it, the volume slider underneath */
+.card.mixer .mix-row { display: grid; grid-template-columns: 16px minmax(0, 1fr) 32px 32px; grid-template-areas: "dot name m s" ". vol vol vol"; gap: 6px 8px; padding: 8px; }
+.card.mixer .mix-row > i, .card.mixer .mix-row > input[type=checkbox] { grid-area: dot; grid-column: auto; grid-row: auto; }
+.card.mixer .mix-row > .mix-name { grid-area: name; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; text-align: left; gap: 4px 8px; white-space: normal; line-height: 1.25; }
+.card.mixer .mix-row > .mix-name .inst, .card.mixer .mix-row > .mix-name select { min-width: 120px; max-width: 100%; }
+.card.mixer .mix-row > .mini:nth-of-type(1) { grid-area: m; }
+.card.mixer .mix-row > .mini:nth-of-type(2) { grid-area: s; }
+.card.mixer .mix-row > input[type=range] { grid-area: vol; grid-column: 2 / -1; grid-row: 2; width: 100%; }
+.card.mixer .mix-row > span:empty { display: none; }
+.card.mixer .band-head { flex-wrap: wrap; gap: 4px 10px; }
+
+@media (max-width: 700px) {
+  .feed { min-height: 0; }
+  .kb-bar .kb-grip { display: none; }
+  .kb-bar .hands-chip { font-size: 0; gap: 0; padding: 0 10px; min-width: 36px; justify-content: center; }
+  .kb-bar .hands-chip svg { width: 16px; height: 16px; }
+  .kb-bar { gap: 6px; flex-wrap: nowrap; min-width: 0; }
+}

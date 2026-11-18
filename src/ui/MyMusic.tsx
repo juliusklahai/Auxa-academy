@@ -15,7 +15,7 @@ import { setExpected } from '../input/expect';
 import { mic, micHelp } from '../input/mic';
 import { midiIn } from '../input/midi';
 import { demoChoraleXml } from '../musicxml/demo';
-import { deleteScore, listScores, saveScore, scoreId, type LibItem } from '../musicxml/library';
+import { deleteScore, listScores, retitleXml, saveScore, scoreId, type LibItem } from '../musicxml/library';
 import { musicXmlText, parseMusicXml, type Score, type ScoreNote } from '../musicxml/parse';
 import { buildPractice, handTracksFor, rangeQ, toSrcQ, fromSrcQ, type PracticeBuild } from '../musicxml/practice';
 import { Timeline } from '../musicxml/tempo';
@@ -151,6 +151,17 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
   const [fix, setFix] = useState(false);
   const [more, setMore] = useState(false);
   const [scan, setScan] = useState(false);
+  const curItem = useRef<LibItem | null>(null); // the library entry of the open score, if it has one
+  const [naming, setNaming] = useState<{ id: string; text: string } | null>(null);
+  const rename = async (it: LibItem, title: string) => {
+    const t = title.trim();
+    setNaming(null);
+    if (!t || t === it.title) return;
+    const next = { ...it, title: t, xml: retitleXml(it.xml, t) };
+    await saveScore(next);
+    setLib(await listScores());
+    if (curItem.current?.id === it.id) { curItem.current = next; setScore((s) => (s ? { ...s, title: t } : s)); }
+  };
   const fixTimer = useRef(0);
   const bandNotes = useMemo(() => (score && (band.pad || band.bass || band.melody) ? makeBand(score, band) : []), [score, band]);
   const allNotes = useMemo(() => (score ? [...score.notes, ...bandNotes].sort((a, b) => a.startQ - b.startQ) : []), [score, bandNotes]);
@@ -181,7 +192,8 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
         // a newer version of the same piece replaces the old one instead of piling up copies
         listScores().then((all) => Promise.all(all.filter((o) => o.title === it.title && o.id !== it.id).map((o) => deleteScore(o.id))))
           .then(() => saveScore(it)).then(() => listScores().then(setLib));
-      }
+        curItem.current = it;
+      } else curItem.current = null;
       return s;
     } catch (e) { setErr((e as Error).message); return null; }
   };
@@ -493,8 +505,17 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
             <div className="card-head"><b>Your library</b><span className="muted small">{lib.length} saved on this device</span></div>
             <div className="lib">{lib.map((it) => (
               <div key={it.id} className="lib-row">
-                <button className="link-row" onClick={() => load(it.xml, false)}><Icon name="note" size={15} /> <b>{it.title}</b> <span className="muted">{it.composer}</span></button>
-                <button className="btn" onClick={() => deleteScore(it.id).then(() => listScores().then(setLib))} aria-label={`Remove ${it.title}`}>Remove</button>
+                {naming?.id === it.id
+                  ? <form className="rename-row" onSubmit={(e) => { e.preventDefault(); void rename(it, naming.text); }}>
+                      <input autoFocus value={naming.text} onChange={(e) => setNaming({ id: it.id, text: e.target.value })} aria-label="New name" maxLength={120} />
+                      <button className="btn dark" type="submit">Save</button>
+                      <button className="btn" type="button" onClick={() => setNaming(null)}>Cancel</button>
+                    </form>
+                  : <>
+                      <button className="link-row" onClick={() => { load(it.xml, false); curItem.current = it; }}><Icon name="note" size={15} /> <b>{it.title}</b> <span className="muted">{it.composer}</span></button>
+                      <button className="btn icon" onClick={() => setNaming({ id: it.id, text: it.title })} aria-label={`Rename ${it.title}`} title="Rename"><Icon name="edit" size={15} /></button>
+                      <button className="btn" onClick={() => deleteScore(it.id).then(() => listScores().then(setLib))} aria-label={`Remove ${it.title}`}>Remove</button>
+                    </>}
               </div>))}
             </div>
           </div>
@@ -572,7 +593,17 @@ export function MyMusic({ singPart, onSingHandled, songId, onSongHandled, xml, o
         ['Key', tr ? transposedKey(score.keyFifths, tr) : keyName(score.keyFifths)],
         ['Bars', score.measures.length],
         ['Parts', score.parts.length],
-      ]}><button className="icon-btn head-close" onClick={() => { stop(); setScore(null); }} aria-label="Close this score" title="Close this score"><Icon name="close" size={16} /></button></PageHead>
+      ]}>
+        {curItem.current && naming?.id !== curItem.current.id && <button className="icon-btn head-rename" onClick={() => setNaming({ id: curItem.current!.id, text: score.title })} aria-label="Rename this score" title="Rename"><Icon name="edit" size={15} /></button>}
+        <button className="icon-btn head-close" onClick={() => { stop(); setScore(null); setNaming(null); }} aria-label="Close this score" title="Close this score"><Icon name="close" size={16} /></button>
+      </PageHead>
+      {curItem.current && naming?.id === curItem.current.id && (
+        <form className="rename-row head" onSubmit={(e) => { e.preventDefault(); void rename(curItem.current!, naming.text); }}>
+          <input autoFocus value={naming.text} onChange={(e) => setNaming({ id: naming.id, text: e.target.value })} aria-label="New name" maxLength={120} />
+          <button className="btn dark" type="submit">Save</button>
+          <button className="btn" type="button" onClick={() => setNaming(null)}>Cancel</button>
+        </form>
+      )}
       <div className="chip-row">
         <button className="chip" onClick={() => pickFile()}><Icon name="plus" size={13} /> Open another</button>
         <button className="chip" onClick={() => load(demoChoraleXml(), false)}>Demo chorale</button>
